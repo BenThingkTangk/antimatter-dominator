@@ -20,24 +20,24 @@ const PRODUCTS: Product[] = [
     name: "Antimatter AI Platform",
     slug: "antimatter-ai",
     tagline: "Digital Solutions That Matter",
-    description: "Full-service AI development, product design, and GTM strategy platform. We build production-ready AI systems, scalable web/mobile products, and data-driven go-to-market strategies for enterprises.",
+    description: "Full-service AI development, product design, and GTM strategy platform. End-to-end product design, scalable web/mobile development, production-ready AI systems, HIPAA-compliant healthcare apps, IoT systems, and data-driven go-to-market strategies — all under one roof.",
     url: "https://antimatterai.com",
     category: "platform",
-    targetMarket: "Enterprise organizations, SaaS companies, startups needing AI-powered product development and go-to-market execution",
+    targetMarket: "Enterprise organizations, SaaS companies, startups, healthcare systems, IoT companies needing AI-powered product development and go-to-market execution",
     keyFeatures: JSON.stringify([
-      "End-to-end product design (UX/UI)",
-      "Frontend/Backend development (React, Next, Node, Flutter)",
-      "AI Development (LLM agents, RAG, fine-tuning, model evals)",
-      "GTM Strategy (ICP, positioning, pricing, demand gen)",
-      "Healthcare App Development (HIPAA compliant)",
-      "IoT Development (firmware, edge AI, MQTT)"
+      "End-to-end product design (User Research, UX Flows, UI Systems, Design Ops)",
+      "Full-stack development (React/Next frontends, Node backend APIs, Flutter mobile, Docker CI/CD)",
+      "AI Development (LLM agents, RAG, fine-tuning, model evals, guardrails, vision/NLP/speech pipelines)",
+      "GTM Strategy (ICP & segmentation, positioning & messaging, pricing & packaging, demand gen)",
+      "Healthcare Apps (HIPAA/PHI compliance, telehealth, EHR integrations via FHIR/HL7, audit logging)",
+      "IoT Development (embedded firmware, BLE/Zigbee/LoRa, MQTT ingestion, edge AI, OTA pipelines)"
     ]),
     valueProps: JSON.stringify([
       "20+ projects delivered with 100% client satisfaction",
-      "Full-stack capability from design to deployment to market",
-      "AI-native approach to every solution",
+      "Full-stack capability: design → engineering → AI → GTM under one roof",
+      "AI-native approach — every solution leverages ML from day one",
       "24/7 support with dedicated teams",
-      "Proven case studies: Clinix AI, OWASP Foundation, Synergies4"
+      "Proven case studies: Clinix AI, OWASP Foundation, Synergies4, Curehire"
     ]),
     commonObjections: JSON.stringify([
       "We already have an in-house dev team",
@@ -46,11 +46,47 @@ const PRODUCTS: Product[] = [
       "How do we know your AI will work?",
       "We've been burned by agencies before"
     ]),
-    competitiveEdge: "Unlike traditional agencies, Antimatter AI is AI-native — every solution leverages machine learning from day one. We combine product design, engineering, AI development, and GTM under one roof, eliminating handoff friction and accelerating time-to-market by 3-5x.",
+    competitiveEdge: "Unlike traditional agencies, Antimatter AI is AI-native — every solution leverages machine learning from day one. We combine product design, engineering, AI development, healthcare compliance, IoT, and GTM under one roof, eliminating handoff friction and accelerating time-to-market by 3-5x. Proven across healthcare (Clinix AI), security (OWASP), and enterprise SaaS.",
     icon: "Atom"
   },
   {
     id: 2,
+    name: "ATOM Enterprise AI",
+    slug: "atom-enterprise",
+    tagline: "Enterprise AI Framework — Deploy Anywhere, Own Everything",
+    description: "ATOM is Antimatter's enterprise AI deployment framework. Deploy voice, search, and workflow agents in controlled environments — VPC, on-prem, or edge — with governance, zero-training guarantees, and full IP ownership. Framework, not a tool. Model-agnostic. Powered by Akamai + Linode edge partnership.",
+    url: "https://www.antimatterai.com/enterprise-ai",
+    category: "enterprise-ai",
+    targetMarket: "CIOs, CTOs, VP Engineering at regulated enterprises, financial services, healthcare systems, defense contractors, government agencies, Fortune 500 companies needing secure AI deployment",
+    keyFeatures: JSON.stringify([
+      "Deploy anywhere: VPC, on-prem, hybrid, edge, containers, Kubernetes",
+      "Security & Compliance: encryption at rest/transit, SSO + RBAC, audit logs, zero-training, private networking",
+      "Full IP Ownership: you own prompts, agents, workflows, outputs — hard isolation, no shared pools",
+      "Composable Framework: agents, orchestration, tool calls, retrieval, deterministic UI modules",
+      "Model-Agnostic Runtime: swap hosted, open-source, private, or on-prem models without code changes, BYO embeddings",
+      "Edge Deployment: Akamai + Linode partnership for low-latency voice/real-time UX with data residency boundaries"
+    ]),
+    valueProps: JSON.stringify([
+      "Deploy agentic AI in your environment — not someone else's cloud",
+      "Zero-training guarantee: ATOM never trains on your data or resells metadata",
+      "Swap model providers without changing product logic — no vendor lock-in",
+      "RBAC, audit trails, encryption, and retention policies per environment",
+      "Edge inference with hybrid routing: edge + VPC/on-prem orchestration via Akamai",
+      "Composable system: reuse agents, retrieval, and tools across teams without rewrites"
+    ]),
+    commonObjections: JSON.stringify([
+      "We already have our own AI infrastructure",
+      "Enterprise AI frameworks are too complex to deploy",
+      "We're locked into our current cloud provider",
+      "How is this different from AWS Bedrock or Azure AI?",
+      "Our compliance team won't approve another vendor",
+      "We need on-prem — cloud solutions don't work for us"
+    ]),
+    competitiveEdge: "ATOM is a framework, not a tool — build composable AI systems for voice, search, workflows, and decisions that you fully own. Unlike Kore.ai, Intercom Fin, Zendesk AI, or Microsoft Copilot Studio, ATOM offers hard tenant isolation, zero-training guarantees, full IP ownership, and deploys to VPC/on-prem/edge. The Akamai + Linode edge partnership delivers sub-100ms latency for voice and real-time UX with data residency controls. No shared pools, no vendor lock-in.",
+    icon: "Server"
+  },
+  {
+    id: 3,
     name: "Vidzee",
     slug: "vidzee",
     tagline: "Listing Photos to Cinematic Videos",
@@ -84,7 +120,7 @@ const PRODUCTS: Product[] = [
     icon: "Video"
   },
   {
-    id: 3,
+    id: 4,
     name: "Clinix Agent",
     slug: "clinix-agent",
     tagline: "Supervised AI Billing Operations",
@@ -118,7 +154,7 @@ const PRODUCTS: Product[] = [
     icon: "ShieldCheck"
   },
   {
-    id: 4,
+    id: 5,
     name: "Clinix AI",
     slug: "clinix-ai",
     tagline: "AI-Powered Healthcare Documentation Automation",
@@ -152,7 +188,7 @@ const PRODUCTS: Product[] = [
     icon: "Stethoscope"
   },
   {
-    id: 5,
+    id: 6,
     name: "Red Team ATOM",
     slug: "red-team-atom",
     tagline: "Autonomous Quantum-Ready Red Team Range",

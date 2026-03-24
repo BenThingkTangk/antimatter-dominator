@@ -30,6 +30,7 @@ function ProductCard({ product }: { product: Product }) {
     "real-estate": "bg-chart-4/15 text-amber-500",
     healthcare: "bg-chart-3/15 text-emerald-500",
     cybersecurity: "bg-chart-5/15 text-rose-500",
+    "enterprise-ai": "bg-purple-500/15 text-purple-500",
   };
 
   return (
@@ -145,7 +146,7 @@ export default function Dashboard() {
 
       <div>
         <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Ecosystem Products</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {products.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
