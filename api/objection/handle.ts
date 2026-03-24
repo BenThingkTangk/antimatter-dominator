@@ -3,29 +3,29 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You are the Antimatter AI Sales Dominator — a lethal sales AI. Products: 1) Antimatter AI Platform 2) ATOM Enterprise AI 3) Vidzee 4) Clinix Agent 5) Clinix AI 6) Red Team ATOM. Style: Direct, confident, data-driven. No fluff.`;
+const SYSTEM = `You are the Antimatter AI Sales Dominator. Destroy objections with confidence. Use: ACKNOWLEDGE (1-2 sentences), REFRAME (2 sentences with metrics), EVIDENCE (proof point), REDIRECT (question that advances deal). Be empathetic but decisive.`;
 
 const PRODUCTS: Record<string, any> = {
-  "antimatter-ai": { name: "Antimatter AI Platform", description: "Full-service AI development, product design, GTM.", valueProps: "20+ projects, 100% satisfaction, AI-native, 3-5x faster", competitiveEdge: "AI-native. Design + engineering + AI + GTM under one roof.", commonObjections: "in-house team, expensive, not ready, burned before" },
-  "atom-enterprise": { name: "ATOM Enterprise AI", description: "Enterprise AI framework. Deploy VPC/on-prem/edge.", valueProps: "Own your AI, zero-training, no vendor lock-in, edge deployment", competitiveEdge: "Framework not tool. Hard isolation. Zero-training. Beats Kore.ai, Copilot Studio.", commonObjections: "own infrastructure, too complex, locked in, compliance" },
-  "vidzee": { name: "Vidzee", description: "AI real estate videos in 5 min.", valueProps: "5-min videos, save $200-500/video, 12,400+ created", competitiveEdge: "Replaces $500 videographer with 5-minute AI.", commonObjections: "already have videographer, not professional, don't need video" },
-  "clinix-agent": { name: "Clinix Agent", description: "AI billing/denial appeals for healthcare.", valueProps: "Stop denials, success-based pricing, real-time tracking", competitiveEdge: "Stedi rails + ML. Pay only on success.", commonObjections: "have billing team, HIPAA concerns, manageable denial rate" },
-  "clinix-ai": { name: "Clinix AI", description: "AI SOAP notes, ICD-10/CPT coding.", valueProps: "Cut documentation 70%, reduce denials, save 2-3 hrs/day", competitiveEdge: "Clinical context understanding. Real-time coding + EHR.", commonObjections: "can't capture nuance, comfortable with workflow, accuracy concerns" },
-  "red-team-atom": { name: "Red Team ATOM", description: "Autonomous quantum-ready red team range.", valueProps: "Only quantum-ready, real-time telemetry, MITRE ATLAS", competitiveEdge: "First quantum-ready red team. Continuous vs annual pen tests.", commonObjections: "quantum years away, do annual pen tests, too advanced" }
+  "antimatter-ai": { name: "Antimatter AI Platform", desc: "Full-service AI dev. 20+ projects, 100% satisfaction, 3-5x faster.", edge: "AI-native. Design+engineering+AI+GTM under one roof." },
+  "atom-enterprise": { name: "ATOM Enterprise AI", desc: "Enterprise AI framework. VPC/on-prem/edge. Zero-training, full IP ownership.", edge: "Hard isolation. No vendor lock-in. Beats Kore.ai, Copilot Studio." },
+  "vidzee": { name: "Vidzee", desc: "AI real estate videos in 5 min. Save $200-500/video. 12,400+ videos.", edge: "Replaces $500 videographer." },
+  "clinix-agent": { name: "Clinix Agent", desc: "AI billing/denial appeals. Success-based pricing.", edge: "Stedi rails + ML. Pay only on success." },
+  "clinix-ai": { name: "Clinix AI", desc: "AI SOAP notes, ICD-10/CPT coding. Cut docs 70%.", edge: "Real-time coding + EHR integration." },
+  "red-team-atom": { name: "Red Team ATOM", desc: "Quantum-ready red team. PQC engine, MITRE ATLAS.", edge: "First quantum-ready. Continuous vs annual pen tests." }
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
     const { productSlug, objection, context } = req.body;
-    const product = PRODUCTS[productSlug];
-    if (!product) return res.status(404).json({ error: "Product not found" });
+    const p = PRODUCTS[productSlug];
+    if (!p) return res.status(404).json({ error: "Product not found" });
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `Handle this sales objection for ${product.name}:\n\nOBJECTION: "${objection}"\n\nProduct: ${product.name}\nDescription: ${product.description}\nValue Props: ${product.valueProps}\nCompetitive Edge: ${product.competitiveEdge}\n${context ? `Context: ${context}` : ""}\n\nRespond with:\n1. ACKNOWLEDGE — Validate the concern (1-2 sentences)\n2. REFRAME — Shift perspective to value (2-3 sentences with metrics)\n3. EVIDENCE — Concrete proof point or comparison\n4. REDIRECT — Question that advances the deal\n\nBe empathetic but decisive. Use data. End with a question.` }]
+      model: "claude-haiku-4-5",
+      max_tokens: 800,
+      system: SYSTEM,
+      messages: [{ role: "user", content: `Objection for ${p.name}: "${objection}". Product: ${p.desc} Edge: ${p.edge}${context ? ` Context: ${context}` : ""}` }]
     });
 
     const content = message.content[0].type === "text" ? message.content[0].text : "";
@@ -41,6 +41,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({ id: Date.now(), productId, objection, response: content, category, createdAt: new Date().toISOString() });
   } catch (err: any) {
     console.error("Objection error:", err);
-    res.status(500).json({ error: err.message || "Failed to handle objection" });
+    res.status(500).json({ error: err.message || "Failed" });
   }
 }
