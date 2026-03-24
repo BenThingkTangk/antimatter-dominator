@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Loader2, Copy, Brain, TrendingUp, Target, Zap } from "lucide-react";
-import type { Product, MarketIntel } from "@shared/schema";
+import { Shield, Loader2, Copy, Brain, Zap } from "lucide-react";
+import type { Product } from "@shared/schema";
+
+interface MarketIntel {
+  id: number;
+  title: string;
+  summary: string;
+  relevantProducts: string;
+  impactLevel: string;
+  source: string;
+  category: string;
+  createdAt: string;
+}
 
 const industries = [
   "Healthcare",
@@ -43,13 +53,10 @@ export default function MarketIntent() {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
+  const [intelHistory, setIntelHistory] = useState<MarketIntel[]>([]);
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
-  });
-
-  const { data: intelHistory = [] } = useQuery<MarketIntel[]>({
-    queryKey: ["/api/market-intel"],
   });
 
   const analyzeIntent = useMutation({
@@ -61,8 +68,8 @@ export default function MarketIntent() {
       });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/market-intel"] });
+    onSuccess: (data: MarketIntel) => {
+      setIntelHistory((prev) => [data, ...prev]);
       toast({ title: "Intel ready", description: "Market intelligence analysis complete." });
     },
     onError: (err: Error) => {
@@ -77,7 +84,6 @@ export default function MarketIntent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
           <Shield className="w-5 h-5 text-emerald-500" />
@@ -89,13 +95,11 @@ export default function MarketIntent() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Config */}
         <Card className="border-border/50 lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Analysis Parameters</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Product Focus */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Product Focus (optional)</label>
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -104,14 +108,15 @@ export default function MarketIntent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Products</SelectItem>
-                  {products.map(p => (
-                    <SelectItem key={p.slug} value={p.slug}>{p.name}</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p.slug} value={p.slug}>
+                      {p.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Industry */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Target Industry</label>
               <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
@@ -119,14 +124,15 @@ export default function MarketIntent() {
                   <SelectValue placeholder="Select industry" />
                 </SelectTrigger>
                 <SelectContent>
-                  {industries.map(i => (
-                    <SelectItem key={i} value={i}>{i}</SelectItem>
+                  {industries.map((i) => (
+                    <SelectItem key={i} value={i}>
+                      {i}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Topic */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Topic Focus</label>
               <Select value={selectedTopic} onValueChange={setSelectedTopic}>
@@ -134,19 +140,16 @@ export default function MarketIntent() {
                   <SelectValue placeholder="Select topic" />
                 </SelectTrigger>
                 <SelectContent>
-                  {topics.map(t => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {topics.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <Button
-              className="w-full"
-              onClick={() => analyzeIntent.mutate()}
-              disabled={analyzeIntent.isPending}
-              data-testid="button-analyze-intent"
-            >
+            <Button className="w-full" onClick={() => analyzeIntent.mutate()} disabled={analyzeIntent.isPending} data-testid="button-analyze-intent">
               {analyzeIntent.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -160,11 +163,10 @@ export default function MarketIntent() {
               )}
             </Button>
 
-            {/* Quick Actions */}
             <div className="pt-2 border-t border-border/50">
               <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Quick Intel</p>
               <div className="space-y-1.5">
-                {products.slice(0, 3).map(p => (
+                {products.slice(0, 3).map((p) => (
                   <button
                     key={p.slug}
                     onClick={() => {
@@ -174,7 +176,6 @@ export default function MarketIntent() {
                       setTimeout(() => analyzeIntent.mutate(), 100);
                     }}
                     className="w-full flex items-center gap-2 p-2 rounded-lg border border-border/50 text-left hover:border-primary/30 transition-colors"
-                    data-testid={`button-quick-intel-${p.slug}`}
                   >
                     <Zap className="w-3 h-3 text-primary shrink-0" />
                     <span className="text-xs truncate">{p.name} Market Brief</span>
@@ -185,7 +186,6 @@ export default function MarketIntent() {
           </CardContent>
         </Card>
 
-        {/* Intel Output */}
         <div className="lg:col-span-2 space-y-3">
           {analyzeIntent.isPending ? (
             <Card className="border-border/50">
@@ -202,9 +202,7 @@ export default function MarketIntent() {
                   <div>
                     <CardTitle className="text-sm">{intel.title}</CardTitle>
                     <div className="flex gap-1.5 mt-1.5">
-                      <Badge variant={intel.impactLevel === "high" ? "default" : "secondary"}>
-                        {intel.impactLevel} impact
-                      </Badge>
+                      <Badge variant={intel.impactLevel === "high" ? "default" : "secondary"}>{intel.impactLevel} impact</Badge>
                       <Badge variant="outline">{intel.category}</Badge>
                     </div>
                   </div>

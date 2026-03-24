@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Loader2, Copy, Sparkles, History, Send, Mail, Phone, Presentation, FileText } from "lucide-react";
-import type { Product, Pitch } from "@shared/schema";
-import { useLocation } from "wouter";
+import { TrendingUp, Loader2, Copy, Sparkles, History, Mail, Phone, Presentation, FileText } from "lucide-react";
+import type { Product } from "@shared/schema";
+
+interface Pitch {
+  id: number;
+  productId: number;
+  pitchType: string;
+  targetPersona: string;
+  content: string;
+  createdAt: string;
+}
 
 const pitchTypes = [
   { value: "elevator", label: "Elevator Pitch", icon: Sparkles, description: "30-second killer pitch" },
@@ -37,10 +44,8 @@ const personas = [
 ];
 
 export default function PitchGenerator() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Parse URL params for pre-selected product
   const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
   const initialProduct = params.get("product") || "";
 
@@ -48,13 +53,10 @@ export default function PitchGenerator() {
   const [pitchType, setPitchType] = useState("elevator");
   const [persona, setPersona] = useState("");
   const [customContext, setCustomContext] = useState("");
+  const [pitchHistory, setPitchHistory] = useState<Pitch[]>([]);
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
-  });
-
-  const { data: pitchHistory = [] } = useQuery<Pitch[]>({
-    queryKey: ["/api/pitches"],
   });
 
   const generatePitch = useMutation({
@@ -67,8 +69,8 @@ export default function PitchGenerator() {
       });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pitches"] });
+    onSuccess: (data: Pitch) => {
+      setPitchHistory((prev) => [data, ...prev]);
       toast({ title: "Pitch generated", description: "Your lethal pitch is ready." });
     },
     onError: (err: Error) => {
@@ -81,11 +83,10 @@ export default function PitchGenerator() {
     toast({ title: "Copied", description: "Pitch copied to clipboard" });
   };
 
-  const selectedProductData = products.find(p => p.slug === selectedProduct);
+  const selectedProductData = products.find((p) => p.slug === selectedProduct);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
           <TrendingUp className="w-5 h-5 text-primary" />
@@ -110,13 +111,11 @@ export default function PitchGenerator() {
 
         <TabsContent value="generate" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Config Panel */}
             <Card className="border-border/50 lg:col-span-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Product Selection */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Product</label>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -124,27 +123,26 @@ export default function PitchGenerator() {
                       <SelectValue placeholder="Select a product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map(p => (
-                        <SelectItem key={p.slug} value={p.slug}>{p.name}</SelectItem>
+                      {products.map((p) => (
+                        <SelectItem key={p.slug} value={p.slug}>
+                          {p.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Pitch Type */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Pitch Type</label>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {pitchTypes.map(pt => {
+                    {pitchTypes.map((pt) => {
                       const Icon = pt.icon;
                       return (
                         <button
                           key={pt.value}
                           onClick={() => setPitchType(pt.value)}
                           className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all text-sm ${
-                            pitchType === pt.value
-                              ? "border-primary/50 bg-primary/5 text-foreground"
-                              : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                            pitchType === pt.value ? "border-primary/50 bg-primary/5 text-foreground" : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                           }`}
                           data-testid={`button-pitch-type-${pt.value}`}
                         >
@@ -159,7 +157,6 @@ export default function PitchGenerator() {
                   </div>
                 </div>
 
-                {/* Target Persona */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Target Persona</label>
                   <Select value={persona} onValueChange={setPersona}>
@@ -167,31 +164,27 @@ export default function PitchGenerator() {
                       <SelectValue placeholder="Who are you pitching?" />
                     </SelectTrigger>
                     <SelectContent>
-                      {personas.map(p => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      {personas.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Custom Context */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Extra Context (optional)</label>
                   <Textarea
                     placeholder="E.g., They just had a data breach, their competitor launched AI..."
                     value={customContext}
-                    onChange={e => setCustomContext(e.target.value)}
+                    onChange={(e) => setCustomContext(e.target.value)}
                     className="min-h-[80px] text-sm"
                     data-testid="input-context"
                   />
                 </div>
 
-                <Button
-                  className="w-full"
-                  onClick={() => generatePitch.mutate()}
-                  disabled={!selectedProduct || !persona || generatePitch.isPending}
-                  data-testid="button-generate-pitch"
-                >
+                <Button className="w-full" onClick={() => generatePitch.mutate()} disabled={!selectedProduct || !persona || generatePitch.isPending} data-testid="button-generate-pitch">
                   {generatePitch.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -207,17 +200,11 @@ export default function PitchGenerator() {
               </CardContent>
             </Card>
 
-            {/* Output Panel */}
             <Card className="border-border/50 lg:col-span-2">
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm">Generated Pitch</CardTitle>
                 {pitchHistory.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(pitchHistory[0]?.content || "")}
-                    data-testid="button-copy-pitch"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(pitchHistory[0]?.content || "")} data-testid="button-copy-pitch">
                     <Copy className="w-3.5 h-3.5 mr-1.5" />
                     Copy
                   </Button>
@@ -233,16 +220,12 @@ export default function PitchGenerator() {
                 ) : pitchHistory.length > 0 ? (
                   <div className="space-y-3">
                     <div className="flex gap-2 flex-wrap">
-                      {selectedProductData && (
-                        <Badge variant="secondary">{selectedProductData.name}</Badge>
-                      )}
-                      <Badge variant="outline">{pitchTypes.find(p => p.value === pitchHistory[0]?.pitchType)?.label}</Badge>
+                      {selectedProductData && <Badge variant="secondary">{selectedProductData.name}</Badge>}
+                      <Badge variant="outline">{pitchTypes.find((p) => p.value === pitchHistory[0]?.pitchType)?.label}</Badge>
                       <Badge variant="outline">{pitchHistory[0]?.targetPersona}</Badge>
                     </div>
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {pitchHistory[0]?.content}
-                      </div>
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{pitchHistory[0]?.content}</div>
                     </div>
                   </div>
                 ) : (
@@ -267,28 +250,22 @@ export default function PitchGenerator() {
             </Card>
           ) : (
             pitchHistory.map((pitch) => {
-              const product = products.find(p => p.id === pitch.productId);
+              const product = products.find((p) => p.id === pitch.productId);
               return (
                 <Card key={pitch.id} className="border-border/50" data-testid={`card-pitch-${pitch.id}`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex gap-2 flex-wrap">
                         <Badge variant="secondary">{product?.name || "Unknown"}</Badge>
-                        <Badge variant="outline">{pitchTypes.find(p => p.value === pitch.pitchType)?.label}</Badge>
+                        <Badge variant="outline">{pitchTypes.find((p) => p.value === pitch.pitchType)?.label}</Badge>
                         <Badge variant="outline">{pitch.targetPersona}</Badge>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(pitch.content)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(pitch.content)}>
                         <Copy className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed line-clamp-6">{pitch.content}</p>
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      {new Date(pitch.createdAt).toLocaleString()}
-                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-2">{new Date(pitch.createdAt).toLocaleString()}</p>
                   </CardContent>
                 </Card>
               );
