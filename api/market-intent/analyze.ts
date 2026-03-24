@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { productSlug, industry, topic } = req.body;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Generate market intelligence for the Antimatter AI ecosystem.\n\n${productSlug && productSlug !== "all" ? `Focus Product: ${productSlug}` : "All products"}\n${industry ? `Target Industry: ${industry}` : ""}\n${topic ? `Topic Focus: ${topic}` : ""}\n\nAvailable Products: ${ALL_PRODUCTS.join(", ")}\n\nProvide:\n1. MARKET TRENDS — 3-4 trends creating demand (specific data points)\n2. BUYER SIGNALS — What indicates a company is ready to buy\n3. COMPETITIVE LANDSCAPE — How we win against alternatives\n4. TALK TRACKS — 2-3 conversation frameworks per relevant product\n5. URGENCY DRIVERS — Why prospects need to act NOW\n\nFormat as actionable intelligence for today. Include specific industries and scenarios.` }]

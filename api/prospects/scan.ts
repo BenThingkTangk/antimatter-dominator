@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { industry, productFocus } = req.body;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 3000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Generate 8 high-value prospect companies that NEED our ecosystem.\n\n${industry && industry !== "All Industries" ? `Focus Industry: ${industry}` : "Scan all industries"}\n${productFocus && productFocus !== "all" ? `Product Focus: ${productFocus}` : "All products"}\n\nFor each, provide a JSON array with objects:\n- companyName: Real company name\n- industry: Their industry\n- score: 0-100 prospect score\n- reason: Why they need Antimatter (2-3 sentences)\n- matchedProducts: Array of product slugs (antimatter-ai, atom-enterprise, vidzee, clinix-agent, clinix-ai, red-team-atom)\n- signals: Array of 2-3 market signals\n- companySize: "enterprise", "mid-market", or "smb"\n- urgency: "critical", "high", "medium", or "low"\n\nIMPORTANT: Return ONLY the JSON array. No markdown, no code blocks. Raw JSON only.` }]

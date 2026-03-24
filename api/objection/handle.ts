@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!product) return res.status(404).json({ error: "Product not found" });
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Handle this sales objection for ${product.name}:\n\nOBJECTION: "${objection}"\n\nProduct: ${product.name}\nDescription: ${product.description}\nValue Props: ${product.valueProps}\nCompetitive Edge: ${product.competitiveEdge}\n${context ? `Context: ${context}` : ""}\n\nRespond with:\n1. ACKNOWLEDGE — Validate the concern (1-2 sentences)\n2. REFRAME — Shift perspective to value (2-3 sentences with metrics)\n3. EVIDENCE — Concrete proof point or comparison\n4. REDIRECT — Question that advances the deal\n\nBe empathetic but decisive. Use data. End with a question.` }]

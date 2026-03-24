@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pitchLabels: Record<string, string> = { elevator: "30-second elevator pitch", email: "cold outreach email", "cold-call": "cold call opening script", "demo-intro": "demo introduction and hook", "executive-brief": "executive briefing for C-suite" };
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Generate a ${pitchLabels[pitchType] || pitchType} for ${product.name}.\n\nProduct: ${product.name}\nDescription: ${product.description}\nTarget Market: ${product.targetMarket}\nKey Features: ${product.keyFeatures}\nValue Props: ${product.valueProps}\nCompetitive Edge: ${product.competitiveEdge}\n\nTarget Persona: ${targetPersona}\n${customContext ? `Additional Context: ${customContext}` : ""}\n\nRequirements: Be specific with metrics. Address pain points directly. Include strong CTA. Concise and impactful.` }]
