@@ -6,111 +6,59 @@ const TWILIO_API_KEY_SECRET = process.env.TWILIO_API_KEY_SECRET;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
-// Product-specific value props for the call script
 const PRODUCT_HOOKS: Record<string, { hook: string; value: string; ask: string }> = {
   "antimatter-ai": {
     hook: "we build AI systems and digital products for companies",
-    value: "We've shipped over twenty projects with a hundred percent client satisfaction, and we do everything from product design to AI development to go-to-market, all under one roof.",
-    ask: "I'd love to understand what your team's working on right now, and see if there's a way we could help accelerate things.",
+    value: "We've shipped over twenty projects with a hundred percent client satisfaction. We do everything from product design to AI development to go-to-market, all under one roof.",
+    ask: "I'd love to understand what your team's working on right now, and see if there's a way we could help speed things up.",
   },
   "atom-enterprise": {
     hook: "we help companies deploy AI agents in their own environment, whether that's on-prem, VPC, or edge",
-    value: "The thing that makes us different is full IP ownership, zero-training guarantees, and you can swap model providers without touching your code. We've got an edge partnership with Akamai too.",
-    ask: "I'm curious, how are you handling AI deployment and data governance right now?",
+    value: "What makes us different is full IP ownership, zero-training guarantees, and you can swap model providers without touching your code. We've also got an edge partnership with Akamai.",
+    ask: "I'm curious, how are you guys handling AI deployment and data governance right now?",
   },
   "vidzee": {
     hook: "we've built something that turns listing photos into cinematic property videos in about five minutes",
-    value: "Agents are saving two to five hundred bucks per listing versus hiring a videographer, and we've already created over twelve thousand videos. It works for Reels, TikTok, YouTube, MLS, all of it.",
+    value: "Agents are saving two to five hundred bucks per listing versus hiring a videographer. We've already created over twelve thousand videos. Works for Reels, TikTok, YouTube, MLS, all of it.",
     ask: "Are you currently using video for your listings, or is that something you've been thinking about?",
   },
   "clinix-agent": {
     hook: "we help healthcare organizations recover lost revenue by automating denial appeals and resubmissions",
-    value: "We stop denials before they happen with eligibility guardrails, and when they do happen, we auto-generate appeal packets tailored to each payer. Plus, it's success-based pricing, so you only pay when we actually recover money.",
-    ask: "What does your denial rate look like right now? And how much time is your billing team spending on appeals?",
+    value: "We stop denials before they happen with eligibility guardrails. And when they do happen, we auto-generate appeal packets tailored to each payer. Plus it's success-based pricing, so you only pay when we actually recover money.",
+    ask: "What does your denial rate look like right now?",
   },
   "clinix-ai": {
     hook: "we automate clinical documentation and coding for healthcare providers",
-    value: "Providers are saving two to three hours a day on documentation. The AI generates ICD-10, CPT, and DSM-5 codes directly from clinical notes, and it integrates right into your EHR.",
-    ask: "How much time are your providers spending on documentation after hours? That's usually the pain point we hear most.",
+    value: "Providers are saving two to three hours a day on documentation. The AI generates ICD-10, CPT, and DSM-5 codes directly from clinical notes, and it plugs right into your EHR.",
+    ask: "How much time are your providers spending on documentation after hours?",
   },
   "red-team-atom": {
     hook: "we've built the first quantum-ready autonomous red team platform",
-    value: "Instead of annual pen tests, we run continuous adversarial simulations with post-quantum cryptography and MITRE ATLAS heatmapping. It's real-time AI and quantum attack telemetry across your whole stack.",
-    ask: "How are you thinking about post-quantum readiness right now? A lot of teams are starting to take the harvest-now-decrypt-later threat seriously.",
+    value: "Instead of annual pen tests, we run continuous adversarial simulations with post-quantum cryptography and MITRE ATLAS heatmapping. Real-time AI and quantum attack telemetry across your whole stack.",
+    ask: "How are you guys thinking about post-quantum readiness right now?",
   },
 };
 
-function buildHumanTwiML(contactName: string, companyName: string, productSlug: string): string {
+function buildTwiML(contactName: string, companyName: string, productSlug: string): string {
   const product = PRODUCT_HOOKS[productSlug] || PRODUCT_HOOKS["antimatter-ai"];
   const firstName = contactName.split(" ")[0] || "there";
 
-  // Natural, conversational script with SSML prosody controls
-  // Uses Amazon Neural voice (Matthew) with pauses, emphasis, and natural phrasing
+  // Clean TwiML - NO <speak> or <prosody> tags inside <Say>
+  // Twilio handles SSML wrapping automatically for Polly Neural voices
+  // Use <break> tags directly inside <Say> for natural pauses
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="medium">
-        Hey ${firstName}, <break time="200ms"/> this is Alex from Antimatter AI.
-        <break time="350ms"/>
-        Hope I'm not catching you at a bad time?
-        <break time="1500ms"/>
-      </prosody>
-    </speak>
-  </Say>
-  <Pause length="2"/>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="97%">
-        Yeah, so, <break time="150ms"/> the reason I'm reaching out is, <break time="200ms"/>
-        ${product.hook}. <break time="300ms"/>
-        And I came across ${companyName} and thought there might be a really good fit.
-        <break time="400ms"/>
-      </prosody>
-    </speak>
-  </Say>
-  <Pause length="2"/>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="95%">
-        ${product.value}
-        <break time="500ms"/>
-      </prosody>
-    </speak>
-  </Say>
-  <Pause length="2"/>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="medium">
-        ${product.ask}
-        <break time="2000ms"/>
-      </prosody>
-    </speak>
-  </Say>
+  <Say voice="Polly.Matthew-Neural">Hey ${firstName}, <break time="200ms"/> this is Alex from Antimatter AI. <break time="300ms"/> Hope I'm not catching you at a bad time?</Say>
   <Pause length="3"/>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="95%">
-        I know you're busy, so I'll keep it quick. <break time="200ms"/>
-        Would it make sense to set up a fifteen minute call later this week?
-        <break time="200ms"/>
-        I can show you exactly how this works for a company like ${companyName}.
-        <break time="1500ms"/>
-      </prosody>
-    </speak>
-  </Say>
-  <Pause length="3"/>
-  <Say voice="Polly.Matthew-Neural">
-    <speak>
-      <prosody rate="medium">
-        Alright, <break time="150ms"/> well I appreciate your time ${firstName}.
-        <break time="200ms"/>
-        I'll shoot you a quick email with some details and a link to book time if that works.
-        <break time="300ms"/>
-        Have a great rest of your day.
-      </prosody>
-    </speak>
-  </Say>
+  <Say voice="Polly.Matthew-Neural">Yeah so, <break time="150ms"/> quick reason for the call. <break time="200ms"/> I came across ${companyName} and, <break time="100ms"/> ${product.hook}. <break time="200ms"/> Thought there might be a really good fit here.</Say>
+  <Pause length="2"/>
+  <Say voice="Polly.Matthew-Neural">${product.value}</Say>
+  <Pause length="2"/>
+  <Say voice="Polly.Matthew-Neural">${product.ask}</Say>
+  <Pause length="4"/>
+  <Say voice="Polly.Matthew-Neural">I know you're busy so I'll keep it quick. <break time="200ms"/> Would it make sense to set up a fifteen minute call later this week? <break time="200ms"/> I can show you exactly how this works for a company like ${companyName}.</Say>
+  <Pause length="4"/>
+  <Say voice="Polly.Matthew-Neural">Alright, <break time="150ms"/> well I appreciate your time ${firstName}. <break time="200ms"/> I'll shoot you a quick email with some details and a link to book time if that works. <break time="300ms"/> Have a great rest of your day.</Say>
 </Response>`;
 }
 
@@ -145,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       accountSid: TWILIO_ACCOUNT_SID,
     });
 
-    const twiml = buildHumanTwiML(
+    const twiml = buildTwiML(
       contactName || "there",
       companyName || "your company",
       productSlug || "antimatter-ai"
