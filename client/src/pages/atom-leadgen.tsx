@@ -1193,23 +1193,44 @@ export default function AtomLeadGen() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  className="w-full gap-2"
-                  onClick={handleStartCall}
-                  disabled={isLoading || !companyName || !contactName || !productSlug}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating call simulation...
-                    </>
-                  ) : (
-                    <>
-                      <PhoneCall className="w-4 h-4" />
-                      Start ATOM Call
-                    </>
-                  )}
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleStartCall}
+                    disabled={isLoading || !companyName || !contactName || !productSlug}
+                  >
+                    {isLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />Simulating...</>
+                    ) : (
+                      <><Brain className="w-4 h-4" />AI Simulate</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                    onClick={async () => {
+                      if (!phoneNumber) {
+                        toast({ title: "Phone required", description: "Enter a phone number to dial", variant: "destructive" });
+                        return;
+                      }
+                      try {
+                        const res = await apiRequest("POST", "/api/atom-leadgen/call", {
+                          phoneNumber,
+                          contactName,
+                          companyName,
+                          productSlug,
+                        });
+                        const data = await res.json();
+                        toast({ title: "Call initiated", description: `Dialing ${contactName || phoneNumber}... SID: ${data.callSid?.slice(-6)}` });
+                      } catch (err: any) {
+                        toast({ title: "Call failed", description: err.message, variant: "destructive" });
+                      }
+                    }}
+                    disabled={!phoneNumber || !companyName}
+                  >
+                    <Phone className="w-4 h-4" />Dial (Twilio)
+                  </Button>
+                </div>
 
                 {isLoading && (
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
