@@ -24,6 +24,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import type { Product } from "@shared/schema";
+import { HumeVoiceCallWrapper } from "@/components/HumeVoiceCall";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1096,11 +1097,17 @@ export default function AtomLeadGen() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <TabsList className="grid grid-cols-4 w-full max-w-lg">
           <TabsTrigger value="campaign">Campaign</TabsTrigger>
+          <TabsTrigger value="voice">
+            <span className="flex items-center gap-1.5">
+              <Radio className="w-3 h-3" />
+              Live Voice
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="live" disabled={!activeResult}>
             <span className="flex items-center gap-1.5">
-              Live Call
+              Sim Call
               {activeResult && !queue.find((q) => q.id === activeCallId && q.status === "completed") && (
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               )}
@@ -1108,6 +1115,16 @@ export default function AtomLeadGen() {
           </TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
+
+        {/* ── TAB: Live Voice (Hume EVI) ── */}
+        <TabsContent value="voice" className="mt-4">
+          <HumeVoiceCallWrapper
+            companyName={companyName || "Target Company"}
+            contactName={contactName || "Decision Maker"}
+            productName={products.find(p => p.slug === productSlug)?.name || "Antimatter AI"}
+            productSlug={productSlug || "antimatter-ai"}
+          />
+        </TabsContent>
 
         {/* ── TAB 1: Campaign ── */}
         <TabsContent value="campaign" className="mt-4 space-y-4">
