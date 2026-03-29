@@ -945,6 +945,137 @@ function AnalyticsDashboard({ calls }: { calls: CallRecord[] }) {
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
+// ─── Call History Card ──────────────────────────────────────────────────────────
+
+function CallHistoryCard({ call, qualification, sentimentTimeline, intentTimeline, tones, recommendations, transcript }: {
+  call: CallRecord;
+  qualification: any;
+  sentimentTimeline: any[];
+  intentTimeline: any[];
+  tones: any;
+  recommendations: string[];
+  transcript: any[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const callTypeLabels: Record<string, string> = { "simulated": "AI Simulation", "twilio-dial": "Twilio Call", "hume-voice": "Live Voice" };
+  const callTypeColors: Record<string, string> = { "simulated": "bg-primary/15 text-primary", "twilio-dial": "bg-emerald-500/15 text-emerald-500", "hume-voice": "bg-purple-500/15 text-purple-500" };
+  const outcomeColors: Record<string, string> = { "qualified": "bg-emerald-500/15 text-emerald-500", "follow-up": "bg-amber-500/15 text-amber-500", "no-interest": "bg-muted text-muted-foreground", "callback": "bg-blue-500/15 text-blue-500", "pending": "bg-muted text-muted-foreground" };
+
+  const tonesArray = Object.entries(tones).map(([name, value]) => ({ name, value: Math.round(Number(value)) })).sort((a, b) => b.value - a.value).slice(0, 5);
+
+  return (
+    <Card className="border-border/50">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-semibold">{call.contactName || "Unknown"}</h3>
+              <span className="text-xs text-muted-foreground">at {call.companyName}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <Badge className={callTypeColors[call.callType] || "bg-muted"} variant="secondary">{callTypeLabels[call.callType] || call.callType}</Badge>
+              <Badge className={outcomeColors[call.outcome] || "bg-muted"} variant="secondary">{call.outcome}</Badge>
+              {call.sentiment > 0 && <Badge variant="outline" className="text-[10px] gap-1"><Activity className="w-3 h-3" />Sent: {call.sentiment}</Badge>}
+              {call.buyerIntent > 0 && <Badge variant="outline" className="text-[10px] gap-1"><Target className="w-3 h-3" />Intent: {call.buyerIntent}</Badge>}
+              {call.duration > 0 && <Badge variant="outline" className="text-[10px] gap-1"><Clock className="w-3 h-3" />{formatDuration(call.duration)}</Badge>}
+              {call.phoneNumber && <Badge variant="outline" className="text-[10px]">{call.phoneNumber}</Badge>}
+            </div>
+            <p className="text-[10px] text-muted-foreground">{new Date(call.createdAt).toLocaleString()}</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </div>
+
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-border/50 space-y-4">
+            {(call.sentiment > 0 || call.buyerIntent > 0) && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-2 rounded-lg bg-muted/30 text-center"><p className="text-lg font-bold">{call.sentiment}</p><p className="text-[10px] text-muted-foreground">Sentiment</p></div>
+                <div className="p-2 rounded-lg bg-muted/30 text-center"><p className="text-lg font-bold">{call.buyerIntent}</p><p className="text-[10px] text-muted-foreground">Buyer Intent</p></div>
+                <div className="p-2 rounded-lg bg-muted/30 text-center"><p className="text-lg font-bold">{qualification.score || 0}</p><p className="text-[10px] text-muted-foreground">Qual Score</p></div>
+                <div className="p-2 rounded-lg bg-muted/30 text-center"><p className="text-lg font-bold">{formatDuration(call.duration)}</p><p className="text-[10px] text-muted-foreground">Duration</p></div>
+              </div>
+            )}
+            {sentimentTimeline.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Sentiment</p>
+                  <ResponsiveContainer width="100%" height={100}>
+                    <LineChart data={sentimentTimeline}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 11 }} />
+                      <Line type="monotone" dataKey="score" stroke="hsl(190, 95%, 50%)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Buyer Intent</p>
+                  <ResponsiveContainer width="100%" height={100}>
+                    <LineChart data={intentTimeline}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 11 }} />
+                      <Line type="monotone" dataKey="score" stroke="hsl(150, 60%, 45%)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+            {tonesArray.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Emotional Tones</p>
+                <div className="space-y-1">{tonesArray.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[10px] w-20 text-muted-foreground capitalize">{t.name}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${t.value}%` }} /></div>
+                    <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{t.value}%</span>
+                  </div>
+                ))}</div>
+              </div>
+            )}
+            {(qualification.keySignals?.length > 0 || qualification.objections?.length > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                {qualification.keySignals?.length > 0 && (
+                  <div><p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Key Signals</p>
+                    {qualification.keySignals.map((s: string, i: number) => (<div key={i} className="flex items-start gap-1.5 mb-1"><CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" /><span className="text-xs">{s}</span></div>))}
+                  </div>
+                )}
+                {qualification.objections?.length > 0 && (
+                  <div><p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Objections</p>
+                    {qualification.objections.map((o: string, i: number) => (<div key={i} className="flex items-start gap-1.5 mb-1"><AlertTriangle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" /><span className="text-xs">{o}</span></div>))}
+                  </div>
+                )}
+              </div>
+            )}
+            {recommendations.length > 0 && (
+              <div><p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">AI Recommendations</p>
+                {recommendations.map((r, i) => (<div key={i} className="flex items-start gap-1.5 mb-1"><Brain className="w-3 h-3 text-primary mt-0.5 shrink-0" /><span className="text-xs">{r}</span></div>))}
+              </div>
+            )}
+            {Array.isArray(transcript) && transcript.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Full Transcript</p>
+                <div className="max-h-[300px] overflow-y-auto space-y-2 p-2 rounded-lg bg-muted/20">
+                  {transcript.map((msg: any, i: number) => (
+                    <div key={i} className={`flex gap-2 ${msg.speaker === "ATOM" ? "" : "flex-row-reverse"}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold ${msg.speaker === "ATOM" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{msg.speaker === "ATOM" ? "A" : "C"}</div>
+                      <div className={`max-w-[80%] rounded-lg p-2 text-xs ${msg.speaker === "ATOM" ? "bg-primary/10" : "bg-muted"}`}>{msg.text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {call.callSid && <p className="text-[10px] text-muted-foreground">Call SID: {call.callSid}</p>}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+
 
 export default function AtomLeadGen() {
   const [location] = useLocation();
@@ -1097,7 +1228,7 @@ export default function AtomLeadGen() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 w-full max-w-lg">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
           <TabsTrigger value="campaign">Campaign</TabsTrigger>
           <TabsTrigger value="voice">
             <span className="flex items-center gap-1.5">
@@ -1114,6 +1245,12 @@ export default function AtomLeadGen() {
             </span>
           </TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="history">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3" />
+              History ({calls.length})
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         {/* ── TAB: Live Voice (Hume EVI) ── */}
@@ -1221,6 +1358,29 @@ export default function AtomLeadGen() {
                           productSlug,
                         });
                         const data = await res.json();
+                        // Save Twilio call to history
+                        store.addCall({
+                          id: Date.now(),
+                          companyName,
+                          contactName,
+                          contactTitle: "",
+                          productSlug,
+                          phoneNumber,
+                          callType: "twilio-dial",
+                          callSid: data.callSid || "",
+                          transcript: "[Live Twilio call - no transcript available]",
+                          sentimentTimeline: "[]",
+                          intentTimeline: "[]",
+                          emotionalTones: "{}",
+                          qualification: JSON.stringify({ qualified: false, score: 0, keySignals: [], objections: [] }),
+                          outcome: "pending",
+                          duration: 0,
+                          aiRecommendations: "[]",
+                          createdAt: new Date().toISOString(),
+                          status: "completed",
+                          sentiment: 0,
+                          buyerIntent: 0,
+                        });
                         toast({ title: "Call initiated", description: `Dialing ${contactName || phoneNumber}... SID: ${data.callSid?.slice(-6)}` });
                       } catch (err: any) {
                         toast({ title: "Call failed", description: err.message, variant: "destructive" });
@@ -1325,6 +1485,40 @@ export default function AtomLeadGen() {
         {/* ── TAB 3: Analytics ── */}
         <TabsContent value="analytics" className="mt-4">
           <AnalyticsDashboard calls={calls} />
+        </TabsContent>
+
+        {/* ── TAB 4: Call History ── */}
+        <TabsContent value="history" className="mt-4 space-y-3">
+          {calls.length === 0 ? (
+            <Card className="border-border/50">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Clock className="w-8 h-8 mb-3 opacity-40" />
+                <p className="text-sm">No call history yet</p>
+                <p className="text-xs mt-1">Run a campaign or dial a prospect to see history here</p>
+              </CardContent>
+            </Card>
+          ) : (
+            calls.map((call) => {
+              const qual = (() => { try { return JSON.parse(call.qualification); } catch { return { score: 0, keySignals: [], objections: [] }; } })();
+              const sentTL = (() => { try { return JSON.parse(call.sentimentTimeline); } catch { return []; } })();
+              const intentTL = (() => { try { return JSON.parse(call.intentTimeline); } catch { return []; } })();
+              const tones = (() => { try { return JSON.parse(call.emotionalTones); } catch { return {}; } })();
+              const recs = (() => { try { return JSON.parse(call.aiRecommendations); } catch { return []; } })();
+              const transcript = (() => { try { return JSON.parse(call.transcript); } catch { return []; } })();
+              return (
+                <CallHistoryCard
+                  key={call.id}
+                  call={call}
+                  qualification={qual}
+                  sentimentTimeline={sentTL}
+                  intentTimeline={intentTL}
+                  tones={tones}
+                  recommendations={recs}
+                  transcript={transcript}
+                />
+              );
+            })
+          )}
         </TabsContent>
       </Tabs>
     </div>
