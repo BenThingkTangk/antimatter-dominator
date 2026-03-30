@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const BRIDGE_URL = "https://atom-voice-bridge.fly.dev";
+const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LeadStatus = "queued" | "research" | "live" | "done";
