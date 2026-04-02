@@ -58,15 +58,28 @@ function ContactCard({ contact }: { contact: Contact }) {
             </a>
           )}
           {contact.phone && (
-            <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
+            <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-emerald-400 hover:underline">
               <Phone className="w-3 h-3" />{contact.phone}
             </a>
           )}
+          {(contact as any).mobilePhone && (contact as any).mobilePhone !== contact.phone && (
+            <a href={`tel:${(contact as any).mobilePhone}`} className="flex items-center gap-1 text-[11px] text-green-400 hover:underline">
+              <Phone className="w-3 h-3" />📱 {(contact as any).mobilePhone}
+            </a>
+          )}
         </div>
+        {(contact as any).city && (
+          <p className="text-[10px] text-muted-foreground mt-0.5">📍 {(contact as any).city}{(contact as any).state ? `, ${(contact as any).state}` : ''}</p>
+        )}
         <div className="flex gap-1.5 mt-1">
           {contact.seniority && <Badge variant="outline" className="text-[9px]">{contact.seniority}</Badge>}
           {contact.department && <Badge variant="outline" className="text-[9px]">{contact.department}</Badge>}
           <Badge variant="outline" className="text-[9px]">{contact.confidence}% confidence</Badge>
+          {(contact as any).source && (
+            <Badge className={`text-[9px] ${(contact as any).source === 'apollo' ? 'bg-purple-500/15 text-purple-400' : (contact as any).source === 'both' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-orange-500/15 text-orange-400'}`}>
+              {(contact as any).source === 'both' ? 'Apollo + Hunter' : (contact as any).source === 'apollo' ? 'Apollo' : 'Hunter'}
+            </Badge>
+          )}
         </div>
       </div>
     </div>
