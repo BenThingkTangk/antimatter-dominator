@@ -1322,6 +1322,7 @@ export default function AtomCampaign() {
       const researchRes = await fetch(`${BRIDGE_URL}/campaign/${id}/research`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: "{}",
       });
 
       if (!researchRes.ok) {
@@ -1383,7 +1384,7 @@ export default function AtomCampaign() {
 
   const handlePause = useCallback(async () => {
     try {
-      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/pause`, { method: "POST" });
+      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/pause`, { method: "POST", headers: { "Content-Type": "text/plain" } });
       setPhase("paused");
     } catch {
       addToast("Failed to pause campaign.", "error");
@@ -1392,7 +1393,7 @@ export default function AtomCampaign() {
 
   const handleResume = useCallback(async () => {
     try {
-      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/resume`, { method: "POST" });
+      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/resume`, { method: "POST", headers: { "Content-Type": "text/plain" } });
       setPhase("active");
     } catch {
       addToast("Failed to resume campaign.", "error");
