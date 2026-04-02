@@ -1359,6 +1359,7 @@ export default function AtomCampaign() {
       const res = await fetch(`${BRIDGE_URL}/campaign/${campaignId}/launch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: "{}",
       });
 
       if (!res.ok) {
