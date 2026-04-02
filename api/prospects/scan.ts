@@ -226,17 +226,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { industry, productFocus } = req.body;
 
-    // Step 1: AI generates prospect companies with domains
+    // Step 1: AI generates real prospect companies based on product and industry
+    const isCustomProduct = productFocus && productFocus !== "all" && productFocus.trim().length > 0;
+    
+    const systemPrompt = `You are an elite B2B sales intelligence analyst. Your job is to identify REAL companies that would be ideal prospects for a specific product or service.
+
+Rules:
+- Only return REAL companies with real website domains
+- Focus on companies most likely to NEED and BUY the product
+- Consider their current tech stack, pain points, contract cycles, and buying signals
+- Rank by likelihood to buy (score 0-100)
+- Include the company's actual website domain (e.g. "walmart.com", "ge.com")
+- Return ONLY a valid JSON array. No markdown, no code blocks, no explanation.`;
+
+    let userPrompt: string;
+    if (isCustomProduct) {
+      userPrompt = `Find 5 real companies${industry && industry !== "All Industries" ? ` in the ${industry} industry` : ""} that would be the best prospects for selling them ${productFocus}.
+
+Think about:
+- What does ${productFocus} do? Who buys it?
+- Which companies have the pain points ${productFocus} solves?
+- Which companies might be using a competitor and could be displaced?
+- Which companies are at a size/stage where they'd need this?
+
+Return JSON array:
+[{"companyName":"string","domain":"company-website.com","industry":"string","score":0-100,"reason":"1-2 sentences explaining exactly why this company would buy ${productFocus}","matchedProducts":["${productFocus.toLowerCase().replace(/\s+/g, '-')}"],"signals":["buying signal 1","buying signal 2"],"companySize":"enterprise|mid-market|smb","urgency":"critical|high|medium|low"}]`;
+    } else {
+      userPrompt = `Find 5 real companies${industry && industry !== "All Industries" ? ` in the ${industry} industry` : ""} that would be ideal prospects for Antimatter AI's product ecosystem:
+- Antimatter AI Platform: Custom AI development and digital product studio
+- ATOM Enterprise: Enterprise AI deployment framework (on-prem, VPC, edge)
+- Vidzee: AI cinematic video from listing photos (real estate)
+- Clinix Agent: AI healthcare billing and denied claims recovery
+- Clinix AI: AI clinical documentation automation
+- Red Team ATOM: Quantum-ready autonomous cybersecurity red teaming
+
+Return JSON array:
+[{"companyName":"string","domain":"company-website.com","industry":"string","score":0-100,"reason":"1-2 sentences why they need a specific product","matchedProducts":["product-slug"],"signals":["signal1","signal2"],"companySize":"enterprise|mid-market|smb","urgency":"critical|high|medium|low"}]
+Use slugs: antimatter-ai, atom-enterprise, vidzee, clinix-agent, clinix-ai, red-team-atom`;
+    }
+
     const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a B2B prospect research AI. Return ONLY a valid JSON array. No markdown, no code blocks. Raw JSON only." },
-          { role: "user", content: `Generate 5 real prospect companies${industry && industry !== "All Industries" ? ` in ${industry}` : ""}${productFocus && productFocus !== "all" && productFocus ? ` that would benefit from ${productFocus}` : " for Antimatter AI ecosystem (AI dev, enterprise AI deployment, real estate video, healthcare billing, clinical documentation, quantum security)"}. JSON array: [{"companyName":"string","domain":"company-website.com","industry":"string","score":0-100,"reason":"1 sentence why they need this product","matchedProducts":["slug"],"signals":["signal"],"companySize":"enterprise|mid-market|smb","urgency":"critical|high|medium|low"}]. Use slugs: antimatter-ai, atom-enterprise, vidzee, clinix-agent, clinix-ai, red-team-atom. IMPORTANT: Include the company's real website domain (e.g. "unitedhealth.com", "jpmorgan.com"). Return ONLY JSON.` },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
-        temperature: 0.4,
+        temperature: 0.3,
       }),
     });
     const aiData = await aiRes.json();
