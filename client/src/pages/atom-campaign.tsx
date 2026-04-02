@@ -3,57 +3,98 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type LeadStatus = "queued" | "research" | "live" | "done";
-type CallStage = "idle" | "research" | "evaluation" | "warm_transfer";
-type SidebarItem = "campaign" | "target" | "live" | "handoff" | "outcomes";
+const PRODUCTS = [
+  "Antimatter AI Platform",
+  "ATOM Enterprise",
+  "Vidzee",
+  "Clinix Agent",
+  "Red Team ATOM",
+];
 
-interface Lead {
-  id: number;
-  name: string;
-  contact: string;
-  title: string;
-  phone: string;
-  region: string;
-  metrics: string;
-  spend: string;
-  stack: string;
-  notes: string;
-  status: LeadStatus;
+const GEO_OPTIONS = ["US", "EU", "US + EU", "Global"];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Phase = "setup" | "researching" | "review" | "active" | "paused" | "complete";
+type TargetStatus = "queued" | "calling" | "connected" | "completed" | "failed" | "skipped";
+type Disposition = "qualified" | "not_interested" | "no_answer" | "callback" | "hot_lead";
+
+interface CampaignForm {
+  brief: string;
+  targetIndustry: string;
+  targetGeo: string;
+  targetCount: number;
+  productSlug: string;
+  alertEmail: string;
 }
 
-interface TranscriptMessage {
+interface DecisionMaker {
+  name: string;
+  title: string;
+  linkedin?: string;
+}
+
+interface Target {
+  id: string;
+  rank: number;
+  companyName: string;
+  industry: string;
+  size: string;
+  location: string;
+  decisionMaker: DecisionMaker;
+  email?: string;
+  phone?: string;
+  tags: string[];
+  status: TargetStatus;
+}
+
+interface TranscriptLine {
   speaker: "ATOM" | "Prospect";
   text: string;
   ts: number;
 }
 
-interface CallState {
-  isActive: boolean;
-  isComplete: boolean;
-  callSid: string | null;
-  transcript: TranscriptMessage[];
+interface CallHistoryEntry {
+  targetId: string;
+  companyName: string;
+  contactName: string;
+  contactTitle: string;
+  duration: number; // seconds
   sentiment: number;
-  buyerIntent: number;
-  stage: CallStage;
-  keySignals: string[];
-  activeLeadId: number | null;
+  intent: number;
+  disposition: Disposition;
+  transcript: TranscriptLine[];
+  expanded: boolean;
 }
 
-interface HandoffPacket {
-  buyer: string;
-  currentStack: string;
-  keyPain: string;
-  offerResonance: string;
-  closeAction: string;
+interface HotLead {
+  targetId: string;
+  companyName: string;
+  contactName: string;
+  sentiment: number;
+  intent: number;
+  buyingSignals: string[];
 }
 
-interface CompiledPlan {
-  targetSignal: string;
-  offerHook: string;
-  qualificationGate: string;
-  regionScope: string;
-  dailyDialCap: string;
+interface LiveCallState {
+  targetId: string | null;
+  companyName: string;
+  contactName: string;
+  contactTitle: string;
+  sentiment: number;
+  intent: number;
+  callStage: string;
+  transcript: TranscriptLine[];
+}
+
+interface CampaignStats {
+  dialed: number;
+  connected: number;
+  qualified: number;
+  hotLeads: number;
+  remaining: number;
+  total: number;
+  avgSentiment: number;
+  avgIntent: number;
 }
 
 interface ToastMsg {
@@ -62,114 +103,73 @@ interface ToastMsg {
   type: "error" | "info" | "success";
 }
 
-// ─── Sample Data ──────────────────────────────────────────────────────────────
-const INITIAL_LEADS: Lead[] = [
-  {
-    id: 1,
-    name: "NovaCart",
-    contact: "Jane Doe",
-    title: "VP Engineering",
-    phone: "",
-    region: "US",
-    metrics: "3.2 TB/mo",
-    spend: "$12k/mo",
-    stack: "Cloudflare CDN + WAF",
-    notes: "Likely renewal inside 9 months.",
-    status: "queued",
-  },
-  {
-    id: 2,
-    name: "Streamly Media",
-    contact: "Ravi Patel",
-    title: "Director of Platform",
-    phone: "",
-    region: "EU",
-    metrics: "8.4 TB/mo",
-    spend: "$26k/mo",
-    stack: "Multi-CDN",
-    notes: "Performance-sensitive workloads and global reach.",
-    status: "queued",
-  },
-  {
-    id: 3,
-    name: "FinEdge Bank",
-    contact: "Sarah Müller",
-    title: "CTO",
-    phone: "",
-    region: "US",
-    metrics: "5.1 TB/mo",
-    spend: "$21k/mo",
-    stack: "Akamai + internal",
-    notes: "Security-first, compliance heavy.",
-    status: "queued",
-  },
-  {
-    id: 4,
-    name: "Omnishop",
-    contact: "Luis Hernandez",
-    title: "Head of Infrastructure",
-    phone: "",
-    region: "US",
-    metrics: "2.7 TB/mo",
-    spend: "$9k/mo",
-    stack: "CloudFront",
-    notes: "Cost optimization focus.",
-    status: "queued",
-  },
-];
+// ─── Style helpers ────────────────────────────────────────────────────────────
+const S = {
+  card: {
+    backgroundColor: "rgba(246,246,253,0.03)",
+    border: "1px solid rgba(246,246,253,0.10)",
+    borderRadius: 12,
+    padding: "20px 24px",
+  } as React.CSSProperties,
 
-const SIM_TRANSCRIPT: TranscriptMessage[] = [
-  {
-    speaker: "ATOM",
-    text: "Hi Jane, this is ATOM calling on behalf of Akamai. I wanted to quickly connect regarding NovaCart's current CDN arrangement with Cloudflare — do you have two minutes?",
-    ts: 0,
-  },
-  {
-    speaker: "Prospect",
-    text: "Sure, I have a couple minutes. What's this about exactly?",
-    ts: 2500,
-  },
-  {
-    speaker: "ATOM",
-    text: "Akamai can often match or beat current Cloudflare pricing, and in some cases buy out up to six months of remaining contract term, subject to approval. Given your renewal window in the next nine months, the timing seemed right.",
-    ts: 5000,
-  },
-  {
-    speaker: "Prospect",
-    text: "Interesting. We're actually reviewing our CDN spend. Our Cloudflare costs have climbed this year.",
-    ts: 8000,
-  },
-  {
-    speaker: "ATOM",
-    text: "That is helpful. Akamai can often match or beat current Cloudflare pricing, and in some cases buy out up to six months of remaining contract term, subject to approval.",
-    ts: 10500,
-  },
-  {
-    speaker: "Prospect",
-    text: "If you can make the migration safe and the economics work, I would look at it before renewal.",
-    ts: 13000,
-  },
-  {
-    speaker: "ATOM",
-    text: "Great. I am going to bring an Akamai specialist into the conversation so they can review pricing and next steps.",
-    ts: 15000,
-  },
-];
+  cardSmall: {
+    backgroundColor: "rgba(246,246,253,0.03)",
+    border: "1px solid rgba(246,246,253,0.10)",
+    borderRadius: 12,
+    padding: "14px 18px",
+  } as React.CSSProperties,
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function getSentimentLabel(score: number): string {
-  if (score >= 70) return "Purchase ready";
-  if (score >= 50) return "Positive";
-  if (score >= 30) return "Neutral";
-  return "Resistant";
-}
+  primaryBtn: {
+    background: "linear-gradient(93.92deg, #8587e3 -13.51%, #4c4dac 40.91%, #696aac 113.69%)",
+    boxShadow: "0px 0px 10px #696aac, inset 0px 0px 2px rgba(255,255,255,0.61)",
+    border: "none",
+    borderRadius: 40,
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "box-shadow 0.2s ease",
+    fontFamily: "inherit",
+  } as React.CSSProperties,
 
-function getBuyerIntentLabel(score: number): string {
-  if (score >= 70) return "Purchase ready";
-  if (score >= 50) return "Evaluating";
-  if (score >= 30) return "Curious";
-  return "Cold";
-}
+  secondaryBtn: {
+    background: "transparent",
+    border: "2px solid #8587e3",
+    borderRadius: 40,
+    color: "#a2a3e9",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    transition: "background 0.15s ease",
+  } as React.CSSProperties,
+
+  input: {
+    width: "100%",
+    backgroundColor: "rgba(246,246,253,0.04)",
+    border: "1px solid rgba(246,246,253,0.12)",
+    borderRadius: 8,
+    padding: "10px 14px",
+    fontSize: 14,
+    color: "#f6f6fd",
+    outline: "none",
+    boxSizing: "border-box" as const,
+    fontFamily: "inherit",
+    transition: "border-color 0.15s",
+  } as React.CSSProperties,
+
+  label: {
+    display: "block",
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase" as const,
+    color: "rgba(246,246,253,0.5)",
+    marginBottom: 6,
+  } as React.CSSProperties,
+
+  accentText: { color: "#a2a3e9" } as React.CSSProperties,
+  highlightText: { color: "#c7c8f2" } as React.CSSProperties,
+  mutedText: { color: "rgba(246,246,253,0.5)" } as React.CSSProperties,
+};
 
 function getGaugeColor(score: number): string {
   if (score >= 60) return "#696aac";
@@ -177,2163 +177,1379 @@ function getGaugeColor(score: number): string {
   return "#ef4444";
 }
 
-function getStageInfo(stage: CallStage) {
-  switch (stage) {
-    case "research":
-      return {
-        label: "Research → evaluation",
-        desc: "The prospect is validating migration risk, current Cloudflare spend, and whether the Akamai buyout offer is real.",
-      };
-    case "evaluation":
-      return {
-        label: "Evaluation → warm transfer",
-        desc: "Prospect is validating offer economics and migration safety before agreeing to speak with a specialist.",
-      };
-    case "warm_transfer":
-      return {
-        label: "Warm transfer",
-        desc: "ATOM is steering the call with offer framing and qualification prompts.",
-      };
-    default:
-      return { label: "Idle", desc: "No active call." };
+function getStatusColor(status: TargetStatus): string {
+  switch (status) {
+    case "queued": return "#6b7280";
+    case "calling": return "#f59e0b";
+    case "connected": return "#3b82f6";
+    case "completed": return "#22c55e";
+    case "failed": return "#ef4444";
+    case "skipped": return "#4b5563";
+    default: return "#6b7280";
   }
 }
 
-function isValidPhone(phone: string): boolean {
-  const cleaned = phone.replace(/\s/g, "");
-  return cleaned.length >= 7 && /^\+?[\d\-().]+$/.test(cleaned);
+function getDispositionColor(d: Disposition): string {
+  switch (d) {
+    case "qualified": return "#22c55e";
+    case "hot_lead": return "#696aac";
+    case "not_interested": return "#ef4444";
+    case "no_answer": return "#6b7280";
+    case "callback": return "#f59e0b";
+    default: return "#6b7280";
+  }
 }
 
-function parseCampaignBrief(brief: string, region: string, dailyLimit: string): CompiledPlan {
-  // Extract key signals from the brief text
-  const techMatch = brief.match(/(?:using|for)\s+([\w\s]+?CDN[\w\s]*?)(?:\s+and|\s+for|\.|,|$)/i);
-  const offerMatch = brief.match(/offering[^.]*?(?:match[^.]*?(?:beat|price)[^.]*?|buy out[^.]*?)/i);
-  const buyoutMatch = brief.match(/(\d+)\s*months?\s*(?:remaining|of)/i);
+function getDispositionLabel(d: Disposition): string {
+  switch (d) {
+    case "qualified": return "Qualified";
+    case "hot_lead": return "Hot Lead";
+    case "not_interested": return "Not Interested";
+    case "no_answer": return "No Answer";
+    case "callback": return "Callback";
+    default: return d;
+  }
+}
 
-  const targetSignal = techMatch
-    ? `${techMatch[1].trim()} customers with renewal inside 12 months`
-    : "Prospects matching campaign technology criteria";
+function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
-  const offerHook = buyoutMatch
-    ? `Price match + buyout up to ${buyoutMatch[1]} months remaining contract`
-    : offerMatch
-    ? offerMatch[0].trim()
-    : "Competitive offer — see campaign brief for details";
+function getPhaseLabel(phase: Phase): string {
+  switch (phase) {
+    case "setup": return "Idle";
+    case "researching": return "Researching";
+    case "review": return "Ready";
+    case "active": return "Active";
+    case "paused": return "Paused";
+    case "complete": return "Complete";
+  }
+}
 
-  return {
-    targetSignal,
-    offerHook,
-    qualificationGate: "Buyer intent ≥ 70 before warm transfer",
-    regionScope: region,
-    dailyDialCap: `${dailyLimit} dials/day`,
+function getPhaseBadgeStyle(phase: Phase): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "4px 12px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: "0.04em",
   };
+  switch (phase) {
+    case "setup": return { ...base, background: "rgba(107,114,128,0.15)", color: "#9ca3af", border: "1px solid rgba(107,114,128,0.3)" };
+    case "researching": return { ...base, background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" };
+    case "review": return { ...base, background: "rgba(105,106,172,0.18)", color: "#a2a3e9", border: "1px solid rgba(105,106,172,0.4)" };
+    case "active": return { ...base, background: "rgba(34,197,94,0.12)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" };
+    case "paused": return { ...base, background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" };
+    case "complete": return { ...base, background: "rgba(59,130,246,0.12)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.3)" };
+  }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatusDot({ status }: { status: LeadStatus | "idle" | "live" | "complete" | "ready" | "waiting" | "healthy" | "active" }) {
-  const colorMap: Record<string, string> = {
-    queued: "#22c55e",
-    research: "#f59e0b",
-    live: "#3b82f6",
-    done: "#6b7280",
-    idle: "#6b7280",
-    complete: "#3b82f6",
-    ready: "#22c55e",
-    waiting: "#f59e0b",
-    healthy: "#22c55e",
-    active: "#22c55e",
-  };
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        width: 7,
-        height: 7,
-        borderRadius: "50%",
-        backgroundColor: colorMap[status] ?? "#6b7280",
-        flexShrink: 0,
-      }}
-    />
-  );
-}
-
-function GaugeBar({
-  value,
-  label,
-  subLabel,
-}: {
-  value: number;
-  label: string;
-  subLabel: string;
-}) {
-  const color = getGaugeColor(value);
-  return (
-    <div style={{ flex: 1 }}>
-      <div
-        style={{
-          fontSize: 10,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "#9ca3af",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 28,
-          fontWeight: 700,
-          color: "#fff",
-          lineHeight: 1.1,
-          marginBottom: 2,
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
-        {subLabel}
-      </div>
-      <div
-        style={{
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: "#2d2d2d",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${value}%`,
-            backgroundColor: color,
-            borderRadius: 2,
-            transition: "width 0.6s ease, background-color 0.4s ease",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function FilterTag({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "3px 10px",
-        borderRadius: 999,
-        border: "1px solid #374151",
-        fontSize: 11,
-        color: "#d1d5db",
-        backgroundColor: "#1f2937",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function LeadCard({
-  lead,
-  onDial,
-  onDelete,
-  onPhoneChange,
-  isDialing,
-}: {
-  lead: Lead;
-  onDial: (lead: Lead) => void;
-  onDelete: (id: number) => void;
-  onPhoneChange: (id: number, phone: string) => void;
-  isDialing: boolean;
-}) {
-  const statusLabel: Record<LeadStatus, string> = {
-    queued: "Queued",
-    research: "Research",
-    live: "Live",
-    done: "Done",
-  };
-
-  const phoneValid = isValidPhone(lead.phone);
-
-  return (
-    <div
-      style={{
-        backgroundColor: "#111827",
-        border: "1px solid #1f2937",
-        borderRadius: 8,
-        padding: "14px 16px",
-        marginBottom: 10,
-        position: "relative",
-      }}
-    >
-      {/* Delete button */}
-      <button
-        onClick={() => onDelete(lead.id)}
-        title="Remove lead"
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          width: 20,
-          height: 20,
-          borderRadius: "50%",
-          border: "1px solid #374151",
-          backgroundColor: "transparent",
-          color: "#6b7280",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 12,
-          lineHeight: 1,
-          padding: 0,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#ef444420";
-          e.currentTarget.style.color = "#ef4444";
-          e.currentTarget.style.borderColor = "#ef4444";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "transparent";
-          e.currentTarget.style.color = "#6b7280";
-          e.currentTarget.style.borderColor = "#374151";
-        }}
-      >
-        ×
-      </button>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 4,
-          paddingRight: 28,
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14, color: "#fff" }}>
-            {lead.name}
-          </div>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 1 }}>
-            {lead.contact} · {lead.title}
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 11,
-            color: "#9ca3af",
-            flexShrink: 0,
-          }}
-        >
-          <StatusDot status={lead.status} />
-          {statusLabel[lead.status]}
-        </div>
-      </div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
-        {lead.metrics} · {lead.region} · est. {lead.spend}
-      </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: "#9ca3af",
-          marginBottom: 10,
-          lineHeight: 1.5,
-        }}
-      >
-        {lead.stack} detected. {lead.notes}
-      </div>
-
-      {/* Phone number input */}
-      <div style={{ marginBottom: 10 }}>
-        <input
-          type="tel"
-          value={lead.phone}
-          onChange={(e) => onPhoneChange(lead.id, e.target.value)}
-          placeholder="+1..."
-          style={{
-            width: "100%",
-            backgroundColor: "#020202",
-            border: `1px solid ${lead.phone && !phoneValid ? "#ef4444" : "#374151"}`,
-            borderRadius: 6,
-            padding: "6px 10px",
-            fontSize: 12,
-            color: "#e5e7eb",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-        {lead.phone && !phoneValid && (
-          <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>
-            Enter a valid phone number
-          </div>
-        )}
-      </div>
-
-      <button
-        onClick={() => onDial(lead)}
-        disabled={isDialing || !phoneValid}
-        title={!phoneValid ? "Enter phone number to dial" : ""}
-        style={{
-          fontSize: 12,
-          fontWeight: 600,
-          padding: "5px 14px",
-          borderRadius: 6,
-          border: "1px solid #696aac",
-          backgroundColor: "transparent",
-          color: !phoneValid ? "#4b5563" : "#696aac",
-          borderColor: !phoneValid ? "#374151" : "#696aac",
-          cursor: isDialing || !phoneValid ? "not-allowed" : "pointer",
-          opacity: isDialing ? 0.5 : 1,
-          transition: "background-color 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          if (!isDialing && phoneValid)
-            (e.currentTarget.style.backgroundColor = "#696aac1a");
-        }}
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor = "transparent")
-        }
-      >
-        {!phoneValid ? "Enter phone number" : isDialing ? "Dialing…" : "Dial Twilio"}
-      </button>
-    </div>
-  );
-}
-
-function TranscriptLine({ msg }: { msg: TranscriptMessage }) {
-  const isAtom = msg.speaker === "ATOM";
-  return (
-    <div
-      style={{
-        padding: "10px 14px",
-        borderRadius: 8,
-        backgroundColor: isAtom ? "#1f2937" : "#111827",
-        border: `1px solid ${isAtom ? "#374151" : "#1f2937"}`,
-        marginBottom: 8,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: isAtom ? "#696aac" : "#9ca3af",
-          marginBottom: 4,
-          textTransform: "uppercase",
-        }}
-      >
-        {msg.speaker}
-      </div>
-      <div style={{ fontSize: 13, color: "#e5e7eb", lineHeight: 1.55 }}>
-        {msg.text}
-      </div>
-    </div>
-  );
-}
-
-function Toast({ toasts, onRemove }: { toasts: ToastMsg[]; onRemove: (id: number) => void }) {
+function ToastContainer({ toasts, onRemove }: { toasts: ToastMsg[]; onRemove: (id: number) => void }) {
   if (toasts.length === 0) return null;
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        zIndex: 1000,
-      }}
-    >
+    <div style={{ position: "fixed", bottom: 24, right: 24, display: "flex", flexDirection: "column", gap: 8, zIndex: 1000 }}>
       {toasts.map((t) => (
         <div
           key={t.id}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 16px",
-            borderRadius: 8,
-            backgroundColor: t.type === "error" ? "#1f0a0a" : t.type === "success" ? "#0a1f0a" : "#0a0f1f",
-            border: `1px solid ${t.type === "error" ? "#ef444440" : t.type === "success" ? "#22c55e40" : "#3b82f640"}`,
-            color: t.type === "error" ? "#fca5a5" : t.type === "success" ? "#86efac" : "#93c5fd",
-            fontSize: 13,
-            maxWidth: 340,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 16px", borderRadius: 10,
+            backgroundColor: t.type === "error" ? "rgba(239,68,68,0.12)" : t.type === "success" ? "rgba(34,197,94,0.12)" : "rgba(105,106,172,0.15)",
+            border: `1px solid ${t.type === "error" ? "rgba(239,68,68,0.35)" : t.type === "success" ? "rgba(34,197,94,0.35)" : "rgba(105,106,172,0.4)"}`,
+            color: t.type === "error" ? "#fca5a5" : t.type === "success" ? "#86efac" : "#c7c8f2",
+            fontSize: 13, maxWidth: 360,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+            backdropFilter: "blur(12px)",
           }}
         >
           <span style={{ flex: 1 }}>{t.message}</span>
-          <button
-            onClick={() => onRemove(t.id)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-              fontSize: 16,
-              opacity: 0.6,
-              padding: 0,
-              lineHeight: 1,
-              flexShrink: 0,
-            }}
-          >
-            ×
-          </button>
+          <button onClick={() => onRemove(t.id)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 18, opacity: 0.6, padding: 0, lineHeight: 1 }}>×</button>
         </div>
       ))}
     </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function AtomLeadGen() {
-  const [activeSidebarItem, setActiveSidebarItem] =
-    useState<SidebarItem>("campaign");
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
-  const [callState, setCallState] = useState<CallState>({
-    isActive: false,
-    isComplete: false,
-    callSid: null,
-    transcript: [],
-    sentiment: 45,
-    buyerIntent: 30,
-    stage: "idle",
-    keySignals: [],
-    activeLeadId: null,
-  });
-  const [handoffPacket, setHandoffPacket] = useState<HandoffPacket | null>(null);
-  const [isDialing, setIsDialing] = useState(false);
-  const [campaignActive, setCampaignActive] = useState(false);
-  const [campaignProgress, setCampaignProgress] = useState<{ current: number; total: number } | null>(null);
-  const [campaignRequest, setCampaignRequest] = useState(
-    "ATOM find customers using Cloudflare for CDN and then call them offering them Akamai CDN in which Akamai will match and beat Cloudflare's price and Akamai will also buy out up to 6 months remaining of the customer's Cloudflare CDN contract."
+function GaugeBar({ value, label }: { value: number; label: string }) {
+  const color = getGaugeColor(value);
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <span style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(246,246,253,0.5)" }}>{label}</span>
+        <span style={{ fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{value}</span>
+      </div>
+      <div style={{ height: 5, borderRadius: 3, backgroundColor: "rgba(246,246,253,0.08)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${value}%`, backgroundColor: color, borderRadius: 3, transition: "width 0.5s ease, background-color 0.4s ease" }} />
+      </div>
+      <div style={{ marginTop: 4, fontSize: 11, color: "rgba(246,246,253,0.4)" }}>
+        {value >= 60 ? "Positive" : value >= 30 ? "Neutral" : "Resistant"}
+      </div>
+    </div>
   );
-  const [targetRegion, setTargetRegion] = useState("US + EU");
-  const [dailyDialLimit, setDailyDialLimit] = useState("30");
-  const [simRunning, setSimRunning] = useState(false);
-  const [compiledPlan, setCompiledPlan] = useState<CompiledPlan>({
-    targetSignal: "Cloudflare CDN customers with renewal inside 12 months",
-    offerHook: "Price match + buyout up to 6 months remaining contract",
-    qualificationGate: "Buyer intent ≥ 70 before warm transfer",
-    regionScope: "US + EU",
-    dailyDialCap: "30 dials/day",
-  });
-  const [toasts, setToasts] = useState<ToastMsg[]>([]);
-  const [qualifiedCount, setQualifiedCount] = useState(0);
-  const [meetingsBooked, setMeetingsBooked] = useState(0);
+}
 
-  // Add Lead form state
-  const [showAddLead, setShowAddLead] = useState(false);
-  const [newLead, setNewLead] = useState({
-    name: "",
-    contact: "",
-    title: "",
-    phone: "",
-    region: "US",
-    notes: "",
-  });
+function StatusDot({ status, pulse }: { status: TargetStatus; pulse?: boolean }) {
+  const color = getStatusColor(status);
+  return (
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 10, height: 10, flexShrink: 0 }}>
+      {pulse && status === "calling" && (
+        <span style={{
+          position: "absolute", width: 10, height: 10, borderRadius: "50%",
+          backgroundColor: color, opacity: 0.4,
+          animation: "pulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite",
+        }} />
+      )}
+      <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color, display: "block", position: "relative" }} />
+    </span>
+  );
+}
 
+// ─── Phase 1: Campaign Setup ──────────────────────────────────────────────────
+
+function PhaseSetup({
+  form, setForm, onSubmit, loading,
+}: {
+  form: CampaignForm;
+  setForm: (f: CampaignForm) => void;
+  onSubmit: () => void;
+  loading: boolean;
+}) {
+  const handleChange = (field: keyof CampaignForm, value: string | number) =>
+    setForm({ ...form, [field]: value });
+
+  return (
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={S.card}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#c7c8f2", marginBottom: 4, marginTop: 0 }}>
+          New Campaign
+        </h2>
+        <p style={{ ...S.mutedText, fontSize: 14, marginTop: 0, marginBottom: 28 }}>
+          Describe your target and ATOM will research prospects and auto-dial them.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Brief */}
+          <div>
+            <label style={S.label}>Campaign Brief</label>
+            <textarea
+              value={form.brief}
+              onChange={(e) => handleChange("brief", e.target.value)}
+              placeholder="Describe your campaign objective, target companies, and product to pitch..."
+              rows={5}
+              style={{ ...S.input, resize: "vertical", lineHeight: 1.6 }}
+            />
+          </div>
+
+          {/* Industry + Geo row */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={S.label}>Target Industry</label>
+              <input
+                type="text"
+                value={form.targetIndustry}
+                onChange={(e) => handleChange("targetIndustry", e.target.value)}
+                placeholder="e.g. information technology, healthcare, financial services"
+                style={S.input}
+              />
+            </div>
+            <div>
+              <label style={S.label}>Target Geography</label>
+              <select
+                value={form.targetGeo}
+                onChange={(e) => handleChange("targetGeo", e.target.value)}
+                style={{ ...S.input }}
+              >
+                {GEO_OPTIONS.map((g) => (
+                  <option key={g} value={g} style={{ backgroundColor: "#111" }}>{g}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Count + Product row */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={S.label}>Target Count</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={form.targetCount}
+                onChange={(e) => handleChange("targetCount", Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                style={S.input}
+              />
+              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.35)", marginTop: 4 }}>Max 50 targets</div>
+            </div>
+            <div>
+              <label style={S.label}>Product to Pitch</label>
+              <select
+                value={form.productSlug}
+                onChange={(e) => handleChange("productSlug", e.target.value)}
+                style={{ ...S.input }}
+              >
+                {PRODUCTS.map((p) => (
+                  <option key={p} value={p} style={{ backgroundColor: "#111" }}>{p}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Alert email */}
+          <div>
+            <label style={S.label}>Alert Email</label>
+            <input
+              type="email"
+              value={form.alertEmail}
+              onChange={(e) => handleChange("alertEmail", e.target.value)}
+              placeholder="Get notified when hot leads are found"
+              style={S.input}
+            />
+          </div>
+
+          {/* Submit */}
+          <button
+            onClick={onSubmit}
+            disabled={loading || !form.brief.trim()}
+            style={{
+              ...S.primaryBtn,
+              padding: "14px 32px",
+              fontSize: 15,
+              marginTop: 4,
+              opacity: loading || !form.brief.trim() ? 0.6 : 1,
+              cursor: loading || !form.brief.trim() ? "not-allowed" : "pointer",
+            }}
+            onMouseEnter={(e) => { if (!loading && form.brief.trim()) e.currentTarget.style.boxShadow = "0px 0px 25px #696aac, inset 0px 0px 6.7px rgba(255,255,255,0.9)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0px 0px 10px #696aac, inset 0px 0px 2px rgba(255,255,255,0.61)"; }}
+          >
+            {loading ? "Researching…" : "Research Targets"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Phase 1b: Researching loading state ─────────────────────────────────────
+
+function PhaseResearching() {
+  const [dots, setDots] = useState("...");
+  useEffect(() => {
+    const t = setInterval(() => setDots((d) => d.length >= 3 ? "." : d + "."), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, padding: 40 }}>
+      <div style={{ textAlign: "center", maxWidth: 480 }}>
+        {/* Animated atom icon */}
+        <div style={{ width: 72, height: 72, margin: "0 auto 28px", position: "relative" }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: "50%",
+            border: "2px solid rgba(105,106,172,0.4)",
+            position: "absolute", inset: 0,
+            animation: "spin 3s linear infinite",
+          }} />
+          <div style={{
+            width: 72, height: 72, borderRadius: "50%",
+            border: "2px solid transparent",
+            borderTopColor: "#8587e3",
+            position: "absolute", inset: 0,
+            animation: "spin 1.5s linear infinite",
+          }} />
+          <div style={{
+            position: "absolute", inset: "22px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(105,106,172,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ color: "#8587e3", fontSize: 14, fontWeight: 700 }}>AI</span>
+          </div>
+        </div>
+
+        <h3 style={{ fontSize: 20, fontWeight: 700, color: "#c7c8f2", margin: "0 0 10px" }}>
+          ATOM is analyzing sources and building your target list{dots}
+        </h3>
+        <p style={{ color: "rgba(246,246,253,0.5)", fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+          Scanning industry databases, LinkedIn signals, funding data, and tech stack indicators to surface the highest-intent prospects.
+        </p>
+
+        <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            "Scanning industry databases",
+            "Enriching with Hunter.io contact data",
+            "Scoring by buyer intent signals",
+            "Ranking targets by fit score",
+          ].map((step, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "10px 16px",
+              backgroundColor: "rgba(246,246,253,0.03)",
+              border: "1px solid rgba(246,246,253,0.08)",
+              borderRadius: 8,
+              fontSize: 13, color: "rgba(246,246,253,0.6)",
+            }}>
+              <span style={{
+                width: 18, height: 18, borderRadius: "50%",
+                border: "1.5px solid rgba(105,106,172,0.5)",
+                borderTopColor: "#8587e3",
+                display: "inline-block",
+                animation: `spin ${1 + i * 0.2}s linear infinite`,
+                flexShrink: 0,
+              }} />
+              {step}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Phase 2: Target Review ───────────────────────────────────────────────────
+
+function TargetCard({ target }: { target: Target }) {
+  return (
+    <div style={{
+      ...S.cardSmall,
+      position: "relative",
+      display: "flex",
+      gap: 14,
+      alignItems: "flex-start",
+    }}>
+      {/* Rank badge */}
+      <div style={{
+        width: 32, height: 32, borderRadius: "50%",
+        background: "linear-gradient(135deg, #8587e3, #4c4dac)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0,
+      }}>
+        #{target.rank}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+          <StatusDot status={target.status} pulse />
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#f6f6fd" }}>{target.companyName}</span>
+        </div>
+
+        <div style={{ fontSize: 12, color: "rgba(246,246,253,0.5)", marginBottom: 8 }}>
+          {target.industry} · {target.size} · {target.location}
+        </div>
+
+        {/* Decision maker */}
+        <div style={{ fontSize: 13, color: "rgba(246,246,253,0.75)", marginBottom: 6 }}>
+          <span style={{ color: "#c7c8f2", fontWeight: 600 }}>{target.decisionMaker.name}</span>
+          {" · "}{target.decisionMaker.title}
+          {target.decisionMaker.linkedin && (
+            <a
+              href={target.decisionMaker.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ marginLeft: 8, color: "#a2a3e9", fontSize: 11, textDecoration: "none" }}
+            >
+              LinkedIn ↗
+            </a>
+          )}
+        </div>
+
+        {/* Contact info */}
+        <div style={{ fontSize: 12, color: "rgba(246,246,253,0.5)", marginBottom: 8, display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {target.email && <span>✉ {target.email}</span>}
+          <span>{target.phone ? `📞 ${target.phone}` : <span style={{ color: "rgba(246,246,253,0.3)" }}>No phone — will skip</span>}</span>
+        </div>
+
+        {/* Tags */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {target.tags.map((tag) => (
+            <span key={tag} style={{
+              padding: "2px 9px", borderRadius: 999,
+              fontSize: 11, fontWeight: 500,
+              backgroundColor: "rgba(105,106,172,0.15)",
+              border: "1px solid rgba(105,106,172,0.3)",
+              color: "#a2a3e9",
+            }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhaseReview({
+  targets, form, campaignId,
+  onLaunch, onEditCampaign,
+}: {
+  targets: Target[];
+  form: CampaignForm;
+  campaignId: string;
+  onLaunch: () => void;
+  onEditCampaign: () => void;
+}) {
+  const withPhone = targets.filter((t) => t.phone).length;
+  const estMinutes = withPhone * 4;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, padding: "32px 24px", alignItems: "start" }}>
+      {/* Left: target list */}
+      <div>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#c7c8f2", margin: "0 0 16px" }}>
+          {targets.length} Targets Identified
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {targets.map((t) => <TargetCard key={t.id} target={t} />)}
+        </div>
+      </div>
+
+      {/* Right: summary + launch */}
+      <div style={{ position: "sticky", top: 24 }}>
+        <div style={S.card}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#c7c8f2", marginTop: 0, marginBottom: 14 }}>Campaign Summary</h3>
+
+          <div style={{ fontSize: 13, color: "rgba(246,246,253,0.65)", marginBottom: 16, lineHeight: 1.6 }}>
+            {form.brief.slice(0, 140)}{form.brief.length > 140 ? "…" : ""}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+            {[
+              { label: "Total Targets", value: targets.length },
+              { label: "With Phone Numbers", value: withPhone },
+              { label: "Est. Call Time", value: `~${estMinutes} min` },
+              { label: "Product", value: form.productSlug },
+              { label: "Geography", value: form.targetGeo },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "rgba(246,246,253,0.45)" }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#c7c8f2" }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, color: "rgba(246,246,253,0.35)", marginBottom: 6 }}>Campaign ID: {campaignId}</div>
+
+          <button
+            onClick={onLaunch}
+            style={{ ...S.primaryBtn, width: "100%", padding: "13px", fontSize: 15, marginBottom: 10 }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0px 0px 25px #696aac, inset 0px 0px 6.7px rgba(255,255,255,0.9)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0px 0px 10px #696aac, inset 0px 0px 2px rgba(255,255,255,0.61)"; }}
+          >
+            Launch Campaign
+          </button>
+
+          <button
+            onClick={onEditCampaign}
+            style={{ ...S.secondaryBtn, width: "100%", padding: "11px", fontSize: 14 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(133,135,227,0.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            Edit Campaign
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Phase 3: Live Dashboard ──────────────────────────────────────────────────
+
+function LiveCallPanel({ live }: { live: LiveCallState }) {
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const simTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const nextLeadIdRef = useRef(5);
-  const toastIdRef = useRef(0);
 
-  // Auto-scroll transcript
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
-  }, [callState.transcript]);
+  }, [live.transcript]);
 
-  // Dynamic campaign health stats
-  const queuedLeads = leads.filter((l) => l.status === "queued").length;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
+      {/* Currently calling */}
+      <div style={S.cardSmall}>
+        <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)", marginBottom: 8 }}>Currently Calling</div>
+        {live.targetId ? (
+          <>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#f6f6fd", marginBottom: 2 }}>{live.companyName}</div>
+            <div style={{ fontSize: 14, color: "#a2a3e9" }}>
+              {live.contactName} · <span style={{ color: "rgba(246,246,253,0.5)" }}>{live.contactTitle}</span>
+            </div>
+            {live.callStage && (
+              <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, backgroundColor: "rgba(105,106,172,0.15)", border: "1px solid rgba(105,106,172,0.3)", fontSize: 12, color: "#a2a3e9" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", animation: "pulse 1.5s ease infinite" }} />
+                {live.callStage}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ color: "rgba(246,246,253,0.4)", fontSize: 14 }}>Waiting to connect…</div>
+        )}
+      </div>
+
+      {/* Gauges */}
+      <div style={{ ...S.cardSmall, display: "flex", gap: 24 }}>
+        <GaugeBar value={live.sentiment} label="Sentiment" />
+        <GaugeBar value={live.intent} label="Buyer Intent" />
+      </div>
+
+      {/* Live transcript */}
+      <div style={{ ...S.card, flex: 1, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(246,246,253,0.08)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)" }}>
+          Live Transcript
+        </div>
+        <div ref={transcriptRef} style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {live.transcript.length === 0 ? (
+            <div style={{ color: "rgba(246,246,253,0.3)", fontSize: 13, textAlign: "center", paddingTop: 24 }}>
+              Transcript will appear here…
+            </div>
+          ) : (
+            live.transcript.map((line, i) => {
+              const isAtom = line.speaker === "ATOM";
+              return (
+                <div key={i} style={{
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  backgroundColor: isAtom ? "rgba(105,106,172,0.12)" : "rgba(246,246,253,0.03)",
+                  border: `1px solid ${isAtom ? "rgba(105,106,172,0.3)" : "rgba(246,246,253,0.08)"}`,
+                }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)",
+                    marginBottom: 5,
+                  }}>{line.speaker}</div>
+                  <div style={{ fontSize: 13, color: "#f6f6fd", lineHeight: 1.6 }}>{line.text}</div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CallHistoryFeed({
+  history,
+  onToggleExpand,
+}: {
+  history: CallHistoryEntry[];
+  onToggleExpand: (id: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: 620 }}>
+      {history.length === 0 && (
+        <div style={{ color: "rgba(246,246,253,0.3)", fontSize: 13, textAlign: "center", paddingTop: 40 }}>
+          Completed calls will appear here
+        </div>
+      )}
+      {[...history].reverse().map((entry) => {
+        const borderColor = entry.disposition === "qualified" || entry.disposition === "hot_lead"
+          ? "rgba(34,197,94,0.35)"
+          : entry.disposition === "not_interested"
+          ? "rgba(239,68,68,0.25)"
+          : "rgba(246,246,253,0.1)";
+
+        return (
+          <div
+            key={entry.targetId}
+            style={{
+              backgroundColor: "rgba(246,246,253,0.03)",
+              border: `1px solid ${borderColor}`,
+              borderRadius: 10,
+              padding: "12px 16px",
+              cursor: "pointer",
+            }}
+            onClick={() => onToggleExpand(entry.targetId)}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 14, color: "#f6f6fd" }}>{entry.companyName}</span>
+                <span style={{ fontSize: 12, color: "rgba(246,246,253,0.5)", marginLeft: 8 }}>{entry.contactName}</span>
+              </div>
+              <span style={{
+                padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600,
+                backgroundColor: `${getDispositionColor(entry.disposition)}20`,
+                border: `1px solid ${getDispositionColor(entry.disposition)}50`,
+                color: getDispositionColor(entry.disposition),
+              }}>{getDispositionLabel(entry.disposition)}</span>
+            </div>
+
+            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "rgba(246,246,253,0.4)" }}>
+              <span>{formatDuration(entry.duration)}</span>
+              <span>Sentiment: <span style={{ color: getGaugeColor(entry.sentiment) }}>{entry.sentiment}</span></span>
+              <span>Intent: <span style={{ color: getGaugeColor(entry.intent) }}>{entry.intent}</span></span>
+            </div>
+
+            {entry.expanded && entry.transcript.length > 0 && (
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid rgba(246,246,253,0.08)", paddingTop: 12 }}>
+                {entry.transcript.map((line, i) => {
+                  const isAtom = line.speaker === "ATOM";
+                  return (
+                    <div key={i} style={{
+                      padding: "8px 12px", borderRadius: 6,
+                      backgroundColor: isAtom ? "rgba(105,106,172,0.1)" : "rgba(246,246,253,0.03)",
+                      fontSize: 12,
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)", marginBottom: 3 }}>{line.speaker}</div>
+                      <div style={{ color: "#f6f6fd", lineHeight: 1.55 }}>{line.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function HotLeadsPanel({ hotLeads }: { hotLeads: HotLead[] }) {
+  if (hotLeads.length === 0) return null;
+
+  return (
+    <div style={{
+      ...S.card,
+      borderColor: "rgba(105,106,172,0.4)",
+      boxShadow: "0 0 24px rgba(105,106,172,0.12)",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <span style={{ fontSize: 18 }}>🔥</span>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#c7c8f2", margin: 0 }}>
+          Hot Leads — Score 75+
+        </h3>
+        <span style={{
+          padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+          background: "linear-gradient(93.92deg, #8587e3, #4c4dac)",
+          color: "#fff",
+        }}>{hotLeads.length}</span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+        {hotLeads.map((lead) => (
+          <div key={lead.targetId} style={{
+            padding: "14px 16px", borderRadius: 10,
+            backgroundColor: "rgba(105,106,172,0.08)",
+            border: "1px solid rgba(105,106,172,0.35)",
+            boxShadow: "0 0 12px rgba(105,106,172,0.08)",
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#f6f6fd", marginBottom: 2 }}>{lead.companyName}</div>
+            <div style={{ fontSize: 13, color: "#a2a3e9", marginBottom: 10 }}>{lead.contactName}</div>
+
+            <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: getGaugeColor(lead.sentiment) }}>{lead.sentiment}</div>
+                <div style={{ fontSize: 10, color: "rgba(246,246,253,0.4)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Sentiment</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: getGaugeColor(lead.intent) }}>{lead.intent}</div>
+                <div style={{ fontSize: 10, color: "rgba(246,246,253,0.4)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Intent</div>
+              </div>
+            </div>
+
+            {lead.buyingSignals.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "rgba(246,246,253,0.4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Key Signals</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  {lead.buyingSignals.map((s, i) => (
+                    <div key={i} style={{ fontSize: 12, color: "rgba(246,246,253,0.7)", display: "flex", gap: 6, alignItems: "flex-start" }}>
+                      <span style={{ color: "#696aac", flexShrink: 0 }}>›</span>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...S.primaryBtn, padding: "7px 14px", fontSize: 12 }}>
+                Review
+              </button>
+              <button style={{ ...S.secondaryBtn, padding: "6px 12px", fontSize: 12 }}>
+                Send Follow-up
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PhaseLiveDashboard({
+  targets, stats, live, history, hotLeads, phase,
+  onPause, onResume, onToggleHistoryExpand,
+}: {
+  targets: Target[];
+  stats: CampaignStats;
+  live: LiveCallState;
+  history: CallHistoryEntry[];
+  hotLeads: HotLead[];
+  phase: "active" | "paused";
+  onPause: () => void;
+  onResume: () => void;
+  onToggleHistoryExpand: (id: string) => void;
+}) {
+  const pct = stats.total > 0 ? Math.round(((stats.total - stats.remaining) / stats.total) * 100) : 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px" }}>
+      {/* Progress bar row */}
+      <div style={S.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#c7c8f2" }}>
+            Calling {stats.total - stats.remaining} of {stats.total}…
+          </div>
+          <button
+            onClick={phase === "active" ? onPause : onResume}
+            style={{
+              ...S.secondaryBtn,
+              padding: "8px 20px",
+              fontSize: 13,
+              borderColor: phase === "active" ? "#f59e0b" : "#22c55e",
+              color: phase === "active" ? "#f59e0b" : "#22c55e",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = phase === "active" ? "rgba(245,158,11,0.1)" : "rgba(34,197,94,0.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            {phase === "active" ? "⏸ Pause" : "▶ Resume"}
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(246,246,253,0.08)", overflow: "hidden", marginBottom: 16 }}>
+          <div style={{
+            height: "100%", width: `${pct}%`,
+            background: "linear-gradient(90deg, #8587e3, #696aac)",
+            borderRadius: 3,
+            transition: "width 0.8s ease",
+          }} />
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+          {[
+            { label: "Dialed", value: stats.dialed, color: "#c7c8f2" },
+            { label: "Connected", value: stats.connected, color: "#a2a3e9" },
+            { label: "Qualified", value: stats.qualified, color: "#22c55e" },
+            { label: "Hot Leads", value: stats.hotLeads, color: "#8587e3" },
+            { label: "Remaining", value: stats.remaining, color: "rgba(246,246,253,0.4)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color }}>{value}</div>
+              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.4)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Middle split view */}
+      <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, minHeight: 0 }}>
+        {/* Live call panel */}
+        <div>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(246,246,253,0.5)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 0, marginBottom: 12 }}>Live Call</h3>
+          <LiveCallPanel live={live} />
+        </div>
+
+        {/* Call history */}
+        <div>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(246,246,253,0.5)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 0, marginBottom: 12 }}>
+            Call History ({history.length})
+          </h3>
+          <CallHistoryFeed history={history} onToggleExpand={onToggleHistoryExpand} />
+        </div>
+      </div>
+
+      {/* Hot leads panel */}
+      <HotLeadsPanel hotLeads={hotLeads} />
+    </div>
+  );
+}
+
+// ─── Phase 4: Campaign Complete ───────────────────────────────────────────────
+
+function PhaseComplete({
+  stats, hotLeads, history, form,
+  onNewCampaign,
+}: {
+  stats: CampaignStats;
+  hotLeads: HotLead[];
+  history: CallHistoryEntry[];
+  form: CampaignForm;
+  onNewCampaign: () => void;
+}) {
+  const handleExport = () => {
+    const rows = [
+      ["Company", "Contact", "Title", "Duration", "Sentiment", "Intent", "Disposition"],
+      ...history.map((e) => [
+        e.companyName, e.contactName, e.contactTitle,
+        formatDuration(e.duration), String(e.sentiment), String(e.intent),
+        getDispositionLabel(e.disposition),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `atom-campaign-results-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#c7c8f2", margin: "0 0 8px" }}>Campaign Complete</h2>
+        <p style={{ color: "rgba(246,246,253,0.5)", margin: 0, fontSize: 15 }}>
+          {form.productSlug} · {form.targetGeo}
+        </p>
+      </div>
+
+      {/* Summary stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+        {[
+          { label: "Total Calls", value: stats.dialed },
+          { label: "Connected", value: stats.connected },
+          { label: "Qualified", value: stats.qualified },
+          { label: "Hot Leads", value: stats.hotLeads },
+          { label: "Avg Sentiment", value: stats.avgSentiment },
+          { label: "Avg Intent", value: stats.avgIntent },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ ...S.card, textAlign: "center" }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: "#c7c8f2", marginBottom: 4 }}>{value}</div>
+            <div style={{ fontSize: 12, color: "rgba(246,246,253,0.45)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Hot leads */}
+      {hotLeads.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <HotLeadsPanel hotLeads={hotLeads} />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
+        <button
+          onClick={handleExport}
+          style={{ ...S.primaryBtn, padding: "13px 32px", fontSize: 15 }}
+          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0px 0px 25px #696aac, inset 0px 0px 6.7px rgba(255,255,255,0.9)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0px 0px 10px #696aac, inset 0px 0px 2px rgba(255,255,255,0.61)"; }}
+        >
+          Export Results CSV
+        </button>
+        <button
+          onClick={onNewCampaign}
+          style={{ ...S.secondaryBtn, padding: "13px 32px", fontSize: 15 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(133,135,227,0.1)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+        >
+          New Campaign
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function AtomCampaign() {
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [campaignId, setCampaignId] = useState<string>("");
+  const [form, setForm] = useState<CampaignForm>({
+    brief: "",
+    targetIndustry: "",
+    targetGeo: "US",
+    targetCount: 10,
+    productSlug: PRODUCTS[0],
+    alertEmail: "",
+  });
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [live, setLive] = useState<LiveCallState>({
+    targetId: null,
+    companyName: "",
+    contactName: "",
+    contactTitle: "",
+    sentiment: 0,
+    intent: 0,
+    callStage: "",
+    transcript: [],
+  });
+  const [history, setHistory] = useState<CallHistoryEntry[]>([]);
+  const [hotLeads, setHotLeads] = useState<HotLead[]>([]);
+  const [stats, setStats] = useState<CampaignStats>({
+    dialed: 0, connected: 0, qualified: 0, hotLeads: 0, remaining: 0, total: 0, avgSentiment: 0, avgIntent: 0,
+  });
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const toastIdRef = useRef(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addToast = useCallback((message: string, type: ToastMsg["type"] = "info") => {
     const id = ++toastIdRef.current;
     setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 5000);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
   }, []);
 
   const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // WebSocket connection for real calls
-  const connectWs = useCallback((callSid: string, lead: Lead) => {
-    const wsUrl = `wss://${BRIDGE_URL.replace(/^https?:\/\//, "")}/events/${callSid}`;
-    const ws = new WebSocket(wsUrl);
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  const connectWs = useCallback((id: string) => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    const wsUrl = `wss://${BRIDGE_URL.replace(/^https?:\/\//, "")}/campaign/${id}/events`;
+    let ws: WebSocket;
+
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch {
+      addToast("Unable to open WebSocket connection.", "error");
+      return;
+    }
+
     wsRef.current = ws;
+
+    ws.onopen = () => {
+      if (wsReconnectRef.current) {
+        clearTimeout(wsReconnectRef.current);
+        wsReconnectRef.current = null;
+      }
+    };
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "transcript") {
-          setCallState((prev) => ({
-            ...prev,
-            transcript: [
-              ...prev.transcript,
-              { speaker: data.speaker, text: data.text, ts: Date.now() },
-            ],
-          }));
-        } else if (data.type === "metrics") {
-          setCallState((prev) => ({
-            ...prev,
-            sentiment: data.sentiment ?? prev.sentiment,
-            buyerIntent: data.buyerIntent ?? prev.buyerIntent,
-            stage: data.stage ?? prev.stage,
-            keySignals: data.keySignals ?? prev.keySignals,
-          }));
-        } else if (data.type === "call_ended") {
-          setCallState((prev) => ({
-            ...prev,
-            isActive: false,
-            isComplete: true,
-          }));
-          setLeads((prev) =>
-            prev.map((l) =>
-              l.id === lead.id ? { ...l, status: "done" } : l
-            )
-          );
-          setHandoffPacket({
-            buyer: `${lead.title} at ${lead.name}`,
-            currentStack: lead.stack,
-            keyPain: lead.notes,
-            offerResonance: "Price match plus 6-month buyout de-risked the switch",
-            closeAction:
-              "Bring enterprise rep in now to confirm migration plan and pricing approval path.",
-          });
-          if (data.stage === "warm_transfer") {
-            setQualifiedCount((c) => c + 1);
-          }
-        }
-      } catch (_) {}
+        const msg = JSON.parse(event.data as string);
+        handleWsEvent(msg);
+      } catch {
+        // ignore parse errors
+      }
     };
 
     ws.onclose = () => {
       wsRef.current = null;
+      // Attempt reconnect if campaign still active
+      setPhase((ph) => {
+        if (ph === "active" || ph === "paused") {
+          wsReconnectRef.current = setTimeout(() => connectWs(id), 3000);
+        }
+        return ph;
+      });
     };
 
     ws.onerror = () => {
-      addToast("WebSocket connection lost.", "error");
+      addToast("WebSocket connection error — reconnecting…", "error");
     };
-  }, [addToast]);
+  }, [addToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Dial a lead via bridge
-  const handleDial = useCallback(
-    async (lead: Lead) => {
-      if (!isValidPhone(lead.phone)) {
-        addToast("Enter a valid phone number before dialing.", "error");
-        return;
-      }
-      setIsDialing(true);
-      try {
-        const res = await fetch(`${BRIDGE_URL}/call`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: lead.phone,
-            contactName: lead.contact,
-            companyName: lead.name,
-            productSlug: "antimatter-ai",
-          }),
+  const handleWsEvent = useCallback((msg: Record<string, unknown>) => {
+    const type = msg.type as string;
+
+    switch (type) {
+      case "target_calling": {
+        const targetId = msg.targetId as string;
+        setTargets((prev) => prev.map((t) => t.id === targetId ? { ...t, status: "calling" as TargetStatus } : t));
+        setLive({
+          targetId,
+          companyName: (msg.companyName as string) ?? "",
+          contactName: (msg.contactName as string) ?? "",
+          contactTitle: (msg.contactTitle as string) ?? "",
+          sentiment: 0,
+          intent: 0,
+          callStage: "Initiating call…",
+          transcript: [],
         });
-        if (res.ok) {
-          const data = await res.json();
-          const sid = data.callSid ?? `live-${Date.now()}`;
-          setCallState((prev) => ({
-            ...prev,
-            isActive: true,
-            isComplete: false,
-            callSid: sid,
-            transcript: [],
-            sentiment: 45,
-            buyerIntent: 30,
-            stage: "research",
-            keySignals: [],
-            activeLeadId: lead.id,
-          }));
-          setLeads((prev) =>
-            prev.map((l) =>
-              l.id === lead.id ? { ...l, status: "live" } : l
-            )
-          );
-          setActiveSidebarItem("live");
-          connectWs(sid, lead);
-        } else {
-          const text = await res.text().catch(() => "");
-          addToast(`Dial failed: ${res.status}${text ? ` — ${text}` : ""}`, "error");
-        }
-      } catch (_) {
-        addToast("Bridge is unreachable. Check your connection and try again.", "error");
-      } finally {
-        setIsDialing(false);
+        break;
       }
-    },
-    [connectWs, addToast]
-  );
 
-  // Delete a lead
-  const handleDeleteLead = useCallback((id: number) => {
-    setLeads((prev) => prev.filter((l) => l.id !== id));
-  }, []);
+      case "call_connected": {
+        const targetId = msg.targetId as string;
+        setTargets((prev) => prev.map((t) => t.id === targetId ? { ...t, status: "connected" as TargetStatus } : t));
+        setLive((prev) => ({ ...prev, callStage: "Connected" }));
+        break;
+      }
 
-  // Update phone number on a lead
-  const handlePhoneChange = useCallback((id: number, phone: string) => {
-    setLeads((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, phone } : l))
-    );
-  }, []);
+      case "call_transcript": {
+        const line: TranscriptLine = {
+          speaker: (msg.speaker as "ATOM" | "Prospect"),
+          text: (msg.text as string) ?? "",
+          ts: Date.now(),
+        };
+        setLive((prev) => ({ ...prev, transcript: [...prev.transcript, line] }));
+        break;
+      }
 
-  // Add a new lead
-  const handleAddLead = useCallback(() => {
-    if (!newLead.name.trim() || !newLead.phone.trim()) {
-      addToast("Company name and phone number are required.", "error");
-      return;
+      case "call_metrics": {
+        setLive((prev) => ({
+          ...prev,
+          sentiment: (msg.sentiment as number) ?? prev.sentiment,
+          intent: (msg.intent as number) ?? prev.intent,
+          callStage: (msg.callStage as string) ?? prev.callStage,
+        }));
+        break;
+      }
+
+      case "call_complete": {
+        const targetId = msg.targetId as string;
+        const disposition = (msg.disposition as Disposition) ?? "no_answer";
+        const sentiment = (msg.sentiment as number) ?? 0;
+        const intent = (msg.intent as number) ?? 0;
+        const duration = (msg.duration as number) ?? 0;
+
+        setTargets((prev) => prev.map((t) => t.id === targetId ? { ...t, status: "completed" as TargetStatus } : t));
+
+        setLive((curr) => {
+          const entry: CallHistoryEntry = {
+            targetId,
+            companyName: curr.companyName,
+            contactName: curr.contactName,
+            contactTitle: curr.contactTitle,
+            duration,
+            sentiment,
+            intent,
+            disposition,
+            transcript: curr.transcript,
+            expanded: false,
+          };
+          setHistory((h) => [...h, entry]);
+          return { ...curr, callStage: "" };
+        });
+
+        setStats((prev) => {
+          const newDialed = prev.dialed + 1;
+          const newConnected = msg.connected ? prev.connected + 1 : prev.connected;
+          const newQualified = disposition === "qualified" || disposition === "hot_lead" ? prev.qualified + 1 : prev.qualified;
+          const newRemaining = Math.max(0, prev.remaining - 1);
+          const sentimentSum = prev.avgSentiment * prev.dialed + sentiment;
+          const intentSum = prev.avgIntent * prev.dialed + intent;
+          return {
+            ...prev,
+            dialed: newDialed,
+            connected: newConnected,
+            qualified: newQualified,
+            remaining: newRemaining,
+            avgSentiment: newDialed ? Math.round(sentimentSum / newDialed) : 0,
+            avgIntent: newDialed ? Math.round(intentSum / newDialed) : 0,
+          };
+        });
+        break;
+      }
+
+      case "hot_lead": {
+        const lead: HotLead = {
+          targetId: (msg.targetId as string) ?? "",
+          companyName: (msg.companyName as string) ?? "",
+          contactName: (msg.contactName as string) ?? "",
+          sentiment: (msg.sentiment as number) ?? 0,
+          intent: (msg.intent as number) ?? 0,
+          buyingSignals: (msg.buyingSignals as string[]) ?? [],
+        };
+        setHotLeads((prev) => [...prev, lead]);
+        setStats((prev) => ({ ...prev, hotLeads: prev.hotLeads + 1 }));
+        addToast(`🔥 Hot lead: ${lead.companyName} — ${lead.contactName}`, "success");
+        break;
+      }
+
+      case "campaign_progress": {
+        const current = (msg.current as number) ?? 0;
+        const total = (msg.total as number) ?? 0;
+        setStats((prev) => ({ ...prev, total, remaining: total - current }));
+        break;
+      }
+
+      case "campaign_complete": {
+        setPhase("complete");
+        wsRef.current?.close();
+        wsRef.current = null;
+        addToast("Campaign complete!", "success");
+        break;
+      }
     }
-    if (!isValidPhone(newLead.phone)) {
-      addToast("Enter a valid phone number (e.g. +15551234567).", "error");
-      return;
-    }
-    const lead: Lead = {
-      id: nextLeadIdRef.current++,
-      name: newLead.name.trim(),
-      contact: newLead.contact.trim() || "Unknown",
-      title: newLead.title.trim() || "Contact",
-      phone: newLead.phone.trim(),
-      region: newLead.region,
-      metrics: "",
-      spend: "",
-      stack: "",
-      notes: newLead.notes.trim(),
-      status: "queued",
-    };
-    setLeads((prev) => [...prev, lead]);
-    setNewLead({ name: "", contact: "", title: "", phone: "", region: "US", notes: "" });
-    setShowAddLead(false);
-    addToast(`${lead.name} added to queue.`, "success");
-  }, [newLead, addToast]);
-
-  // Compile plan from brief
-  const handleCompilePlan = useCallback(() => {
-    const plan = parseCampaignBrief(campaignRequest, targetRegion, dailyDialLimit);
-    setCompiledPlan(plan);
-    addToast("Campaign plan compiled.", "success");
-  }, [campaignRequest, targetRegion, dailyDialLimit, addToast]);
-
-  // Launch queue (set campaign active)
-  const handleLaunchQueue = useCallback(() => {
-    setCampaignActive(true);
-    addToast("Campaign activated. Use 'Launch Campaign' to start dialing.", "info");
   }, [addToast]);
 
-  // Launch Campaign — dial all queued leads with valid phone numbers sequentially
-  const handleLaunchCampaign = useCallback(async () => {
-    const dialable = leads.filter(
-      (l) => l.status === "queued" && isValidPhone(l.phone)
-    );
-    if (dialable.length === 0) {
-      addToast(
-        "No queued leads with valid phone numbers. Add phone numbers to your leads first.",
-        "error"
-      );
-      return;
-    }
-    setCampaignActive(true);
-    for (let i = 0; i < dialable.length; i++) {
-      const lead = dialable[i];
-      setCampaignProgress({ current: i + 1, total: dialable.length });
-      await handleDial(lead);
-      // Small pause between calls
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
-    setCampaignProgress(null);
-    addToast(`Campaign complete. Dialed ${dialable.length} leads.`, "success");
-  }, [leads, handleDial, addToast]);
-
-  // Simulate a live call
-  const handleSimulate = useCallback(() => {
-    if (simRunning) return;
-    setSimRunning(true);
-
-    simTimersRef.current.forEach(clearTimeout);
-    simTimersRef.current = [];
-
-    setCallState({
-      isActive: true,
-      isComplete: false,
-      callSid: `sim-${Date.now()}`,
-      transcript: [],
-      sentiment: 45,
-      buyerIntent: 30,
-      stage: "research",
-      keySignals: [],
-      activeLeadId: 1,
-    });
-    setHandoffPacket(null);
-    setActiveSidebarItem("live");
-
-    SIM_TRANSCRIPT.forEach((msg, _i) => {
-      const t = setTimeout(
-        () => {
-          setCallState((prev) => ({
-            ...prev,
-            transcript: [...prev.transcript, { ...msg, ts: Date.now() }],
-          }));
-        },
-        1500 + msg.ts
-      );
-      simTimersRef.current.push(t);
-    });
-
-    const sentimentSteps = [45, 52, 58, 63, 68, 72, 76];
-    sentimentSteps.forEach((val, i) => {
-      const t = setTimeout(
-        () => setCallState((prev) => ({ ...prev, sentiment: val })),
-        2000 + i * 1800
-      );
-      simTimersRef.current.push(t);
-    });
-
-    const intentSteps = [30, 42, 54, 64, 72, 80, 86];
-    intentSteps.forEach((val, i) => {
-      const t = setTimeout(
-        () => setCallState((prev) => ({ ...prev, buyerIntent: val })),
-        2000 + i * 1800
-      );
-      simTimersRef.current.push(t);
-    });
-
-    const t1 = setTimeout(
-      () =>
-        setCallState((prev) => ({ ...prev, stage: "evaluation" })),
-      5500
-    );
-    const t2 = setTimeout(
-      () =>
-        setCallState((prev) => ({ ...prev, stage: "warm_transfer" })),
-      11000
-    );
-    simTimersRef.current.push(t1, t2);
-
-    const tEnd = setTimeout(() => {
-      setCallState((prev) => ({
-        ...prev,
-        isActive: false,
-        isComplete: true,
-        sentiment: 76,
-        buyerIntent: 86,
-        stage: "warm_transfer",
-      }));
-      setHandoffPacket({
-        buyer: "VP Engineering at NovaCart",
-        currentStack: "Cloudflare CDN",
-        keyPain: "Rising spend and moderate support satisfaction",
-        offerResonance:
-          "Price match plus 6-month buyout de-risked the switch",
-        closeAction:
-          "Bring enterprise rep in now to confirm migration plan and pricing approval path.",
-      });
-      setLeads((prev) =>
-        prev.map((l) => (l.id === 1 ? { ...l, status: "done" } : l))
-      );
-      setQualifiedCount((c) => c + 1);
-      setSimRunning(false);
-    }, 17000);
-    simTimersRef.current.push(tEnd);
-  }, [simRunning]);
-
-  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      simTimersRef.current.forEach(clearTimeout);
       wsRef.current?.close();
+      if (wsReconnectRef.current) clearTimeout(wsReconnectRef.current);
     };
   }, []);
 
-  // ── Sidebar nav config
-  const sidebarItems: {
-    key: SidebarItem;
-    label: string;
-    tag: string;
-  }[] = [
-    { key: "campaign", label: "Campaign studio", tag: "Plan" },
-    { key: "target", label: "Target queue", tag: "Prospects" },
-    { key: "live", label: "Live call board", tag: "Realtime" },
-    { key: "handoff", label: "Rep handoff", tag: "Close" },
-    { key: "outcomes", label: "Outcomes", tag: "History" },
-  ];
+  // ── API calls ─────────────────────────────────────────────────────────────
 
-  const callStatusLabel = callState.isComplete
-    ? "Call complete"
-    : callState.isActive
-    ? "Live"
-    : "Idle";
+  const handleResearch = useCallback(async () => {
+    setPhase("researching");
 
-  const callStatusColor = callState.isComplete
-    ? "#3b82f6"
-    : callState.isActive
-    ? "#ef4444"
-    : "#6b7280";
+    try {
+      // Create campaign
+      const createRes = await fetch(`${BRIDGE_URL}/campaign/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brief: form.brief,
+          targetIndustry: form.targetIndustry,
+          targetGeo: form.targetGeo,
+          targetCount: form.targetCount,
+          productSlug: form.productSlug,
+          alertEmail: form.alertEmail,
+        }),
+      });
 
-  const stageInfo = getStageInfo(callState.stage);
+      if (!createRes.ok) {
+        const text = await createRes.text().catch(() => "");
+        throw new Error(`Create failed: ${createRes.status}${text ? ` — ${text}` : ""}`);
+      }
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    backgroundColor: "#111",
-    border: "1px solid #374151",
-    borderRadius: 8,
-    padding: "9px 12px",
-    fontSize: 13,
-    color: "#e5e7eb",
-    outline: "none",
-    boxSizing: "border-box",
-  };
+      const createData = await createRes.json();
+      const id: string = createData.id ?? createData.campaignId ?? `cam-${Date.now()}`;
+      setCampaignId(id);
+
+      // Research targets
+      const researchRes = await fetch(`${BRIDGE_URL}/campaign/${id}/research`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!researchRes.ok) {
+        const text = await researchRes.text().catch(() => "");
+        throw new Error(`Research failed: ${researchRes.status}${text ? ` — ${text}` : ""}`);
+      }
+
+      const researchData = await researchRes.json();
+      const fetchedTargets: Target[] = (researchData.targets ?? []).map((t: Record<string, unknown>, i: number) => ({
+        id: (t.id as string) ?? `t-${i}`,
+        rank: i + 1,
+        companyName: (t.companyName as string) ?? (t.company as string) ?? `Company ${i + 1}`,
+        industry: (t.industry as string) ?? "",
+        size: (t.size as string) ?? "",
+        location: (t.location as string) ?? "",
+        decisionMaker: {
+          name: ((t.decisionMaker as Record<string, unknown>)?.name as string) ?? (t.contactName as string) ?? "",
+          title: ((t.decisionMaker as Record<string, unknown>)?.title as string) ?? (t.contactTitle as string) ?? "",
+          linkedin: ((t.decisionMaker as Record<string, unknown>)?.linkedin as string) ?? undefined,
+        },
+        email: (t.email as string) ?? undefined,
+        phone: (t.phone as string) ?? undefined,
+        tags: (t.tags as string[]) ?? [],
+        status: "queued" as TargetStatus,
+      }));
+
+      setTargets(fetchedTargets);
+      setStats((prev) => ({
+        ...prev,
+        total: fetchedTargets.length,
+        remaining: fetchedTargets.length,
+      }));
+      setPhase("review");
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Research failed. Please try again.", "error");
+      setPhase("setup");
+    }
+  }, [form, addToast]);
+
+  const handleLaunch = useCallback(async () => {
+    try {
+      const res = await fetch(`${BRIDGE_URL}/campaign/${campaignId}/launch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Launch failed: ${res.status}${text ? ` — ${text}` : ""}`);
+      }
+
+      setPhase("active");
+      connectWs(campaignId);
+      addToast("Campaign launched — ATOM is dialing.", "success");
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Launch failed. Please try again.", "error");
+    }
+  }, [campaignId, connectWs, addToast]);
+
+  const handlePause = useCallback(async () => {
+    try {
+      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/pause`, { method: "POST" });
+      setPhase("paused");
+    } catch {
+      addToast("Failed to pause campaign.", "error");
+    }
+  }, [campaignId, addToast]);
+
+  const handleResume = useCallback(async () => {
+    try {
+      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/resume`, { method: "POST" });
+      setPhase("active");
+    } catch {
+      addToast("Failed to resume campaign.", "error");
+    }
+  }, [campaignId, addToast]);
+
+  const handleNewCampaign = useCallback(() => {
+    wsRef.current?.close();
+    wsRef.current = null;
+    setCampaignId("");
+    setTargets([]);
+    setHistory([]);
+    setHotLeads([]);
+    setLive({ targetId: null, companyName: "", contactName: "", contactTitle: "", sentiment: 0, intent: 0, callStage: "", transcript: [] });
+    setStats({ dialed: 0, connected: 0, qualified: 0, hotLeads: 0, remaining: 0, total: 0, avgSentiment: 0, avgIntent: 0 });
+    setForm({ brief: "", targetIndustry: "", targetGeo: "US", targetCount: 10, productSlug: PRODUCTS[0], alertEmail: "" });
+    setPhase("setup");
+  }, []);
+
+  const handleToggleHistoryExpand = useCallback((id: string) => {
+    setHistory((prev) => prev.map((e) => e.targetId === id ? { ...e, expanded: !e.expanded } : e));
+  }, []);
+
+  // Poll status while active (in case WS misses events)
+  useEffect(() => {
+    if (phase !== "active" || !campaignId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${BRIDGE_URL}/campaign/${campaignId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "complete") {
+            setPhase("complete");
+            clearInterval(interval);
+          }
+        }
+      } catch {
+        // silent
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [phase, campaignId]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100%",
-        minHeight: "calc(100vh - 0px)",
+    <>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50% { transform: scale(2); opacity: 0; }
+        }
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(105,106,172,0.35); border-radius: 3px; }
+        input, select, textarea { color-scheme: dark; }
+        input:focus, select:focus, textarea:focus {
+          border-color: rgba(105,106,172,0.6) !important;
+          outline: none;
+        }
+      `}</style>
+
+      <div style={{
+        minHeight: "100vh",
         backgroundColor: "#020202",
-        color: "#fff",
-        fontFamily:
-          'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
-      }}
-    >
-      {/* Toast notifications */}
-      <Toast toasts={toasts} onRemove={removeToast} />
+        color: "#f6f6fd",
+        fontFamily: "'Plus Jakarta Sans', 'Arial', 'Helvetica', sans-serif",
+      }}>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* ── Inner Sidebar ─────────────────────────────────────────────────── */}
-      <aside
-        style={{
-          width: 220,
-          minWidth: 220,
-          backgroundColor: "#111",
-          borderRight: "1px solid #1f2937",
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <header style={{
+          borderBottom: "1px solid rgba(246,246,253,0.08)",
+          padding: "20px 32px",
           display: "flex",
-          flexDirection: "column",
-          padding: "20px 0",
-          flexShrink: 0,
-        }}
-      >
-        {/* Logo */}
-        <div style={{ padding: "0 16px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                backgroundColor: "#696aac20",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#696aac"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="1" fill="#696aac" />
-                <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9C11.18 3.77 5.85 1.7 3.8 3.8c-2.04 2.04-.02 7.37 4.5 11.91C12.83 20.24 18.16 22.27 20.2 20.2z" />
-                <path d="M15.7 15.7c4.52-4.54 6.56-9.87 4.5-11.91-2.04-2.04-7.37-.02-11.91 4.5-4.52 4.54-6.56 9.87-4.5 11.91 2.04 2.04 7.37.02 11.91-4.5z" />
-              </svg>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#fff",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                ATOM ENGINE
-              </div>
-              <div
-                style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}
-              >
-                Voice campaign platform
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Workspace label */}
-        <div
-          style={{
-            fontSize: 9,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            color: "#4b5563",
-            padding: "0 16px 8px",
-            fontWeight: 600,
-          }}
-        >
-          Workspace
-        </div>
-
-        {/* Nav items */}
-        <nav style={{ flex: 1 }}>
-          {sidebarItems.map((item) => {
-            const isActive = activeSidebarItem === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => setActiveSidebarItem(item.key)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  width: "100%",
-                  padding: "9px 16px",
-                  backgroundColor: isActive ? "#696aac15" : "transparent",
-                  border: "none",
-                  borderLeft: isActive
-                    ? "2px solid #696aac"
-                    : "2px solid transparent",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background-color 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive)
-                    e.currentTarget.style.backgroundColor = "#1f2937";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive)
-                    e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 13,
-                    color: isActive ? "#696aac" : "#d1d5db",
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                >
-                  {item.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: "#4b5563",
-                    fontWeight: 500,
-                  }}
-                >
-                  {item.tag}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Campaign Health */}
-        <div
-          style={{
-            margin: "16px 12px 0",
-            borderTop: "1px solid #1f2937",
-            paddingTop: 16,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              color: "#4b5563",
-              marginBottom: 12,
-              fontWeight: 600,
-              paddingLeft: 4,
-            }}
-          >
-            Campaign Health
-          </div>
-
-          {/* Queued Leads */}
-          <div
-            style={{
-              backgroundColor: "rgba(246,246,253,0.03)",
-              border: "1px solid #1f2937",
-              borderRadius: 8,
-              padding: "10px 12px",
-              marginBottom: 8,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 9,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#6b7280",
-                marginBottom: 4,
-              }}
-            >
-              Queued Leads
-            </div>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 700,
-                color: "#fff",
-                lineHeight: 1,
-                marginBottom: 3,
-              }}
-            >
-              {queuedLeads}
-            </div>
-            <div style={{ fontSize: 10, color: "#6b7280" }}>
-              Ready to dial
-            </div>
-          </div>
-
-          {/* Qualified Today */}
-          <div
-            style={{
-              backgroundColor: "rgba(246,246,253,0.03)",
-              border: "1px solid #1f2937",
-              borderRadius: 8,
-              padding: "10px 12px",
-              marginBottom: 8,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 9,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#6b7280",
-                marginBottom: 4,
-              }}
-            >
-              Qualified Today
-            </div>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 700,
-                color: "#fff",
-                lineHeight: 1,
-                marginBottom: 3,
-              }}
-            >
-              {qualifiedCount}
-            </div>
-            <div style={{ fontSize: 10, color: "#6b7280" }}>
-              Intent above threshold
-            </div>
-          </div>
-
-          {/* Meetings Booked */}
-          <div
-            style={{
-              backgroundColor: "rgba(246,246,253,0.03)",
-              border: "1px solid #1f2937",
-              borderRadius: 8,
-              padding: "10px 12px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 9,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#6b7280",
-                marginBottom: 4,
-              }}
-            >
-              Meetings Booked
-            </div>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 700,
-                color: "#fff",
-                lineHeight: 1,
-                marginBottom: 3,
-              }}
-            >
-              {meetingsBooked}
-            </div>
-            <div style={{ fontSize: 10, color: "#6b7280" }}>
-              Warm transfer or callback
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* ── Main Content ───────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Top Bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 24px",
-            borderBottom: "1px solid #1f2937",
-            backgroundColor: "#020202",
-            flexShrink: 0,
-          }}
-        >
-          {/* Title */}
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          backgroundColor: "rgba(2,2,2,0.9)",
+          backdropFilter: "blur(12px)",
+          zIndex: 100,
+        }}>
           <div>
-            <h1
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                color: "#fff",
-                letterSpacing: "-0.02em",
-                lineHeight: 1.1,
-                margin: 0,
-              }}
-            >
-              ATOM{" "}
-              <span style={{ color: "#696aac" }}>lead gen</span> engine
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 3px", color: "#f6f6fd", letterSpacing: "-0.02em" }}>
+              ATOM Campaign Engine
             </h1>
-            <p
-              style={{
-                fontSize: 13,
-                color: "#6b7280",
-                marginTop: 4,
-                lineHeight: 1.4,
-              }}
-            >
-              Design a campaign, manage outbound targets, monitor buyer intent, and prep rep handoffs in real time.
+            <p style={{ margin: 0, fontSize: 13, color: "rgba(246,246,253,0.45)" }}>
+              Autonomous outbound prospecting powered by AI
             </p>
           </div>
 
-          {/* Actions */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexShrink: 0,
-            }}
-          >
-            {/* Campaign status badge */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 12px",
-                borderRadius: 6,
-                border: `1px solid ${campaignActive ? "#166534" : "#374151"}`,
-                backgroundColor: campaignActive ? "#14532d22" : "#1f293722",
-              }}
-            >
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  backgroundColor: campaignActive ? "#22c55e" : "#6b7280",
-                  display: "inline-block",
-                }}
-              />
-              <span style={{ fontSize: 12, color: campaignActive ? "#86efac" : "#9ca3af", fontWeight: 500 }}>
-                Campaign: {campaignActive ? "Active" : "Idle"}
-              </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Phase badge */}
+            <div style={getPhaseBadgeStyle(phase)}>
+              {(phase === "active") && (
+                <span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#4ade80", display: "inline-block", animation: "pulse 2s ease infinite" }} />
+              )}
+              {getPhaseLabel(phase)}
             </div>
 
-            {/* Campaign progress indicator */}
-            {campaignProgress && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#696aac",
-                  fontWeight: 500,
-                  padding: "5px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #696aac40",
-                  backgroundColor: "#696aac10",
-                }}
-              >
-                Calling {campaignProgress.current} of {campaignProgress.total}…
+            {/* Campaign ID chip */}
+            {campaignId && (
+              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.3)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(246,246,253,0.1)" }}>
+                {campaignId}
               </div>
             )}
-
-            {/* Add Lead button */}
-            <button
-              onClick={() => {
-                setActiveSidebarItem("target");
-                setShowAddLead(true);
-              }}
-              style={{
-                padding: "7px 16px",
-                borderRadius: 8,
-                border: "1px solid #374151",
-                backgroundColor: "#1f2937",
-                color: "#d1d5db",
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#374151")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1f2937")}
-            >
-              + Add Lead
-            </button>
-
-            {/* Launch Campaign */}
-            <button
-              onClick={handleLaunchCampaign}
-              disabled={isDialing || simRunning}
-              style={{
-                padding: "7px 16px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor: isDialing || simRunning ? "#0f766e" : "#696aac",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: isDialing || simRunning ? "not-allowed" : "pointer",
-                transition: "background-color 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                if (!isDialing && !simRunning)
-                  e.currentTarget.style.backgroundColor = "#0d9488";
-              }}
-              onMouseLeave={(e) => {
-                if (!isDialing && !simRunning)
-                  e.currentTarget.style.backgroundColor = "#696aac";
-              }}
-            >
-              {isDialing ? "Dialing…" : "Launch Campaign"}
-            </button>
           </div>
-        </div>
+        </header>
 
-        {/* Content grid */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "20px 24px",
-            display: "flex",
-            gap: 20,
-            alignItems: "flex-start",
-          }}
-        >
-          {/* ── Left Panel (~45%) ──────────────────────────────────────────── */}
-          <div style={{ flex: "0 0 44%", minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Campaign Studio Card */}
-            <div
-              style={{
-                backgroundColor: "rgba(246,246,253,0.03)",
-                border: "1px solid #1f2937",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              {/* Card header */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px 20px 0",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: "#fff",
-                      margin: 0,
-                    }}
-                  >
-                    Campaign studio
-                  </h2>
-                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                    Define your campaign strategy. ATOM will use this context when calling prospects.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    fontSize: 11,
-                    color: "#22c55e",
-                    flexShrink: 0,
-                    marginLeft: 12,
-                  }}
-                >
-                  <StatusDot status="ready" />
-                  Ready to compile
-                </div>
-              </div>
+        {/* ── Body ────────────────────────────────────────────────────────── */}
+        <main>
+          {phase === "setup" && (
+            <PhaseSetup form={form} setForm={setForm} onSubmit={handleResearch} loading={false} />
+          )}
 
-              <div style={{ padding: "16px 20px 20px" }}>
-                {/* Campaign Brief */}
-                <div style={{ marginBottom: 14 }}>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.12em",
-                      textTransform: "uppercase",
-                      color: "#6b7280",
-                      marginBottom: 6,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Campaign Brief
-                  </div>
-                  <textarea
-                    value={campaignRequest}
-                    onChange={(e) => setCampaignRequest(e.target.value)}
-                    rows={6}
-                    placeholder="Describe your campaign: target audience, offer, qualification criteria, and desired outcome…"
-                    style={{
-                      width: "100%",
-                      backgroundColor: "#111",
-                      border: "1px solid #374151",
-                      borderRadius: 8,
-                      padding: "10px 12px",
-                      fontSize: 13,
-                      color: "#e5e7eb",
-                      resize: "vertical",
-                      outline: "none",
-                      boxSizing: "border-box",
-                      lineHeight: 1.6,
-                    }}
-                  />
-                </div>
+          {phase === "researching" && (
+            <PhaseResearching />
+          )}
 
-                {/* Region + Dial limit */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 12,
-                    marginBottom: 14,
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: "#6b7280",
-                        marginBottom: 6,
-                        fontWeight: 600,
-                      }}
-                    >
-                      Target Region
-                    </div>
-                    <select
-                      value={targetRegion}
-                      onChange={(e) => setTargetRegion(e.target.value)}
-                      style={{
-                        width: "100%",
-                        backgroundColor: "#111",
-                        border: "1px solid #374151",
-                        borderRadius: 8,
-                        padding: "9px 12px",
-                        fontSize: 13,
-                        color: "#e5e7eb",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="US">US</option>
-                      <option value="EU">EU</option>
-                      <option value="US + EU">US + EU</option>
-                      <option value="Global">Global</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: "#6b7280",
-                        marginBottom: 6,
-                        fontWeight: 600,
-                      }}
-                    >
-                      Daily Dial Limit
-                    </div>
-                    <input
-                      type="number"
-                      value={dailyDialLimit}
-                      onChange={(e) => setDailyDialLimit(e.target.value)}
-                      style={{
-                        width: "100%",
-                        backgroundColor: "#111",
-                        border: "1px solid #374151",
-                        borderRadius: 8,
-                        padding: "9px 12px",
-                        fontSize: 13,
-                        color: "#e5e7eb",
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-                </div>
+          {phase === "review" && (
+            <PhaseReview
+              targets={targets}
+              form={form}
+              campaignId={campaignId}
+              onLaunch={handleLaunch}
+              onEditCampaign={() => setPhase("setup")}
+            />
+          )}
 
-                {/* Filter Tags */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 6,
-                    marginBottom: 16,
-                  }}
-                >
-                  <FilterTag label="Tech filter · Cloudflare CDN" />
-                  <FilterTag label="Offer · match or beat" />
-                  <FilterTag label="Buyout cap · 6 months" />
-                  <FilterTag label="Handoff · buyer intent 70+" />
-                </div>
+          {(phase === "active" || phase === "paused") && (
+            <PhaseLiveDashboard
+              targets={targets}
+              stats={stats}
+              live={live}
+              history={history}
+              hotLeads={hotLeads}
+              phase={phase}
+              onPause={handlePause}
+              onResume={handleResume}
+              onToggleHistoryExpand={handleToggleHistoryExpand}
+            />
+          )}
 
-                {/* Buttons */}
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button
-                    onClick={handleCompilePlan}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      backgroundColor: "transparent",
-                      color: "#d1d5db",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1f2937")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                  >
-                    Compile plan
-                  </button>
-                  <button
-                    onClick={handleLaunchQueue}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 8,
-                      border: "none",
-                      backgroundColor: campaignActive ? "#0f766e" : "#696aac",
-                      color: "#fff",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!campaignActive) e.currentTarget.style.backgroundColor = "#0d9488";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = campaignActive ? "#0f766e" : "#696aac";
-                    }}
-                  >
-                    {campaignActive ? "Queue active" : "Launch queue"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Target Queue Card */}
-            <div
-              style={{
-                backgroundColor: "rgba(246,246,253,0.03)",
-                border: "1px solid #1f2937",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px 20px 0",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: "#fff",
-                      margin: 0,
-                    }}
-                  >
-                    Target queue
-                  </h2>
-                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                    Outbound targets for this campaign. Add leads manually or import from your enrichment pipeline.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    fontSize: 11,
-                    color: "#22c55e",
-                    flexShrink: 0,
-                    marginLeft: 12,
-                  }}
-                >
-                  <StatusDot status="healthy" />
-                  Queue healthy
-                </div>
-              </div>
-
-              <div style={{ padding: "16px 20px 20px" }}>
-                {leads.length === 0 && (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "24px 0",
-                      fontSize: 13,
-                      color: "#4b5563",
-                    }}
-                  >
-                    No leads in queue. Add a lead below to get started.
-                  </div>
-                )}
-                {leads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onDial={handleDial}
-                    onDelete={handleDeleteLead}
-                    onPhoneChange={handlePhoneChange}
-                    isDialing={isDialing}
-                  />
-                ))}
-
-                {/* Add Lead toggle */}
-                <button
-                  onClick={() => setShowAddLead((v) => !v)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    width: "100%",
-                    padding: "10px 0",
-                    background: "none",
-                    border: "none",
-                    borderTop: "1px solid #1f2937",
-                    color: "#9ca3af",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    marginTop: 4,
-                    textAlign: "left",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#696aac")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#9ca3af")}
-                >
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>
-                    {showAddLead ? "−" : "+"}
-                  </span>
-                  Add Lead
-                </button>
-
-                {/* Add Lead form */}
-                {showAddLead && (
-                  <div
-                    style={{
-                      backgroundColor: "#111",
-                      border: "1px solid #374151",
-                      borderRadius: 10,
-                      padding: "16px",
-                      marginTop: 8,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#d1d5db",
-                        marginBottom: 2,
-                      }}
-                    >
-                      New Lead
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Company Name <span style={{ color: "#ef4444" }}>*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newLead.name}
-                          onChange={(e) => setNewLead((p) => ({ ...p, name: e.target.value }))}
-                          placeholder="Acme Corp"
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Contact Name
-                        </label>
-                        <input
-                          type="text"
-                          value={newLead.contact}
-                          onChange={(e) => setNewLead((p) => ({ ...p, contact: e.target.value }))}
-                          placeholder="Jane Smith"
-                          style={inputStyle}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Title
-                        </label>
-                        <input
-                          type="text"
-                          value={newLead.title}
-                          onChange={(e) => setNewLead((p) => ({ ...p, title: e.target.value }))}
-                          placeholder="VP Engineering"
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Phone <span style={{ color: "#ef4444" }}>*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          value={newLead.phone}
-                          onChange={(e) => setNewLead((p) => ({ ...p, phone: e.target.value }))}
-                          placeholder="+1..."
-                          style={{
-                            ...inputStyle,
-                            borderColor: newLead.phone && !isValidPhone(newLead.phone) ? "#ef4444" : "#374151",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Region
-                        </label>
-                        <select
-                          value={newLead.region}
-                          onChange={(e) => setNewLead((p) => ({ ...p, region: e.target.value }))}
-                          style={{ ...inputStyle, cursor: "pointer" }}
-                        >
-                          <option value="US">US</option>
-                          <option value="EU">EU</option>
-                          <option value="APAC">APAC</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, color: "#6b7280", display: "block", marginBottom: 4 }}>
-                          Notes
-                        </label>
-                        <textarea
-                          value={newLead.notes}
-                          onChange={(e) => setNewLead((p) => ({ ...p, notes: e.target.value }))}
-                          placeholder="Any relevant context…"
-                          rows={2}
-                          style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-                      <button
-                        onClick={handleAddLead}
-                        style={{
-                          padding: "8px 18px",
-                          borderRadius: 8,
-                          border: "none",
-                          backgroundColor: "#696aac",
-                          color: "#fff",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#0d9488")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#696aac")}
-                      >
-                        Add to Queue
-                      </button>
-                      <button
-                        onClick={() => setShowAddLead(false)}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: 8,
-                          border: "1px solid #374151",
-                          backgroundColor: "transparent",
-                          color: "#9ca3af",
-                          fontSize: 13,
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1f2937")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Right Panel (~55%) ─────────────────────────────────────────── */}
-          <div style={{ flex: "0 0 54%", minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Live Call Board Card */}
-            <div
-              style={{
-                backgroundColor: "rgba(246,246,253,0.03)",
-                border: "1px solid #1f2937",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px 20px 0",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: "#fff",
-                      margin: 0,
-                    }}
-                  >
-                    Live call board
-                  </h2>
-                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                    Real-time speech scoring and call progression from your active voice stack.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    fontSize: 11,
-                    flexShrink: 0,
-                    marginLeft: 12,
-                  }}
-                  className={callState.isActive ? "pulse-dot" : ""}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      backgroundColor: callStatusColor,
-                      display: "inline-block",
-                    }}
-                  />
-                  <span style={{ color: callStatusColor === "#6b7280" ? "#9ca3af" : callStatusColor }}>
-                    {callStatusLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ padding: "16px 20px 20px" }}>
-                {/* Gauges */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 16,
-                    backgroundColor: "#111",
-                    border: "1px solid #1f2937",
-                    borderRadius: 10,
-                    padding: "16px 20px",
-                    marginBottom: 14,
-                  }}
-                >
-                  <GaugeBar
-                    value={callState.sentiment}
-                    label="Sentiment"
-                    subLabel={getSentimentLabel(callState.sentiment)}
-                  />
-                  <div
-                    style={{
-                      width: 1,
-                      backgroundColor: "#1f2937",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <GaugeBar
-                    value={callState.buyerIntent}
-                    label="Buyer Intent"
-                    subLabel={getBuyerIntentLabel(callState.buyerIntent)}
-                  />
-                </div>
-
-                {/* Call Stage */}
-                {callState.stage !== "idle" && (
-                  <div
-                    style={{
-                      backgroundColor: "#111",
-                      border: "1px solid #374151",
-                      borderRadius: 10,
-                      padding: "14px 16px",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "#fff",
-                        marginBottom: 5,
-                      }}
-                    >
-                      {stageInfo.label}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1.5 }}>
-                      {stageInfo.desc}
-                    </div>
-                  </div>
-                )}
-
-                {/* Transcript */}
-                <div
-                  style={{
-                    backgroundColor: "#111",
-                    border: "1px solid #1f2937",
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    marginBottom: 14,
-                    maxHeight: 340,
-                    overflowY: "auto",
-                  }}
-                  ref={transcriptRef}
-                >
-                  {callState.transcript.length === 0 ? (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "#4b5563",
-                        textAlign: "center",
-                        padding: "24px 0",
-                      }}
-                    >
-                      {callState.isComplete
-                        ? "Call ended."
-                        : callState.isActive
-                        ? "Call in progress — transcript will appear here."
-                        : "Waiting for active call…"}
-                    </div>
-                  ) : (
-                    callState.transcript.map((msg, i) => (
-                      <TranscriptLine key={i} msg={msg} />
-                    ))
-                  )}
-                </div>
-
-                {/* CTA row */}
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <button
-                    onClick={handleSimulate}
-                    disabled={simRunning}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 8,
-                      border: "1px solid #374151",
-                      backgroundColor: simRunning ? "#1f2937" : "transparent",
-                      color: simRunning ? "#9ca3af" : "#d1d5db",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: simRunning ? "not-allowed" : "pointer",
-                      transition: "background-color 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!simRunning) e.currentTarget.style.backgroundColor = "#1f2937";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!simRunning) e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    {simRunning ? "Simulating…" : "Test Call (Simulation)"}
-                  </button>
-                  <div style={{ fontSize: 11, color: "#4b5563" }}>
-                    {callState.isComplete
-                      ? "Call complete — handoff packet ready below."
-                      : callState.isActive
-                      ? "Live call in progress."
-                      : "Use 'Dial Twilio' on a lead card to initiate a real call."}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Rep Handoff Packet Card */}
-            <div
-              style={{
-                backgroundColor: "rgba(246,246,253,0.03)",
-                border: "1px solid #1f2937",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px 20px 0",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: "#fff",
-                      margin: 0,
-                    }}
-                  >
-                    Rep handoff packet
-                  </h2>
-                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                    Everything a closer needs when ATOM finds a real opportunity
-                    and passes it to a human.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    fontSize: 11,
-                    flexShrink: 0,
-                    marginLeft: 12,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      backgroundColor: handoffPacket ? "#f59e0b" : "#6b7280",
-                      display: "inline-block",
-                    }}
-                  />
-                  <span style={{ color: handoffPacket ? "#f59e0b" : "#6b7280" }}>
-                    {handoffPacket ? "Rep brief ready" : "Waiting for qualified lead"}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ padding: "16px 20px 20px" }}>
-                {/* Qualified Handoff Summary */}
-                {handoffPacket ? (
-                  <div
-                    style={{
-                      backgroundColor: "#111",
-                      border: "1px solid #1f2937",
-                      borderRadius: 10,
-                      padding: "16px",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 14,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "#fff",
-                        }}
-                      >
-                        Qualified handoff summary
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                          fontSize: 11,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            backgroundColor: "#f59e0b",
-                            display: "inline-block",
-                          }}
-                        />
-                        <span style={{ color: "#f59e0b" }}>Hot lead</span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {[
-                        { key: "Buyer", val: handoffPacket.buyer },
-                        { key: "Current stack", val: handoffPacket.currentStack },
-                        { key: "Key pain", val: handoffPacket.keyPain },
-                        { key: "Offer resonance", val: handoffPacket.offerResonance },
-                        { key: "Close action", val: handoffPacket.closeAction },
-                      ].map(({ key, val }) => (
-                        <div key={key} style={{ fontSize: 13, lineHeight: 1.5 }}>
-                          <span
-                            style={{ color: "#9ca3af", fontWeight: 600 }}
-                          >
-                            {key}:{" "}
-                          </span>
-                          <span style={{ color: "#e5e7eb" }}>{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      backgroundColor: "#111",
-                      border: "1px solid #1f2937",
-                      borderRadius: 10,
-                      padding: "28px 16px",
-                      marginBottom: 14,
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: "#4b5563" }}>
-                      Complete a call to populate the handoff packet.
-                    </div>
-                  </div>
-                )}
-
-                {/* Compiled campaign plan */}
-                <div
-                  style={{
-                    backgroundColor: "#111",
-                    border: "1px solid #1f2937",
-                    borderRadius: 10,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      borderBottom: "1px solid #1f2937",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "#fff",
-                      }}
-                    >
-                      Compiled campaign plan
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        fontSize: 11,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: "50%",
-                          backgroundColor: "#22c55e",
-                          display: "inline-block",
-                        }}
-                      />
-                      <span style={{ color: "#22c55e" }}>Ready</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: "14px 16px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        fontSize: 13,
-                      }}
-                    >
-                      {[
-                        {
-                          key: "Target signal",
-                          val: compiledPlan.targetSignal,
-                        },
-                        {
-                          key: "Offer hook",
-                          val: compiledPlan.offerHook,
-                        },
-                        {
-                          key: "Qualification gate",
-                          val: compiledPlan.qualificationGate,
-                        },
-                        {
-                          key: "Region scope",
-                          val: compiledPlan.regionScope,
-                        },
-                        {
-                          key: "Daily dial cap",
-                          val: compiledPlan.dailyDialCap,
-                        },
-                      ].map(({ key, val }) => (
-                        <div key={key} style={{ lineHeight: 1.5 }}>
-                          <span style={{ color: "#9ca3af", fontWeight: 600 }}>
-                            {key}:{" "}
-                          </span>
-                          <span style={{ color: "#e5e7eb" }}>{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          {phase === "complete" && (
+            <PhaseComplete
+              stats={stats}
+              hotLeads={hotLeads}
+              history={history}
+              form={form}
+              onNewCampaign={handleNewCampaign}
+            />
+          )}
+        </main>
       </div>
-    </div>
+    </>
   );
 }
