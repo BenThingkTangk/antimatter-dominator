@@ -374,12 +374,12 @@ function PhaseSetup({
               <input
                 type="number"
                 min={1}
-                max={50}
+                max={500}
                 value={form.targetCount}
-                onChange={(e) => handleChange("targetCount", Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                onChange={(e) => handleChange("targetCount", Math.max(1, parseInt(e.target.value) || 1))}
                 style={S.input}
               />
-              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.35)", marginTop: 4 }}>Max 50 targets</div>
+              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.35)", marginTop: 4 }}>Set your target count</div>
             </div>
             <div>
               <label style={S.label}>Product to Pitch</label>

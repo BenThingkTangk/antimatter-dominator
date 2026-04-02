@@ -306,10 +306,13 @@ export default function ProspectEngine() {
               </Select>
             </div>
             <div className="flex-1">
-              <Select value={productFocus} onValueChange={setProductFocus}>
-                <SelectTrigger><SelectValue placeholder="Product focus (optional)" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Products</SelectItem>{products.map(p => <SelectItem key={p.slug} value={p.slug}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <input
+                type="text"
+                value={productFocus}
+                onChange={(e) => setProductFocus(e.target.value)}
+                placeholder="e.g. Akamai, Five9, TierPoint, Antimatter AI..."
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
             </div>
             <Button onClick={() => scanProspects.mutate()} disabled={scanProspects.isPending} className="sm:w-auto w-full">
               {scanProspects.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning...</> : <><Radar className="w-4 h-4 mr-2" />Scan + Enrich</>}
