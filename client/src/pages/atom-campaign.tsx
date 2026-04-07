@@ -1909,7 +1909,12 @@ export default function AtomCampaign() {
     callStage: "",
     transcript: [],
   });
-  const [history, setHistory] = useState<CallHistoryEntry[]>([]);
+  const [history, setHistory] = useState<CallHistoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('atom_campaign_call_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [hotLeads, setHotLeads] = useState<HotLead[]>([]);
   const [stats, setStats] = useState<CampaignStats>({
     dialed: 0, connected: 0, qualified: 0, hotLeads: 0, remaining: 0, total: 0, avgSentiment: 0, avgIntent: 0,
@@ -1934,6 +1939,11 @@ export default function AtomCampaign() {
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
   // Keep snapshot refs current so they can be captured in WS event handlers
+  // Persist campaign call history
+  useEffect(() => {
+    try { localStorage.setItem('atom_campaign_call_history', JSON.stringify(history)); } catch {}
+  }, [history]);
+
   useEffect(() => { sentimentHistoryRef.current = sentimentHistory; }, [sentimentHistory]);
   useEffect(() => { emotionsRef.current = emotions; }, [emotions]);
   useEffect(() => { buyingSignalsRef.current = buyingSignals; }, [buyingSignals]);

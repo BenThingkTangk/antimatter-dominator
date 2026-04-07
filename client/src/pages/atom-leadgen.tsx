@@ -615,9 +615,19 @@ export default function ATOMLeadGen() {
 
   // View mode + call history
   const [viewMode, setViewMode] = useState<ViewMode>("live");
-  const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);
+  const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('atom_leadgen_call_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [historySearch, setHistorySearch] = useState("");
+
+  // Persist call history to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('atom_leadgen_call_history', JSON.stringify(callHistory)); } catch {}
+  }, [callHistory]);
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
