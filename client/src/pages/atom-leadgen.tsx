@@ -424,14 +424,15 @@ export default function ATOMLeadGen() {
           });
         }
       } else if (data.type === "transcript") {
-        setTranscript((prev) => [
-          ...prev,
-          {
-            speaker: data.speaker as "ATOM" | "PROSPECT",
-            text: data.text,
-            ts: data.ts ?? Date.now(),
-          },
-        ]);
+        // Bridge sends role: 'agent'|'prospect', map to ATOM|PROSPECT
+        const speaker = data.speaker === "ATOM" || data.role === "agent" ? "ATOM" : "PROSPECT";
+        const text = data.text || "";
+        if (text.trim()) {
+          setTranscript((prev) => [
+            ...prev,
+            { speaker, text, ts: data.ts ?? Date.now() },
+          ]);
+        }
       } else if (data.type === "call_ended") {
         setCallStatus("ended");
         setSummary({
