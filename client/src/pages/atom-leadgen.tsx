@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { PhoneCall, PhoneOff, Loader2 } from "lucide-react";
+import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,31 @@ interface CallSummary {
   stage: string;
 }
 
+interface SentimentPoint {
+  ts: number;
+  value: number;
+}
+
+interface CallHistoryEntry {
+  id: string;
+  callSid: string;
+  contactName: string;
+  companyName: string;
+  product: string;
+  phoneNumber: string;
+  timestamp: number;
+  duration: number;
+  finalSentiment: number;
+  finalIntent: number;
+  finalStage: string;
+  transcript: TranscriptEntry[];
+  sentimentHistory: SentimentPoint[];
+  emotions: Record<string, number>;
+  buyingSignals: string[];
+}
+
 type CallStatus = "idle" | "dialing" | "active" | "ended";
+type ViewMode = "live" | "history";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +76,13 @@ function formatDuration(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}m ${s}s`;
+}
+
+function formatDateTime(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleDateString([], { month: "short", day: "numeric" }) +
+    " " +
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function sentimentLabel(v: number) {
@@ -76,6 +107,26 @@ function sentimentColor(v: number) {
   return "#f87171";
 }
 
+function outcomeLabel(intent: number): string {
+  if (intent > 75) return "Qualified";
+  if (intent >= 40) return "Engaged";
+  return "Cold";
+}
+
+function outcomeBadgeStyle(intent: number): React.CSSProperties {
+  if (intent > 75)
+    return { background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" };
+  if (intent >= 40)
+    return { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" };
+  return { background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" };
+}
+
+function cardBorderColor(intent: number): string {
+  if (intent > 60) return "#34d399";
+  if (intent >= 30) return "#fbbf24";
+  return "#f87171";
+}
+
 // Polar coords for arc endpoint
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -84,11 +135,12 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 
 // ─── SVG Gauge ───────────────────────────────────────────────────────────────
 
-function Gauge({ score, label, type }: { score: number; label: string; type: "sentiment" | "intent" }) {
+function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: string; type: "sentiment" | "intent"; idSuffix?: string }) {
   const pct = Math.max(0, Math.min(100, score));
   const offset = ARC_LENGTH - (ARC_LENGTH * pct) / 100;
   const color = type === "sentiment" ? sentimentColor(score) : score > 75 ? "#a78bfa" : "#696aac";
-  const gradId = `gauge-grad-${type}`;
+  const gradId = `gauge-grad-${type}${idSuffix}`;
+  const glowId = `glow-${type}${idSuffix}`;
 
   return (
     <div className="flex flex-col items-center">
@@ -101,7 +153,7 @@ function Gauge({ score, label, type }: { score: number; label: string; type: "se
             <stop offset="100%" stopColor="#a78bfa" />
           </linearGradient>
           {score > 75 && type === "intent" && (
-            <filter id="glow">
+            <filter id={glowId}>
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
@@ -128,7 +180,7 @@ function Gauge({ score, label, type }: { score: number; label: string; type: "se
           strokeDasharray={ARC_LENGTH}
           strokeDashoffset={offset}
           style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1)" }}
-          filter={score > 75 && type === "intent" ? "url(#glow)" : undefined}
+          filter={score > 75 && type === "intent" ? `url(#${glowId})` : undefined}
         />
         {/* Score */}
         <text x="100" y="82" textAnchor="middle" fill="white" fontSize="36" fontWeight="300">
@@ -241,7 +293,7 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
-function SentimentSparkline({ points }: { points: Array<{ ts: number; value: number }> }) {
+function SentimentSparkline({ points, idSuffix = "" }: { points: Array<{ ts: number; value: number }>; idSuffix?: string }) {
   if (points.length < 2) {
     return (
       <div
@@ -268,16 +320,17 @@ function SentimentSparkline({ points }: { points: Array<{ ts: number; value: num
 
   const linePath = `M ${pts.join(" L ")}`;
   const areaPath = `M ${pts[0]} L ${pts.join(" L ")} L ${W},${H} L 0,${H} Z`;
+  const gradId = `sparkGrad${idSuffix}`;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#696aac" stopOpacity="0.4" />
           <stop offset="100%" stopColor="#696aac" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill="url(#sparkGrad)" />
+      <path d={areaPath} fill={`url(#${gradId})`} />
       <path d={linePath} stroke="#8587e3" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
     </svg>
   );
@@ -330,6 +383,208 @@ function PulsingDot() {
   );
 }
 
+// ─── History Card Detail ──────────────────────────────────────────────────────
+
+function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
+  const idx = entry.id;
+  return (
+    <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid rgba(246,246,253,0.06)" }}>
+      {/* Gauges */}
+      <div className="grid grid-cols-2 gap-4">
+        <div
+          className="rounded-xl p-4 flex flex-col items-center"
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+        >
+          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "rgba(246,246,253,0.45)" }}>
+            Sentiment
+          </div>
+          <Gauge score={entry.finalSentiment} label={sentimentLabel(entry.finalSentiment)} type="sentiment" idSuffix={`-hist-${idx}`} />
+        </div>
+        <div
+          className="rounded-xl p-4 flex flex-col items-center"
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+        >
+          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "rgba(246,246,253,0.45)" }}>
+            Buyer Intent
+          </div>
+          <Gauge score={entry.finalIntent} label={intentLabel(entry.finalIntent)} type="intent" idSuffix={`-hist-${idx}`} />
+        </div>
+      </div>
+
+      {/* Emotion Bars */}
+      <div
+        className="rounded-xl p-4"
+        style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+      >
+        <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "rgba(246,246,253,0.45)" }}>
+          Emotion Analysis
+        </div>
+        <div className="space-y-2.5">
+          {Object.entries(entry.emotions).map(([name, val]) => (
+            <EmotionBar key={name} name={name} value={val} />
+          ))}
+        </div>
+      </div>
+
+      {/* Stage + Sparkline */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+        >
+          <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "rgba(246,246,253,0.45)" }}>
+            Call Stage
+          </div>
+          <StageTimeline activeStage={entry.finalStage} />
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+        >
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
+            Sentiment Timeline
+          </div>
+          <div className="h-20">
+            <SentimentSparkline points={entry.sentimentHistory} idSuffix={`-hist-${idx}`} />
+          </div>
+        </div>
+      </div>
+
+      {/* Buying Signals */}
+      {entry.buyingSignals.length > 0 && (
+        <div>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
+            Buying Signals
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {entry.buyingSignals.map((sig, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full text-xs font-medium"
+                style={{
+                  background: "rgba(105,106,172,0.2)",
+                  border: "1px solid rgba(133,135,227,0.3)",
+                  color: "#a2a3e9",
+                }}
+              >
+                {sig}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Transcript */}
+      <div>
+        <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
+          Full Transcript
+        </div>
+        <div
+          className="overflow-y-auto pr-1"
+          style={{ maxHeight: "360px", minHeight: "80px" }}
+        >
+          {entry.transcript.length === 0 ? (
+            <div className="text-sm text-center py-8" style={{ color: "rgba(246,246,253,0.25)" }}>
+              No transcript recorded.
+            </div>
+          ) : (
+            entry.transcript.map((e, i) => <TxMessage key={i} entry={e} />)
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── History Card ─────────────────────────────────────────────────────────────
+
+function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry; isExpanded: boolean; onToggle: () => void }) {
+  const borderColor = cardBorderColor(entry.finalIntent);
+
+  return (
+    <div
+      className="rounded-xl p-4 cursor-pointer transition-all duration-200"
+      style={{
+        background: "rgba(246,246,253,0.03)",
+        border: `1px solid ${isExpanded ? "#696aac" : "rgba(246,246,253,0.08)"}`,
+        borderLeft: `3px solid ${borderColor}`,
+        boxShadow: isExpanded ? "0 0 16px rgba(105,106,172,0.15)" : "none",
+      }}
+      onClick={onToggle}
+    >
+      {/* Card header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
+              {entry.companyName || "Unknown Company"}
+            </span>
+            {entry.contactName && (
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.45)" }}>
+                · {entry.contactName}
+              </span>
+            )}
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+              style={outcomeBadgeStyle(entry.finalIntent)}
+            >
+              {outcomeLabel(entry.finalIntent)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <span className="text-xs" style={{ color: "rgba(246,246,253,0.4)" }}>
+              {entry.phoneNumber}
+            </span>
+            {entry.product && (
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.4)" }}>
+                · {entry.product}
+              </span>
+            )}
+            <span className="text-xs" style={{ color: "rgba(246,246,253,0.3)" }}>
+              · {formatDateTime(entry.timestamp)}
+            </span>
+            {entry.duration > 0 && (
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.3)" }}>
+                · {formatDuration(entry.duration)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Scores + chevron */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(246,246,253,0.35)" }}>
+              Sentiment
+            </div>
+            <div
+              className="text-lg font-light"
+              style={{ color: sentimentColor(entry.finalSentiment) }}
+            >
+              {Math.round(entry.finalSentiment)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(246,246,253,0.35)" }}>
+              Intent
+            </div>
+            <div className="text-lg font-light" style={{ color: "#a2a3e9" }}>
+              {Math.round(entry.finalIntent)}
+            </div>
+          </div>
+          <div style={{ color: "rgba(246,246,253,0.35)" }}>
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded detail */}
+      {isExpanded && <HistoryCallDetail entry={entry} />}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ATOMLeadGen() {
@@ -353,15 +608,37 @@ export default function ATOMLeadGen() {
     emotions: { confidence: 0, interest: 0, skepticism: 0, excitement: 0, frustration: 0, neutrality: 0 },
     buyingSignals: [],
   });
-  const [sentimentHistory, setSentimentHistory] = useState<Array<{ ts: number; value: number }>>([]);
+  const [sentimentHistory, setSentimentHistory] = useState<SentimentPoint[]>([]);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [buyingSignals, setBuyingSignals] = useState<string[]>([]);
   const [summary, setSummary] = useState<CallSummary | null>(null);
+
+  // View mode + call history
+  const [viewMode, setViewMode] = useState<ViewMode>("live");
+  const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [historySearch, setHistorySearch] = useState("");
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const callSidRef = useRef<string | null>(null);
+  // Keep a ref to the latest metrics/transcript etc. so the ws callback can access them
+  const metricsRef = useRef(metrics);
+  const transcriptRef = useRef(transcript);
+  const sentimentHistoryRef = useRef(sentimentHistory);
+  const emotionsRef = useRef(metrics.emotions);
+  const buyingSignalsRef = useRef(buyingSignals);
+  const formRef = useRef({ contactName, companyName, product: productSlug, phone });
+
+  useEffect(() => { metricsRef.current = metrics; }, [metrics]);
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+  useEffect(() => { sentimentHistoryRef.current = sentimentHistory; }, [sentimentHistory]);
+  useEffect(() => { emotionsRef.current = metrics.emotions; }, [metrics.emotions]);
+  useEffect(() => { buyingSignalsRef.current = buyingSignals; }, [buyingSignals]);
+  useEffect(() => {
+    formRef.current = { contactName, companyName, product: productSlug, phone };
+  }, [contactName, companyName, productSlug, phone]);
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -435,12 +712,38 @@ export default function ATOMLeadGen() {
         }
       } else if (data.type === "call_ended") {
         setCallStatus("ended");
+        const dur = data.duration ?? 0;
         setSummary({
-          duration: data.duration ?? 0,
-          finalSentiment: metrics.sentiment,
-          finalIntent: metrics.buyerIntent,
-          stage: metrics.stage,
+          duration: dur,
+          finalSentiment: metricsRef.current.sentiment,
+          finalIntent: metricsRef.current.buyerIntent,
+          stage: metricsRef.current.stage,
         });
+
+        // Push to call history using latest refs
+        const currentSid = callSidRef.current ?? sid;
+        const form = formRef.current;
+        setCallHistory((prev) => [
+          {
+            id: currentSid,
+            callSid: currentSid,
+            contactName: form.contactName,
+            companyName: form.companyName,
+            product: form.product,
+            phoneNumber: form.phone,
+            timestamp: Date.now(),
+            duration: dur,
+            finalSentiment: metricsRef.current.sentiment,
+            finalIntent: metricsRef.current.buyerIntent,
+            finalStage: metricsRef.current.stage,
+            transcript: [...transcriptRef.current],
+            sentimentHistory: [...sentimentHistoryRef.current],
+            emotions: { ...emotionsRef.current },
+            buyingSignals: [...buyingSignalsRef.current],
+          },
+          ...prev,
+        ]);
+
         ws.close();
       }
     };
@@ -452,7 +755,7 @@ export default function ATOMLeadGen() {
     ws.onclose = () => {
       console.log("[WS] closed");
     };
-  }, [metrics]);
+  }, []);
 
   const handleDial = async () => {
     if (!phone.trim()) {
@@ -471,6 +774,8 @@ export default function ATOMLeadGen() {
       emotions: { confidence: 0, interest: 0, skepticism: 0, excitement: 0, frustration: 0, neutrality: 0 },
       buyingSignals: [],
     });
+    // Switch to live view when a new call starts
+    setViewMode("live");
 
     try {
       const res = await fetch(`${BRIDGE_URL}/call`, {
@@ -506,15 +811,40 @@ export default function ATOMLeadGen() {
 
   const handleEndCall = () => {
     wsRef.current?.close();
+    const dur = 0;
     setCallStatus("ended");
     setSummary((prev) =>
       prev ?? {
-        duration: 0,
-        finalSentiment: metrics.sentiment,
-        finalIntent: metrics.buyerIntent,
-        stage: metrics.stage,
+        duration: dur,
+        finalSentiment: metricsRef.current.sentiment,
+        finalIntent: metricsRef.current.buyerIntent,
+        stage: metricsRef.current.stage,
       }
     );
+
+    // Push to history when manually ended
+    const currentSid = callSidRef.current ?? "manual-" + Date.now();
+    const form = formRef.current;
+    setCallHistory((prev) => [
+      {
+        id: currentSid,
+        callSid: currentSid,
+        contactName: form.contactName,
+        companyName: form.companyName,
+        product: form.product,
+        phoneNumber: form.phone,
+        timestamp: Date.now(),
+        duration: dur,
+        finalSentiment: metricsRef.current.sentiment,
+        finalIntent: metricsRef.current.buyerIntent,
+        finalStage: metricsRef.current.stage,
+        transcript: [...transcriptRef.current],
+        sentimentHistory: [...sentimentHistoryRef.current],
+        emotions: { ...emotionsRef.current },
+        buyingSignals: [...buyingSignalsRef.current],
+      },
+      ...prev,
+    ]);
   };
 
   const handleNewCall = () => {
@@ -536,6 +866,18 @@ export default function ATOMLeadGen() {
 
   const showAnalytics = callStatus === "active" || callStatus === "ended";
 
+  // Filter history
+  const filteredHistory = callHistory.filter((entry) => {
+    if (!historySearch.trim()) return true;
+    const q = historySearch.toLowerCase();
+    return (
+      entry.companyName.toLowerCase().includes(q) ||
+      entry.contactName.toLowerCase().includes(q) ||
+      entry.phoneNumber.toLowerCase().includes(q) ||
+      entry.product.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div
       className="min-h-screen px-4 py-8 md:px-8"
@@ -544,393 +886,494 @@ export default function ATOMLeadGen() {
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* ─── Header ─────────────────────────────────────────────────────── */}
-        <div className="mb-2">
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "rgba(246,246,253,0.95)" }}>
-            ATOM Lead Gen
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>
-            AI-powered outbound calling with live analytics
-          </p>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            Section 1: Call Setup
-        ═══════════════════════════════════════════════════════════════════ */}
-        <div
-          className="rounded-2xl p-6"
-          style={{
-            background: "rgba(246,246,253,0.03)",
-            border: "1px solid rgba(246,246,253,0.08)",
-          }}
-        >
-          <div
-            className="text-xs uppercase tracking-wider mb-5"
-            style={{ color: "rgba(246,246,253,0.5)" }}
-          >
-            Call Setup
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "rgba(246,246,253,0.95)" }}>
+              ATOM Lead Gen
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>
+              AI-powered outbound calling with live analytics
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            {/* Phone */}
-            <div>
-              <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
-                Phone Number <span style={{ color: "#f87171" }}>*</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={callStatus === "active" || callStatus === "dialing"}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                style={{
-                  background: "rgba(246,246,253,0.05)",
-                  border: "1px solid rgba(246,246,253,0.1)",
-                  color: "rgba(246,246,253,0.9)",
-                }}
-              />
-            </div>
-
-            {/* Contact Name */}
-            <div>
-              <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
-                Contact Name
-              </label>
-              <input
-                type="text"
-                placeholder="Jane Smith"
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                disabled={callStatus === "active" || callStatus === "dialing"}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                style={{
-                  background: "rgba(246,246,253,0.05)",
-                  border: "1px solid rgba(246,246,253,0.1)",
-                  color: "rgba(246,246,253,0.9)",
-                }}
-              />
-            </div>
-
-            {/* Company */}
-            <div>
-              <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
-                Company Name
-              </label>
-              <input
-                type="text"
-                placeholder="Acme Corp"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                disabled={callStatus === "active" || callStatus === "dialing"}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                style={{
-                  background: "rgba(246,246,253,0.05)",
-                  border: "1px solid rgba(246,246,253,0.1)",
-                  color: "rgba(246,246,253,0.9)",
-                }}
-              />
-            </div>
-
-            {/* Product */}
-            <div>
-              <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
-                Product / Service to Pitch
-              </label>
-              <input
-                type="text"
-                placeholder="Akamai, TierPoint, CDN…"
-                value={productSlug}
-                onChange={(e) => setProductSlug(e.target.value)}
-                disabled={callStatus === "active" || callStatus === "dialing"}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                style={{
-                  background: "rgba(246,246,253,0.05)",
-                  border: "1px solid rgba(246,246,253,0.1)",
-                  color: "rgba(246,246,253,0.9)",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* CTA row */}
-          {callStatus === "idle" || callStatus === "dialing" ? (
-            <button
-              onClick={handleDial}
-              disabled={callStatus === "dialing"}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all"
-              style={{
-                background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
-                color: "white",
-                boxShadow: "0 0 20px rgba(133,135,227,0.35)",
-                opacity: callStatus === "dialing" ? 0.7 : 1,
-                cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
-              }}
-            >
-              {callStatus === "dialing" ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Connecting…
-                </>
-              ) : (
-                <>
-                  <PhoneCall size={16} />
-                  Dial with ATOM
-                </>
-              )}
-            </button>
-          ) : callStatus === "active" ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <PulsingDot />
-                <span className="text-sm font-medium" style={{ color: "#34d399" }}>
-                  Call Active
-                  {companyName && ` — ${companyName}`}
-                  {contactName && ` — ${contactName}`}
-                </span>
-              </div>
-              <button
-                onClick={handleEndCall}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-                style={{
-                  background: "rgba(248,113,113,0.15)",
-                  border: "1px solid rgba(248,113,113,0.3)",
-                  color: "#f87171",
-                  cursor: "pointer",
-                }}
-              >
-                <PhoneOff size={14} />
-                End Call
-              </button>
-            </div>
-          ) : (
-            /* ended */
-            <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "rgba(246,246,253,0.5)" }}>
-                Call ended
-              </span>
-              <button
-                onClick={handleNewCall}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium"
-                style={{
-                  background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
-                  color: "white",
-                  boxShadow: "0 0 16px rgba(133,135,227,0.3)",
-                  cursor: "pointer",
-                }}
-              >
-                <PhoneCall size={14} />
-                New Call
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            Section 2: Live Analytics (only during/after call)
-        ═══════════════════════════════════════════════════════════════════ */}
-        {showAnalytics && (
-          <div
-            className="rounded-2xl p-6 space-y-6"
+          {/* View toggle button */}
+          <button
+            onClick={() => setViewMode((v) => (v === "live" ? "history" : "live"))}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium flex-shrink-0 transition-all"
             style={{
-              background: "rgba(246,246,253,0.03)",
-              border: "1px solid rgba(246,246,253,0.08)",
+              background: viewMode === "history" ? "rgba(105,106,172,0.2)" : "transparent",
+              border: viewMode === "history"
+                ? "1px solid #696aac"
+                : "1px solid rgba(246,246,253,0.15)",
+              color: viewMode === "history" ? "#a2a3e9" : "rgba(246,246,253,0.6)",
+              cursor: "pointer",
+              boxShadow: viewMode === "history" ? "0 0 12px rgba(105,106,172,0.2)" : "none",
             }}
           >
-            <div
-              className="text-xs uppercase tracking-wider"
-              style={{ color: "rgba(246,246,253,0.5)" }}
-            >
-              Live Analytics{callStatus === "ended" && " — Final State"}
-            </div>
-
-            {/* ── Row 1: Gauges ── */}
-            <div className="grid grid-cols-2 gap-4">
-              <div
-                className="rounded-xl p-4 flex flex-col items-center"
-                style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
-              >
-                <div
-                  className="text-xs uppercase tracking-wider mb-2 self-start"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Sentiment
-                </div>
-                <Gauge score={metrics.sentiment} label={sentimentLabel(metrics.sentiment)} type="sentiment" />
-              </div>
-              <div
-                className="rounded-xl p-4 flex flex-col items-center"
-                style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
-              >
-                <div
-                  className="text-xs uppercase tracking-wider mb-2 self-start"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Buyer Intent
-                </div>
-                <Gauge score={metrics.buyerIntent} label={intentLabel(metrics.buyerIntent)} type="intent" />
-              </div>
-            </div>
-
-            {/* ── Row 2: Emotion Bars ── */}
-            <div
-              className="rounded-xl p-4"
-              style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
-            >
-              <div
-                className="text-xs uppercase tracking-wider mb-4"
-                style={{ color: "rgba(246,246,253,0.45)" }}
-              >
-                Emotion Analysis
-              </div>
-              <div className="space-y-2.5">
-                {Object.entries(metrics.emotions).map(([name, val]) => (
-                  <EmotionBar key={name} name={name} value={val} />
-                ))}
-              </div>
-            </div>
-
-            {/* ── Row 3: Stage + Sparkline ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                className="rounded-xl p-4"
-                style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
-              >
-                <div
-                  className="text-xs uppercase tracking-wider mb-4"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Call Stage
-                </div>
-                <StageTimeline activeStage={metrics.stage} />
-              </div>
-              <div
-                className="rounded-xl p-4"
-                style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
-              >
-                <div
-                  className="text-xs uppercase tracking-wider mb-3"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Sentiment Timeline
-                </div>
-                <div className="h-20">
-                  <SentimentSparkline points={sentimentHistory} />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Row 4: Buying Signals ── */}
-            {buyingSignals.length > 0 && (
-              <div>
-                <div
-                  className="text-xs uppercase tracking-wider mb-3"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Buying Signals
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {buyingSignals.map((sig, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        background: "rgba(105,106,172,0.2)",
-                        border: "1px solid rgba(133,135,227,0.3)",
-                        color: "#a2a3e9",
-                        animation: "slideIn 0.3s ease",
-                      }}
-                    >
-                      {sig}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Call Summary (after ended) ── */}
-            {callStatus === "ended" && summary && (
-              <div
-                className="rounded-xl p-4"
+            <Clock size={14} />
+            Call History
+            {callHistory.length > 0 && (
+              <span
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                 style={{
-                  background: "rgba(105,106,172,0.08)",
-                  border: "1px solid rgba(133,135,227,0.2)",
+                  background: "rgba(105,106,172,0.35)",
+                  color: "#a2a3e9",
                 }}
               >
-                <div
-                  className="text-xs uppercase tracking-wider mb-3"
-                  style={{ color: "rgba(246,246,253,0.45)" }}
-                >
-                  Call Summary
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Duration</div>
-                    <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
-                      {summary.duration ? formatDuration(summary.duration) : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Sentiment</div>
-                    <div className="text-sm font-medium" style={{ color: sentimentColor(summary.finalSentiment) }}>
-                      {sentimentLabel(summary.finalSentiment)} ({Math.round(summary.finalSentiment)})
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Intent</div>
-                    <div className="text-sm font-medium" style={{ color: "#a2a3e9" }}>
-                      {intentLabel(summary.finalIntent)} ({Math.round(summary.finalIntent)})
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Stage</div>
-                    <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
-                      {summary.stage}
-                    </div>
-                  </div>
-                </div>
+                {callHistory.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            HISTORY VIEW
+        ═══════════════════════════════════════════════════════════════════ */}
+        {viewMode === "history" && (
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "rgba(246,246,253,0.3)" }}
+              />
+              <input
+                type="text"
+                placeholder="Search by company, contact, phone, or product…"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{
+                  background: "rgba(246,246,253,0.04)",
+                  border: "1px solid rgba(246,246,253,0.1)",
+                  color: "rgba(246,246,253,0.9)",
+                }}
+              />
+            </div>
+
+            {/* List */}
+            {callHistory.length === 0 ? (
+              <div
+                className="rounded-2xl p-12 text-center"
+                style={{
+                  background: "rgba(246,246,253,0.02)",
+                  border: "1px solid rgba(246,246,253,0.06)",
+                }}
+              >
+                <Clock size={32} className="mx-auto mb-3" style={{ color: "rgba(246,246,253,0.15)" }} />
+                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
+                  No calls yet. Make your first call to start building history.
+                </p>
+              </div>
+            ) : filteredHistory.length === 0 ? (
+              <div
+                className="rounded-2xl p-10 text-center"
+                style={{
+                  background: "rgba(246,246,253,0.02)",
+                  border: "1px solid rgba(246,246,253,0.06)",
+                }}
+              >
+                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
+                  No calls match your search.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredHistory.map((entry) => (
+                  <HistoryCard
+                    key={entry.id}
+                    entry={entry}
+                    isExpanded={expandedHistoryId === entry.id}
+                    onToggle={() =>
+                      setExpandedHistoryId((prev) => (prev === entry.id ? null : entry.id))
+                    }
+                  />
+                ))}
               </div>
             )}
           </div>
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════
-            Section 3: Live Transcript
+            LIVE VIEW
         ═══════════════════════════════════════════════════════════════════ */}
-        {showAnalytics && (
-          <div
-            className="rounded-2xl p-6"
-            style={{
-              background: "rgba(246,246,253,0.03)",
-              border: "1px solid rgba(246,246,253,0.08)",
-            }}
-          >
+        {viewMode === "live" && (
+          <>
+            {/* ═══ Section 1: Call Setup ═══ */}
             <div
-              className="text-xs uppercase tracking-wider mb-4"
-              style={{ color: "rgba(246,246,253,0.5)" }}
-            >
-              Live Transcript
-            </div>
-
-            <div
-              className="overflow-y-auto pr-1"
+              className="rounded-2xl p-6"
               style={{
-                maxHeight: "420px",
-                minHeight: "120px",
+                background: "rgba(246,246,253,0.03)",
+                border: "1px solid rgba(246,246,253,0.08)",
               }}
             >
-              {transcript.length === 0 ? (
-                <div
-                  className="text-sm text-center py-10"
-                  style={{ color: "rgba(246,246,253,0.25)" }}
+              <div
+                className="text-xs uppercase tracking-wider mb-5"
+                style={{ color: "rgba(246,246,253,0.5)" }}
+              >
+                Call Setup
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                {/* Phone */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Phone Number <span style={{ color: "#f87171" }}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                    }}
+                  />
+                </div>
+
+                {/* Contact Name */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Jane Smith"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                    }}
+                  />
+                </div>
+
+                {/* Company */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Acme Corp"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                    }}
+                  />
+                </div>
+
+                {/* Product */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Product / Service to Pitch
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Akamai, TierPoint, CDN…"
+                    value={productSlug}
+                    onChange={(e) => setProductSlug(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* CTA row */}
+              {callStatus === "idle" || callStatus === "dialing" ? (
+                <button
+                  onClick={handleDial}
+                  disabled={callStatus === "dialing"}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
+                    color: "white",
+                    boxShadow: "0 0 20px rgba(133,135,227,0.35)",
+                    opacity: callStatus === "dialing" ? 0.7 : 1,
+                    cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
+                  }}
                 >
-                  {callStatus === "active" ? "Waiting for transcript…" : "No transcript recorded."}
+                  {callStatus === "dialing" ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Connecting…
+                    </>
+                  ) : (
+                    <>
+                      <PhoneCall size={16} />
+                      Dial with ATOM
+                    </>
+                  )}
+                </button>
+              ) : callStatus === "active" ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <PulsingDot />
+                    <span className="text-sm font-medium" style={{ color: "#34d399" }}>
+                      Call Active
+                      {companyName && ` — ${companyName}`}
+                      {contactName && ` — ${contactName}`}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleEndCall}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                    style={{
+                      background: "rgba(248,113,113,0.15)",
+                      border: "1px solid rgba(248,113,113,0.3)",
+                      color: "#f87171",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <PhoneOff size={14} />
+                    End Call
+                  </button>
                 </div>
               ) : (
-                transcript.map((entry, i) => <TxMessage key={i} entry={entry} />)
+                /* ended */
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Call ended
+                  </span>
+                  <button
+                    onClick={handleNewCall}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium"
+                    style={{
+                      background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
+                      color: "white",
+                      boxShadow: "0 0 16px rgba(133,135,227,0.3)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <PhoneCall size={14} />
+                    New Call
+                  </button>
+                </div>
               )}
-              <div ref={transcriptEndRef} />
             </div>
-          </div>
+
+            {/* ═══ Section 2: Live Analytics (only during/after call) ═══ */}
+            {showAnalytics && (
+              <div
+                className="rounded-2xl p-6 space-y-6"
+                style={{
+                  background: "rgba(246,246,253,0.03)",
+                  border: "1px solid rgba(246,246,253,0.08)",
+                }}
+              >
+                <div
+                  className="text-xs uppercase tracking-wider"
+                  style={{ color: "rgba(246,246,253,0.5)" }}
+                >
+                  Live Analytics{callStatus === "ended" && " — Final State"}
+                </div>
+
+                {/* ── Row 1: Gauges ── */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className="rounded-xl p-4 flex flex-col items-center"
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+                  >
+                    <div
+                      className="text-xs uppercase tracking-wider mb-2 self-start"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Sentiment
+                    </div>
+                    <Gauge score={metrics.sentiment} label={sentimentLabel(metrics.sentiment)} type="sentiment" />
+                  </div>
+                  <div
+                    className="rounded-xl p-4 flex flex-col items-center"
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+                  >
+                    <div
+                      className="text-xs uppercase tracking-wider mb-2 self-start"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Buyer Intent
+                    </div>
+                    <Gauge score={metrics.buyerIntent} label={intentLabel(metrics.buyerIntent)} type="intent" />
+                  </div>
+                </div>
+
+                {/* ── Row 2: Emotion Bars ── */}
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+                >
+                  <div
+                    className="text-xs uppercase tracking-wider mb-4"
+                    style={{ color: "rgba(246,246,253,0.45)" }}
+                  >
+                    Emotion Analysis
+                  </div>
+                  <div className="space-y-2.5">
+                    {Object.entries(metrics.emotions).map(([name, val]) => (
+                      <EmotionBar key={name} name={name} value={val} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Row 3: Stage + Sparkline ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    className="rounded-xl p-4"
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+                  >
+                    <div
+                      className="text-xs uppercase tracking-wider mb-4"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Call Stage
+                    </div>
+                    <StageTimeline activeStage={metrics.stage} />
+                  </div>
+                  <div
+                    className="rounded-xl p-4"
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
+                  >
+                    <div
+                      className="text-xs uppercase tracking-wider mb-3"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Sentiment Timeline
+                    </div>
+                    <div className="h-20">
+                      <SentimentSparkline points={sentimentHistory} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Row 4: Buying Signals ── */}
+                {buyingSignals.length > 0 && (
+                  <div>
+                    <div
+                      className="text-xs uppercase tracking-wider mb-3"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Buying Signals
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {buyingSignals.map((sig, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            background: "rgba(105,106,172,0.2)",
+                            border: "1px solid rgba(133,135,227,0.3)",
+                            color: "#a2a3e9",
+                            animation: "slideIn 0.3s ease",
+                          }}
+                        >
+                          {sig}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Call Summary (after ended) ── */}
+                {callStatus === "ended" && summary && (
+                  <div
+                    className="rounded-xl p-4"
+                    style={{
+                      background: "rgba(105,106,172,0.08)",
+                      border: "1px solid rgba(133,135,227,0.2)",
+                    }}
+                  >
+                    <div
+                      className="text-xs uppercase tracking-wider mb-3"
+                      style={{ color: "rgba(246,246,253,0.45)" }}
+                    >
+                      Call Summary
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Duration</div>
+                        <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
+                          {summary.duration ? formatDuration(summary.duration) : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Sentiment</div>
+                        <div className="text-sm font-medium" style={{ color: sentimentColor(summary.finalSentiment) }}>
+                          {sentimentLabel(summary.finalSentiment)} ({Math.round(summary.finalSentiment)})
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Intent</div>
+                        <div className="text-sm font-medium" style={{ color: "#a2a3e9" }}>
+                          {intentLabel(summary.finalIntent)} ({Math.round(summary.finalIntent)})
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Stage</div>
+                        <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
+                          {summary.stage}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══ Section 3: Live Transcript ═══ */}
+            {showAnalytics && (
+              <div
+                className="rounded-2xl p-6"
+                style={{
+                  background: "rgba(246,246,253,0.03)",
+                  border: "1px solid rgba(246,246,253,0.08)",
+                }}
+              >
+                <div
+                  className="text-xs uppercase tracking-wider mb-4"
+                  style={{ color: "rgba(246,246,253,0.5)" }}
+                >
+                  {callStatus === "ended" ? "Transcript" : "Live Transcript"}
+                </div>
+
+                <div
+                  className="overflow-y-auto pr-1"
+                  style={{
+                    maxHeight: "420px",
+                    minHeight: "120px",
+                  }}
+                >
+                  {transcript.length === 0 ? (
+                    <div
+                      className="text-sm text-center py-10"
+                      style={{ color: "rgba(246,246,253,0.25)" }}
+                    >
+                      {callStatus === "active" ? "Waiting for transcript…" : "No transcript recorded."}
+                    </div>
+                  ) : (
+                    transcript.map((entry, i) => <TxMessage key={i} entry={entry} />)
+                  )}
+                  <div ref={transcriptEndRef} />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

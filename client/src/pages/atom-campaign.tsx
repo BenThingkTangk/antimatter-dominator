@@ -58,6 +58,10 @@ interface CallHistoryEntry {
   disposition: Disposition;
   transcript: TranscriptLine[];
   expanded: boolean;
+  // Rich analytics snapshot (captured at call_complete)
+  sentimentHistory: SentimentPoint[];
+  emotions: EmotionData[];
+  buyingSignals: string[];
 }
 
 interface HotLead {
@@ -1343,12 +1347,262 @@ function LiveCallPanel({
   );
 }
 
+// ─── Outcome helpers for campaign history ────────────────────────────────────
+
+function campaignOutcomeLabel(intent: number): string {
+  if (intent > 75) return "Qualified";
+  if (intent >= 40) return "Engaged";
+  return "Cold";
+}
+
+function campaignOutcomeBadgeStyle(intent: number): React.CSSProperties {
+  if (intent > 75)
+    return { background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" };
+  if (intent >= 40)
+    return { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" };
+  return { background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" };
+}
+
+function campaignCardLeftBorder(intent: number): string {
+  if (intent > 75) return "#34d399";
+  if (intent >= 40) return "#fbbf24";
+  return "#f87171";
+}
+
+// ─── Sparkline for campaign history (works with SentimentPoint {time,score}) ─
+
+function CampSparkline({ points, idSuffix = "" }: { points: SentimentPoint[]; idSuffix?: string }) {
+  const W = 260, H = 52, PAD = 6;
+  if (points.length < 2) {
+    return (
+      <div style={{ height: H, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 11, color: "rgba(246,246,253,0.25)" }}>No data</span>
+      </div>
+    );
+  }
+  const maxTime = Math.max(...points.map((p) => p.time));
+  const minTime = 0;
+  const xScale = (t: number) => PAD + ((t - minTime) / Math.max(maxTime - minTime, 1)) * (W - PAD * 2);
+  const yScale = (s: number) => H - PAD - (s / 100) * (H - PAD * 2);
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${xScale(p.time).toFixed(1)} ${yScale(p.score).toFixed(1)}`).join(" ");
+  const areaPath = `M ${xScale(points[0].time).toFixed(1)} ${H - PAD} ${linePath.slice(1)} L ${xScale(points[points.length - 1].time).toFixed(1)} ${H - PAD} Z`;
+  const gradId = `campSparkGrad${idSuffix}`;
+
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#696aac" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#696aac" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke="#a2a3e9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ─── Rich campaign history card ───────────────────────────────────────────────
+
+function CampaignHistoryCard({
+  entry,
+  isExpanded,
+  onToggle,
+}: {
+  entry: CallHistoryEntry;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const leftBorder = campaignCardLeftBorder(entry.intent);
+  const sectionHdr: React.CSSProperties = {
+    fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "rgba(246,246,253,0.4)", fontWeight: 600, marginBottom: 10, marginTop: 0,
+  };
+
+  return (
+    <div
+      style={{
+        backgroundColor: "rgba(246,246,253,0.03)",
+        border: `1px solid ${isExpanded ? "#696aac" : "rgba(246,246,253,0.08)"}`,
+        borderLeft: `3px solid ${leftBorder}`,
+        borderRadius: 10,
+        overflow: "hidden",
+        boxShadow: isExpanded ? "0 0 16px rgba(105,106,172,0.12)" : "none",
+        transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+      }}
+    >
+      {/* ── Summary row (always visible) ── */}
+      <div
+        style={{ padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
+        onClick={onToggle}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: "#f6f6fd" }}>{entry.companyName || "Unknown"}</span>
+            {entry.contactName && (
+              <span style={{ fontSize: 12, color: "rgba(246,246,253,0.5)" }}>· {entry.contactName}</span>
+            )}
+            <span
+              style={{
+                padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 600,
+                ...campaignOutcomeBadgeStyle(entry.intent),
+              }}
+            >
+              {campaignOutcomeLabel(entry.intent)}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 14, fontSize: 12, color: "rgba(246,246,253,0.4)", flexWrap: "wrap" }}>
+            <span>{formatDuration(entry.duration)}</span>
+            <span style={{ color: getDispositionColor(entry.disposition) }}>{getDispositionLabel(entry.disposition)}</span>
+          </div>
+        </div>
+
+        {/* Scores + chevron */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(246,246,253,0.35)", marginBottom: 2 }}>Sentiment</div>
+            <div style={{ fontSize: 18, fontWeight: 300, color: getGaugeColor(entry.sentiment) }}>{entry.sentiment}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(246,246,253,0.35)", marginBottom: 2 }}>Intent</div>
+            <div style={{ fontSize: 18, fontWeight: 300, color: "#a2a3e9" }}>{entry.intent}</div>
+          </div>
+          <div style={{ color: "rgba(246,246,253,0.35)", fontSize: 14, lineHeight: 1 }}>{isExpanded ? "▲" : "▼"}</div>
+        </div>
+      </div>
+
+      {/* ── Expanded detail ── */}
+      {isExpanded && (
+        <div style={{ padding: "0 16px 16px", borderTop: "1px solid rgba(246,246,253,0.06)" }}>
+          <div style={{ paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* Frozen gauges */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{
+                borderRadius: 10, padding: "12px 14px",
+                background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)",
+                display: "flex", flexDirection: "column", alignItems: "center",
+              }}>
+                <p style={sectionHdr}>Sentiment</p>
+                <RadialGauge
+                  score={entry.sentiment}
+                  label="Sentiment"
+                  sublabel={getSentimentLabel(entry.sentiment)}
+                  size={120}
+                  variant="sentiment"
+                />
+              </div>
+              <div style={{
+                borderRadius: 10, padding: "12px 14px",
+                background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)",
+                display: "flex", flexDirection: "column", alignItems: "center",
+              }}>
+                <p style={sectionHdr}>Buyer Intent</p>
+                <RadialGauge
+                  score={entry.intent}
+                  label="Buyer Intent"
+                  sublabel={getIntentLabel(entry.intent)}
+                  size={120}
+                  variant="intent"
+                  hot={entry.intent > 75}
+                />
+              </div>
+            </div>
+
+            {/* Emotion bars */}
+            {entry.emotions.length > 0 && (
+              <div style={{
+                borderRadius: 10, padding: "12px 14px",
+                background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)",
+              }}>
+                <p style={sectionHdr}>Emotion Analysis</p>
+                <EmotionBars emotions={entry.emotions} />
+              </div>
+            )}
+
+            {/* Stage + Sparkline */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{
+                borderRadius: 10, padding: "12px 14px",
+                background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)",
+              }}>
+                <p style={sectionHdr}>Call Stage</p>
+                <CallStageTimeline currentStage={entry.transcript.length > 0 ? "Close" : "Discovery"} />
+              </div>
+              <div style={{
+                borderRadius: 10, padding: "12px 14px",
+                background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)",
+              }}>
+                <p style={sectionHdr}>Sentiment Timeline</p>
+                <CampSparkline points={entry.sentimentHistory} idSuffix={`-ch-${entry.targetId}`} />
+              </div>
+            </div>
+
+            {/* Buying signals */}
+            {entry.buyingSignals.length > 0 && (
+              <div>
+                <p style={sectionHdr}>Buying Signals</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {entry.buyingSignals.map((sig, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        padding: "4px 11px", borderRadius: 999, fontSize: 11, fontWeight: 500,
+                        backgroundColor: "rgba(105,106,172,0.15)",
+                        border: "1px solid rgba(105,106,172,0.45)",
+                        color: "#c7c8f2",
+                      }}
+                    >
+                      {sig}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Full transcript */}
+            <div>
+              <p style={sectionHdr}>Transcript</p>
+              <div style={{ maxHeight: 300, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
+                {entry.transcript.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "rgba(246,246,253,0.25)", textAlign: "center", padding: "20px 0" }}>
+                    No transcript recorded.
+                  </div>
+                ) : (
+                  entry.transcript.map((line, i) => {
+                    const isAtom = line.speaker === "ATOM";
+                    return (
+                      <div key={i} style={{
+                        padding: "8px 12px", borderRadius: 7,
+                        backgroundColor: isAtom ? "rgba(105,106,172,0.12)" : "rgba(246,246,253,0.03)",
+                        border: `1px solid ${isAtom ? "rgba(105,106,172,0.3)" : "rgba(246,246,253,0.06)"}`,
+                        fontSize: 12,
+                      }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)", marginBottom: 3 }}>
+                          {isAtom ? "ATOM" : "Prospect"}
+                        </div>
+                        <div style={{ color: "#f6f6fd", lineHeight: 1.55 }}>{line.text}</div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CallHistoryFeed({
   history,
-  onToggleExpand,
+  expandedId,
+  onToggle,
 }: {
   history: CallHistoryEntry[];
-  onToggleExpand: (id: string) => void;
+  expandedId: string | null;
+  onToggle: (id: string) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", maxHeight: 620 }}>
@@ -1357,64 +1611,14 @@ function CallHistoryFeed({
           Completed calls will appear here
         </div>
       )}
-      {[...history].reverse().map((entry) => {
-        const borderColor = entry.disposition === "qualified" || entry.disposition === "hot_lead"
-          ? "rgba(34,197,94,0.35)"
-          : entry.disposition === "not_interested"
-          ? "rgba(239,68,68,0.25)"
-          : "rgba(246,246,253,0.1)";
-
-        return (
-          <div
-            key={entry.targetId}
-            style={{
-              backgroundColor: "rgba(246,246,253,0.03)",
-              border: `1px solid ${borderColor}`,
-              borderRadius: 10,
-              padding: "12px 16px",
-              cursor: "pointer",
-            }}
-            onClick={() => onToggleExpand(entry.targetId)}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-              <div>
-                <span style={{ fontWeight: 600, fontSize: 14, color: "#f6f6fd" }}>{entry.companyName}</span>
-                <span style={{ fontSize: 12, color: "rgba(246,246,253,0.5)", marginLeft: 8 }}>{entry.contactName}</span>
-              </div>
-              <span style={{
-                padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600,
-                backgroundColor: `${getDispositionColor(entry.disposition)}20`,
-                border: `1px solid ${getDispositionColor(entry.disposition)}50`,
-                color: getDispositionColor(entry.disposition),
-              }}>{getDispositionLabel(entry.disposition)}</span>
-            </div>
-
-            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "rgba(246,246,253,0.4)" }}>
-              <span>{formatDuration(entry.duration)}</span>
-              <span>Sentiment: <span style={{ color: getGaugeColor(entry.sentiment) }}>{entry.sentiment}</span></span>
-              <span>Intent: <span style={{ color: getGaugeColor(entry.intent) }}>{entry.intent}</span></span>
-            </div>
-
-            {entry.expanded && entry.transcript.length > 0 && (
-              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid rgba(246,246,253,0.08)", paddingTop: 12 }}>
-                {entry.transcript.map((line, i) => {
-                  const isAtom = line.speaker === "ATOM";
-                  return (
-                    <div key={i} style={{
-                      padding: "8px 12px", borderRadius: 6,
-                      backgroundColor: isAtom ? "rgba(105,106,172,0.1)" : "rgba(246,246,253,0.03)",
-                      fontSize: 12,
-                    }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)", marginBottom: 3 }}>{line.speaker}</div>
-                      <div style={{ color: "#f6f6fd", lineHeight: 1.55 }}>{line.text}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {[...history].reverse().map((entry) => (
+        <CampaignHistoryCard
+          key={entry.targetId}
+          entry={entry}
+          isExpanded={expandedId === entry.targetId}
+          onToggle={() => onToggle(entry.targetId)}
+        />
+      ))}
     </div>
   );
 }
@@ -1494,7 +1698,7 @@ function HotLeadsPanel({ hotLeads }: { hotLeads: HotLead[] }) {
 function PhaseLiveDashboard({
   targets, stats, live, history, hotLeads, phase,
   sentimentHistory, emotions, buyingSignals, callDuration,
-  onPause, onResume, onToggleHistoryExpand,
+  expandedHistoryId, onPause, onResume, onToggleHistoryExpand,
 }: {
   targets: Target[];
   stats: CampaignStats;
@@ -1506,6 +1710,7 @@ function PhaseLiveDashboard({
   emotions: EmotionData[];
   buyingSignals: string[];
   callDuration: number;
+  expandedHistoryId: string | null;
   onPause: () => void;
   onResume: () => void;
   onToggleHistoryExpand: (id: string) => void;
@@ -1581,7 +1786,7 @@ function PhaseLiveDashboard({
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(246,246,253,0.5)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 0, marginBottom: 12 }}>
             Call History ({history.length})
           </h3>
-          <CallHistoryFeed history={history} onToggleExpand={onToggleHistoryExpand} />
+          <CallHistoryFeed history={history} expandedId={expandedHistoryId} onToggle={onToggleHistoryExpand} />
         </div>
       </div>
 
@@ -1721,6 +1926,17 @@ export default function AtomCampaign() {
   const toastIdRef = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
   const wsReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Snapshot refs for rich history capture
+  const sentimentHistoryRef = useRef<SentimentPoint[]>([]);
+  const emotionsRef = useRef<EmotionData[]>(DEFAULT_EMOTIONS);
+  const buyingSignalsRef = useRef<string[]>([]);
+  const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+
+  // Keep snapshot refs current so they can be captured in WS event handlers
+  useEffect(() => { sentimentHistoryRef.current = sentimentHistory; }, [sentimentHistory]);
+  useEffect(() => { emotionsRef.current = emotions; }, [emotions]);
+  useEffect(() => { buyingSignalsRef.current = buyingSignals; }, [buyingSignals]);
 
   const addToast = useCallback((message: string, type: ToastMsg["type"] = "info") => {
     const id = ++toastIdRef.current;
@@ -1834,8 +2050,10 @@ export default function AtomCampaign() {
 
       case "call_metrics": {
         const newSentiment = (msg.sentiment as number) ?? 0;
-        const newIntent = (msg.intent as number) ?? 0;
-        const newStage = (msg.callStage as string) ?? "";
+        // Accept both "buyerIntent" (per spec) and legacy "intent"
+        const newIntent = (msg.buyerIntent as number) ?? (msg.intent as number) ?? 0;
+        // Accept both "stage" (per spec) and legacy "callStage"
+        const newStage = (msg.stage as string) ?? (msg.callStage as string) ?? "";
         setLive((prev) => ({
           ...prev,
           sentiment: newSentiment || prev.sentiment,
@@ -1849,16 +2067,28 @@ export default function AtomCampaign() {
             { time: callStartRef.current ? Math.floor((Date.now() - callStartRef.current) / 1000) : prev.length * 3, score: newSentiment },
           ]);
         }
-        // Map emotions from WS if provided
+        // Map emotions from WS if provided — accept both 0-1 fractions and 0-100 integers
         if (msg.emotions && typeof msg.emotions === "object") {
           const wsEmotions = msg.emotions as Record<string, number>;
-          setEmotions(DEFAULT_EMOTIONS.map((e) =>
-            wsEmotions[e.name] !== undefined ? { ...e, value: Math.round(wsEmotions[e.name] * 100) } : e
-          ));
+          setEmotions(DEFAULT_EMOTIONS.map((e) => {
+            const key = e.name;
+            const keyLower = key.toLowerCase();
+            const raw = wsEmotions[key] ?? wsEmotions[keyLower];
+            if (raw === undefined) return e;
+            // Normalise: if value <= 1 it's a fraction, otherwise already 0-100
+            const value = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+            return { ...e, value };
+          }));
         }
         // Map buying signals from WS if provided
         if (Array.isArray(msg.buyingSignals)) {
-          setBuyingSignals(msg.buyingSignals as string[]);
+          setBuyingSignals((prev) => {
+            const next = [...prev];
+            for (const sig of msg.buyingSignals as string[]) {
+              if (!next.includes(sig)) next.push(sig);
+            }
+            return next;
+          });
         }
         break;
       }
@@ -1889,6 +2119,10 @@ export default function AtomCampaign() {
             disposition,
             transcript: curr.transcript,
             expanded: false,
+            // Rich analytics snapshot captured at call end
+            sentimentHistory: [...sentimentHistoryRef.current],
+            emotions: [...emotionsRef.current],
+            buyingSignals: [...buyingSignalsRef.current],
           };
           setHistory((h) => [...h, entry]);
           return { ...curr, callStage: "" };
@@ -2083,12 +2317,17 @@ export default function AtomCampaign() {
     setEmotions(DEFAULT_EMOTIONS);
     setBuyingSignals([]);
     setCallDuration(0);
+    sentimentHistoryRef.current = [];
+    emotionsRef.current = DEFAULT_EMOTIONS;
+    buyingSignalsRef.current = [];
+    setShowHistoryOverlay(false);
+    setExpandedHistoryId(null);
     setForm({ brief: "", targetIndustry: "", targetGeo: "US", targetCount: 10, productSlug: "", alertEmail: "" });
     setPhase("setup");
   }, []);
 
   const handleToggleHistoryExpand = useCallback((id: string) => {
-    setHistory((prev) => prev.map((e) => e.targetId === id ? { ...e, expanded: !e.expanded } : e));
+    setExpandedHistoryId((prev) => (prev === id ? null : id));
   }, []);
 
   // ── Simulation: animate emotions + sentiment history when a call is live ───────────
@@ -2206,6 +2445,79 @@ export default function AtomCampaign() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const historyOverlay = showHistoryOverlay && (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        backgroundColor: "rgba(2,2,2,0.88)",
+        backdropFilter: "blur(16px)",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        overflowY: "auto",
+        padding: "40px 24px 60px",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setShowHistoryOverlay(false); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 860,
+        backgroundColor: "#0d0d12",
+        border: "1px solid rgba(105,106,172,0.25)",
+        borderRadius: 16,
+        overflow: "hidden",
+        boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+      }}>
+        {/* Overlay header */}
+        <div style={{
+          padding: "18px 24px",
+          borderBottom: "1px solid rgba(246,246,253,0.08)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          backgroundColor: "rgba(246,246,253,0.02)",
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#c7c8f2" }}>Call History</h2>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "rgba(246,246,253,0.4)" }}>
+              {history.length} {history.length === 1 ? "call" : "calls"} — current session
+            </p>
+          </div>
+          <button
+            onClick={() => setShowHistoryOverlay(false)}
+            style={{
+              background: "rgba(246,246,253,0.06)",
+              border: "1px solid rgba(246,246,253,0.12)",
+              borderRadius: 8,
+              color: "rgba(246,246,253,0.7)",
+              cursor: "pointer",
+              fontSize: 18,
+              lineHeight: 1,
+              padding: "4px 10px",
+              fontFamily: "inherit",
+            }}
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Overlay body */}
+        <div style={{ padding: "20px 24px" }}>
+          {history.length === 0 ? (
+            <div style={{
+              textAlign: "center", padding: "60px 24px",
+              color: "rgba(246,246,253,0.3)", fontSize: 14,
+            }}>
+              No calls recorded yet. History populates as campaign calls complete.
+            </div>
+          ) : (
+            <CallHistoryFeed
+              history={history}
+              expandedId={expandedHistoryId}
+              onToggle={handleToggleHistoryExpand}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <style>{`
@@ -2236,6 +2548,8 @@ export default function AtomCampaign() {
           outline: none;
         }
       `}</style>
+
+      {historyOverlay}
 
       <div style={{
         minHeight: "100vh",
@@ -2268,6 +2582,49 @@ export default function AtomCampaign() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Call History button */}
+            <button
+              onClick={() => setShowHistoryOverlay((v) => !v)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "7px 16px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                background: showHistoryOverlay ? "rgba(105,106,172,0.22)" : "transparent",
+                border: showHistoryOverlay ? "1px solid #696aac" : "1px solid rgba(246,246,253,0.15)",
+                color: showHistoryOverlay ? "#a2a3e9" : "rgba(246,246,253,0.6)",
+                transition: "all 0.15s ease",
+                boxShadow: showHistoryOverlay ? "0 0 12px rgba(105,106,172,0.2)" : "none",
+              }}
+              onMouseEnter={(e) => { if (!showHistoryOverlay) { e.currentTarget.style.background = "rgba(246,246,253,0.05)"; e.currentTarget.style.color = "rgba(246,246,253,0.8)"; } }}
+              onMouseLeave={(e) => { if (!showHistoryOverlay) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(246,246,253,0.6)"; } }}
+            >
+              {/* Clock icon */}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Call History
+              {history.length > 0 && (
+                <span style={{
+                  background: "rgba(105,106,172,0.35)",
+                  color: "#a2a3e9",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: 999,
+                  lineHeight: 1.6,
+                }}>
+                  {history.length}
+                </span>
+              )}
+            </button>
+
             {/* Phase badge */}
             <div style={getPhaseBadgeStyle(phase)}>
               {(phase === "active") && (
@@ -2317,6 +2674,7 @@ export default function AtomCampaign() {
               emotions={emotions}
               buyingSignals={buyingSignals}
               callDuration={callDuration}
+              expandedHistoryId={expandedHistoryId}
               onPause={handlePause}
               onResume={handleResume}
               onToggleHistoryExpand={handleToggleHistoryExpand}
