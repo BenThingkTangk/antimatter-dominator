@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
@@ -79,6 +79,19 @@ interface LiveCallState {
   callStage: string;
   transcript: TranscriptLine[];
 }
+
+interface SentimentPoint {
+  time: number; // seconds into call
+  score: number;
+}
+
+interface EmotionData {
+  name: string;
+  value: number; // 0-100
+  color: string;
+}
+
+type CallStageName = "Discovery" | "Evaluation" | "Negotiation" | "Close";
 
 interface CampaignStats {
   dialed: number;
@@ -271,6 +284,477 @@ function ToastContainer({ toasts, onRemove }: { toasts: ToastMsg[]; onRemove: (i
   );
 }
 
+// ─── Sentiment gauge helpers ──────────────────────────────────────────────────
+
+function getSentimentLabel(score: number): string {
+  if (score >= 80) return "Very Positive";
+  if (score >= 60) return "Positive";
+  if (score >= 30) return "Neutral";
+  return "Negative";
+}
+
+function getIntentLabel(score: number): string {
+  if (score >= 80) return "Hot Lead";
+  if (score >= 65) return "Purchase Ready";
+  if (score >= 45) return "Interested";
+  if (score >= 25) return "Curious";
+  return "Low";
+}
+
+function getSentimentArcColor(score: number): string {
+  if (score >= 80) return "url(#sentGradPurple)";
+  if (score >= 60) return "url(#sentGradGreen)";
+  if (score >= 30) return "url(#sentGradAmber)";
+  return "url(#sentGradRed)";
+}
+
+function getIntentArcColor(score: number): string {
+  if (score >= 80) return "url(#intGradGreen)";
+  if (score >= 65) return "url(#intGradTeal)";
+  if (score >= 30) return "url(#intGradAmber)";
+  return "url(#intGradRed)";
+}
+
+// ─── Radial Gauge ─────────────────────────────────────────────────────────────
+
+function RadialGauge({
+  score,
+  label,
+  sublabel,
+  size = 140,
+  variant = "sentiment",
+  hot = false,
+}: {
+  score: number;
+  label: string;
+  sublabel: string;
+  size?: number;
+  variant?: "sentiment" | "intent";
+  hot?: boolean;
+}) {
+  // Semicircle arc: starts at 180deg (left), ends at 0deg (right)
+  // Center = (size/2, size/2+10), radius = size*0.38
+  const cx = size / 2;
+  const cy = size / 2 + 8;
+  const r = size * 0.38;
+  const strokeW = size * 0.075;
+
+  // Arc length for 180 degrees
+  const circumference = Math.PI * r; // half circle
+  const filled = Math.max(0, Math.min(1, score / 100)) * circumference;
+  const gap = circumference - filled;
+
+  const arcColor = variant === "sentiment" ? getSentimentArcColor(score) : getIntentArcColor(score);
+
+  // Path: semicircle from left to right (bottom half suppressed)
+  // startX = cx - r, startY = cy
+  // endX = cx + r, endY = cy
+  const startX = cx - r;
+  const startY = cy;
+  const endX = cx + r;
+  const endY = cy;
+
+  const trackPath = `M ${startX} ${startY} A ${r} ${r} 0 0 1 ${endX} ${endY}`;
+
+  const sentIds = {
+    red: "sentGradRed",
+    amber: "sentGradAmber",
+    green: "sentGradGreen",
+    purple: "sentGradPurple",
+  };
+  const intIds = {
+    red: "intGradRed",
+    amber: "intGradAmber",
+    teal: "intGradTeal",
+    green: "intGradGreen",
+  };
+
+  const scoreColor =
+    score >= 80 ? (variant === "sentiment" ? "#a2a3e9" : "#4ade80")
+    : score >= 60 ? (variant === "sentiment" ? "#22c55e" : "#14b8a6")
+    : score >= 30 ? "#f59e0b"
+    : "#ef4444";
+
+  return (
+    <div style={{ position: "relative", width: size, flexShrink: 0 }}>
+      <svg
+        width={size}
+        height={size * 0.65}
+        viewBox={`0 0 ${size} ${size * 0.65}`}
+        style={{
+          filter: hot ? "drop-shadow(0 0 10px rgba(105,106,172,0.7))" : "drop-shadow(0 0 6px rgba(105,106,172,0.3))",
+          overflow: "visible",
+          display: "block",
+          transition: "filter 0.8s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <defs>
+          {variant === "sentiment" ? (
+            <>
+              <linearGradient id={sentIds.red} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#f87171" />
+              </linearGradient>
+              <linearGradient id={sentIds.amber} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#fbbf24" />
+              </linearGradient>
+              <linearGradient id={sentIds.green} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="100%" stopColor="#4ade80" />
+              </linearGradient>
+              <linearGradient id={sentIds.purple} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#696aac" />
+                <stop offset="100%" stopColor="#a2a3e9" />
+              </linearGradient>
+            </>
+          ) : (
+            <>
+              <linearGradient id={intIds.red} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#f87171" />
+              </linearGradient>
+              <linearGradient id={intIds.amber} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#fbbf24" />
+              </linearGradient>
+              <linearGradient id={intIds.teal} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#14b8a6" />
+                <stop offset="100%" stopColor="#696aac" />
+              </linearGradient>
+              <linearGradient id={intIds.green} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="100%" stopColor="#4ade80" />
+              </linearGradient>
+            </>
+          )}
+        </defs>
+
+        {/* Track */}
+        <path
+          d={trackPath}
+          fill="none"
+          stroke="rgba(246,246,253,0.07)"
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+        />
+
+        {/* Filled arc */}
+        <path
+          d={trackPath}
+          fill="none"
+          stroke={arcColor}
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+          strokeDasharray={`${filled} ${gap + 0.5}`}
+          style={{ transition: "stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1), stroke 0.8s ease" }}
+        />
+
+        {/* Score number */}
+        <text
+          x={cx}
+          y={cy - r * 0.12}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={scoreColor}
+          fontSize={size * 0.18}
+          fontWeight="300"
+          fontFamily="'Plus Jakarta Sans', sans-serif"
+          style={{ transition: "fill 0.8s ease" }}
+        >
+          {score}
+        </text>
+      </svg>
+
+      {/* Label below */}
+      <div style={{
+        textAlign: "center",
+        marginTop: -4,
+        fontSize: size * 0.082,
+        fontWeight: 600,
+        color: scoreColor,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        transition: "color 0.8s ease",
+      }}>
+        {sublabel}
+      </div>
+      <div style={{
+        textAlign: "center",
+        marginTop: 3,
+        fontSize: size * 0.072,
+        color: "rgba(246,246,253,0.4)",
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+      }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// ─── Emotion Dimension Bars ───────────────────────────────────────────────────
+
+const EMOTION_COLORS: Record<string, string> = {
+  Confidence: "#696aac",
+  Interest: "#a2a3e9",
+  Skepticism: "#f59e0b",
+  Excitement: "#22c55e",
+  Frustration: "#ef4444",
+  Neutrality: "#64748b",
+};
+
+function EmotionBars({ emotions }: { emotions: EmotionData[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {emotions.map((e) => (
+        <div key={e.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            fontSize: 11,
+            color: "rgba(246,246,253,0.55)",
+            width: 76,
+            flexShrink: 0,
+            fontWeight: 500,
+          }}>{e.name}</span>
+
+          <div style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: "rgba(246,246,253,0.06)", overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              width: `${e.value}%`,
+              background: `linear-gradient(90deg, ${e.color}cc, ${e.color})`,
+              borderRadius: 3,
+              transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)",
+              boxShadow: `0 0 6px ${e.color}60`,
+            }} />
+          </div>
+
+          <span style={{
+            fontSize: 11,
+            color: e.color,
+            width: 32,
+            textAlign: "right",
+            fontWeight: 600,
+            flexShrink: 0,
+            transition: "color 0.4s ease",
+          }}>{e.value}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Call Stage Timeline ──────────────────────────────────────────────────────
+
+const CALL_STAGES: CallStageName[] = ["Discovery", "Evaluation", "Negotiation", "Close"];
+
+function CallStageTimeline({ currentStage }: { currentStage: string }) {
+  const currentIdx = useMemo(() => {
+    const lower = currentStage.toLowerCase();
+    if (lower.includes("close") || lower.includes("closing")) return 3;
+    if (lower.includes("negot")) return 2;
+    if (lower.includes("eval") || lower.includes("demo")) return 1;
+    if (lower.includes("discov") || lower.includes("connect") || lower.includes("initiat")) return 0;
+    return 0;
+  }, [currentStage]);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+      {CALL_STAGES.map((stage, i) => {
+        const isActive = i === currentIdx;
+        const isComplete = i < currentIdx;
+        const color = isComplete ? "#696aac" : isActive ? "#a2a3e9" : "rgba(246,246,253,0.2)";
+        const isLast = i === CALL_STAGES.length - 1;
+
+        return (
+          <div key={stage} style={{ display: "flex", alignItems: "center", flex: isLast ? 0 : 1, minWidth: 0 }}>
+            {/* Node */}
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}>
+              <div style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                border: `2px solid ${color}`,
+                backgroundColor: isActive ? "rgba(162,163,233,0.18)" : isComplete ? "rgba(105,106,172,0.3)" : "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: isActive ? "0 0 10px rgba(162,163,233,0.5)" : "none",
+                transition: "all 0.6s ease",
+                flexShrink: 0,
+              }}>
+                {isComplete ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5l2.5 2.5L8 3" stroke="#696aac" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: isActive ? "#a2a3e9" : "rgba(246,246,253,0.15)", transition: "background 0.4s ease" }} />
+                )}
+              </div>
+              <span style={{
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color,
+                fontWeight: isActive ? 700 : 500,
+                whiteSpace: "nowrap",
+                transition: "color 0.4s ease",
+              }}>{stage}</span>
+            </div>
+
+            {/* Connector line */}
+            {!isLast && (
+              <div style={{ flex: 1, height: 2, margin: "0 4px", marginBottom: 18, borderRadius: 1, backgroundColor: "rgba(246,246,253,0.08)", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width: isComplete ? "100%" : isActive ? "50%" : "0%",
+                  background: "linear-gradient(90deg, #696aac, #a2a3e9)",
+                  borderRadius: 1,
+                  transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)",
+                }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Sentiment Sparkline ──────────────────────────────────────────────────────
+
+function SentimentSparkline({ points }: { points: SentimentPoint[] }) {
+  const W = 280;
+  const H = 52;
+  const PAD = 6;
+
+  const pathD = useMemo(() => {
+    if (points.length < 2) return "";
+    const maxTime = Math.max(...points.map((p) => p.time));
+    const minTime = Math.max(0, maxTime - 60);
+    const visible = points.filter((p) => p.time >= minTime);
+    if (visible.length < 2) return "";
+
+    const xScale = (t: number) => PAD + ((t - minTime) / Math.max(60, maxTime - minTime)) * (W - PAD * 2);
+    const yScale = (s: number) => H - PAD - (s / 100) * (H - PAD * 2);
+
+    const first = visible[0];
+    const last = visible[visible.length - 1];
+
+    return [
+      `M ${xScale(first.time).toFixed(1)} ${H - PAD}`,
+      `L ${xScale(first.time).toFixed(1)} ${yScale(first.score).toFixed(1)}`,
+      ...visible.slice(1).map((p, i) => {
+        const prev = visible[i];
+        const cpX = ((xScale(prev.time) + xScale(p.time)) / 2).toFixed(1);
+        return `C ${cpX} ${yScale(prev.score).toFixed(1)} ${cpX} ${yScale(p.score).toFixed(1)} ${xScale(p.time).toFixed(1)} ${yScale(p.score).toFixed(1)}`;
+      }),
+      `L ${xScale(last.time).toFixed(1)} ${H - PAD}`,
+      "Z",
+    ].join(" ");
+  }, [points]);
+
+  const linePath = useMemo(() => {
+    if (points.length < 2) return "";
+    const maxTime = Math.max(...points.map((p) => p.time));
+    const minTime = Math.max(0, maxTime - 60);
+    const visible = points.filter((p) => p.time >= minTime);
+    if (visible.length < 2) return "";
+
+    const xScale = (t: number) => PAD + ((t - minTime) / Math.max(60, maxTime - minTime)) * (W - PAD * 2);
+    const yScale = (s: number) => H - PAD - (s / 100) * (H - PAD * 2);
+
+    return visible.map((p, i) => {
+      if (i === 0) return `M ${xScale(p.time).toFixed(1)} ${yScale(p.score).toFixed(1)}`;
+      const prev = visible[i - 1];
+      const cpX = ((xScale(prev.time) + xScale(p.time)) / 2).toFixed(1);
+      return `C ${cpX} ${yScale(prev.score).toFixed(1)} ${cpX} ${yScale(p.score).toFixed(1)} ${xScale(p.time).toFixed(1)} ${yScale(p.score).toFixed(1)}`;
+    }).join(" ");
+  }, [points]);
+
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#696aac" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="#696aac" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      {/* Horizontal guide lines */}
+      {[25, 50, 75].map((y) => (
+        <line
+          key={y}
+          x1={PAD} y1={H - PAD - (y / 100) * (H - PAD * 2)}
+          x2={W - PAD} y2={H - PAD - (y / 100) * (H - PAD * 2)}
+          stroke="rgba(246,246,253,0.05)" strokeWidth="1"
+        />
+      ))}
+      {pathD && (
+        <path d={pathD} fill="url(#sparkFill)" />
+      )}
+      {linePath && (
+        <path d={linePath} fill="none" stroke="#a2a3e9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+      {points.length >= 2 && (() => {
+        const maxTime = Math.max(...points.map((p) => p.time));
+        const minTime = Math.max(0, maxTime - 60);
+        const visible = points.filter((p) => p.time >= minTime);
+        if (visible.length === 0) return null;
+        const last = visible[visible.length - 1];
+        const xScale = (t: number) => PAD + ((t - minTime) / Math.max(60, maxTime - minTime)) * (W - PAD * 2);
+        const yScale = (s: number) => H - PAD - (s / 100) * (H - PAD * 2);
+        return (
+          <circle
+            cx={xScale(last.time)}
+            cy={yScale(last.score)}
+            r={3}
+            fill="#a2a3e9"
+            style={{ filter: "drop-shadow(0 0 4px #696aac)" }}
+          />
+        );
+      })()}
+    </svg>
+  );
+}
+
+// ─── Buying Signals Panel ─────────────────────────────────────────────────────
+
+function BuyingSignalsBadges({ signals }: { signals: string[] }) {
+  if (signals.length === 0) {
+    return <span style={{ fontSize: 12, color: "rgba(246,246,253,0.25)" }}>Signals detected during the call will appear here…</span>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+      {signals.map((s, i) => (
+        <span
+          key={i}
+          style={{
+            padding: "4px 11px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 500,
+            backgroundColor: "rgba(105,106,172,0.15)",
+            border: "1px solid rgba(105,106,172,0.45)",
+            color: "#c7c8f2",
+            boxShadow: "0 0 8px rgba(105,106,172,0.2)",
+            animation: "slideIn 0.4s ease forwards",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {s}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Legacy GaugeBar kept for call history display
 function GaugeBar({ value, label }: { value: number; label: string }) {
   const color = getGaugeColor(value);
   return (
@@ -652,8 +1136,30 @@ function PhaseReview({
 
 // ─── Phase 3: Live Dashboard ──────────────────────────────────────────────────
 
-function LiveCallPanel({ live }: { live: LiveCallState }) {
+const DEFAULT_EMOTIONS: EmotionData[] = [
+  { name: "Confidence", value: 0, color: EMOTION_COLORS.Confidence },
+  { name: "Interest", value: 0, color: EMOTION_COLORS.Interest },
+  { name: "Skepticism", value: 0, color: EMOTION_COLORS.Skepticism },
+  { name: "Excitement", value: 0, color: EMOTION_COLORS.Excitement },
+  { name: "Frustration", value: 0, color: EMOTION_COLORS.Frustration },
+  { name: "Neutrality", value: 0, color: EMOTION_COLORS.Neutrality },
+];
+
+function LiveCallPanel({
+  live,
+  sentimentHistory,
+  emotions,
+  buyingSignals,
+  callDuration,
+}: {
+  live: LiveCallState;
+  sentimentHistory: SentimentPoint[];
+  emotions: EmotionData[];
+  buyingSignals: string[];
+  callDuration: number;
+}) {
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const isHotLead = live.intent >= 75;
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -661,43 +1167,153 @@ function LiveCallPanel({ live }: { live: LiveCallState }) {
     }
   }, [live.transcript]);
 
+  const sectionHeader: React.CSSProperties = {
+    fontSize: 10,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "rgba(246,246,253,0.4)",
+    fontWeight: 600,
+    marginBottom: 12,
+    marginTop: 0,
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
-      {/* Currently calling */}
-      <div style={S.cardSmall}>
-        <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)", marginBottom: 8 }}>Currently Calling</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+      {/* ── Header: company + duration ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "14px 18px",
+        borderColor: live.targetId ? "rgba(105,106,172,0.25)" : "rgba(246,246,253,0.08)",
+      }}>
         {live.targetId ? (
-          <>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#f6f6fd", marginBottom: 2 }}>{live.companyName}</div>
-            <div style={{ fontSize: 14, color: "#a2a3e9" }}>
-              {live.contactName} · <span style={{ color: "rgba(246,246,253,0.5)" }}>{live.contactTitle}</span>
-            </div>
-            {live.callStage && (
-              <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, backgroundColor: "rgba(105,106,172,0.15)", border: "1px solid rgba(105,106,172,0.3)", fontSize: 12, color: "#a2a3e9" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", animation: "pulse 1.5s ease infinite" }} />
-                {live.callStage}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)", marginBottom: 5 }}>Live Call</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#f6f6fd", marginBottom: 2 }}>{live.companyName}</div>
+              <div style={{ fontSize: 13, color: "#a2a3e9" }}>
+                {live.contactName}
+                {live.contactTitle && <span style={{ color: "rgba(246,246,253,0.45)" }}> · {live.contactTitle}</span>}
               </div>
-            )}
-          </>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: "rgba(246,246,253,0.35)", marginBottom: 3, letterSpacing: "0.06em" }}>DURATION</div>
+              <div style={{ fontSize: 20, fontWeight: 300, color: "#c7c8f2", letterSpacing: "0.05em", fontVariantNumeric: "tabular-nums" }}>
+                {formatDuration(callDuration)}
+              </div>
+            </div>
+          </div>
         ) : (
-          <div style={{ color: "rgba(246,246,253,0.4)", fontSize: 14 }}>Waiting to connect…</div>
+          <div style={{ color: "rgba(246,246,253,0.3)", fontSize: 14 }}>Waiting to connect…</div>
         )}
       </div>
 
-      {/* Gauges */}
-      <div style={{ ...S.cardSmall, display: "flex", gap: 24 }}>
-        <GaugeBar value={live.sentiment} label="Sentiment" />
-        <GaugeBar value={live.intent} label="Buyer Intent" />
+      {/* ── Gauges row ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "16px 20px",
+        display: "flex",
+        justifyContent: "space-around",
+        alignItems: "flex-start",
+        gap: 16,
+      }}>
+        {/* Sentiment gauge */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <RadialGauge
+            score={live.sentiment}
+            label="Sentiment"
+            sublabel={getSentimentLabel(live.sentiment)}
+            size={130}
+            variant="sentiment"
+          />
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, backgroundColor: "rgba(246,246,253,0.07)", alignSelf: "stretch", margin: "4px 0" }} />
+
+        {/* Intent gauge */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+          {isHotLead && (
+            <div style={{
+              position: "absolute",
+              top: -8,
+              right: -8,
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              background: "linear-gradient(93.92deg, #8587e3, #4c4dac)",
+              color: "#fff",
+              boxShadow: "0 0 10px rgba(105,106,172,0.6)",
+              animation: "hotPulse 1.5s ease infinite",
+              zIndex: 1,
+            }}>HOT</div>
+          )}
+          <RadialGauge
+            score={live.intent}
+            label="Buyer Intent"
+            sublabel={getIntentLabel(live.intent)}
+            size={115}
+            variant="intent"
+            hot={isHotLead}
+          />
+        </div>
       </div>
 
-      {/* Live transcript */}
-      <div style={{ ...S.card, flex: 1, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(246,246,253,0.08)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)" }}>
+      {/* ── Emotion Analysis ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "14px 18px",
+      }}>
+        <p style={sectionHeader}>Emotion Analysis</p>
+        <EmotionBars emotions={emotions} />
+      </div>
+
+      {/* ── Call Stage ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "14px 18px",
+      }}>
+        <p style={sectionHeader}>Call Stage</p>
+        <CallStageTimeline currentStage={live.callStage} />
+      </div>
+
+      {/* ── Sentiment Timeline ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "14px 18px",
+      }}>
+        <p style={sectionHeader}>Sentiment Timeline</p>
+        {sentimentHistory.length < 2 ? (
+          <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 12, color: "rgba(246,246,253,0.2)" }}>Collecting data…</span>
+          </div>
+        ) : (
+          <SentimentSparkline points={sentimentHistory} />
+        )}
+      </div>
+
+      {/* ── Buying Signals ──── */}
+      <div style={{
+        ...S.cardSmall,
+        padding: "14px 18px",
+      }}>
+        <p style={sectionHeader}>Buying Signals</p>
+        <BuyingSignalsBadges signals={buyingSignals} />
+      </div>
+
+      {/* ── Live Transcript ──── */}
+      <div style={{ ...S.card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(246,246,253,0.08)", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(246,246,253,0.4)" }}>
           Live Transcript
         </div>
-        <div ref={transcriptRef} style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div
+          ref={transcriptRef}
+          style={{ maxHeight: 240, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}
+        >
           {live.transcript.length === 0 ? (
-            <div style={{ color: "rgba(246,246,253,0.3)", fontSize: 13, textAlign: "center", paddingTop: 24 }}>
+            <div style={{ color: "rgba(246,246,253,0.3)", fontSize: 13, textAlign: "center", paddingTop: 20 }}>
               Transcript will appear here…
             </div>
           ) : (
@@ -877,6 +1493,7 @@ function HotLeadsPanel({ hotLeads }: { hotLeads: HotLead[] }) {
 
 function PhaseLiveDashboard({
   targets, stats, live, history, hotLeads, phase,
+  sentimentHistory, emotions, buyingSignals, callDuration,
   onPause, onResume, onToggleHistoryExpand,
 }: {
   targets: Target[];
@@ -885,6 +1502,10 @@ function PhaseLiveDashboard({
   history: CallHistoryEntry[];
   hotLeads: HotLead[];
   phase: "active" | "paused";
+  sentimentHistory: SentimentPoint[];
+  emotions: EmotionData[];
+  buyingSignals: string[];
+  callDuration: number;
   onPause: () => void;
   onResume: () => void;
   onToggleHistoryExpand: (id: string) => void;
@@ -946,8 +1567,13 @@ function PhaseLiveDashboard({
       <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, minHeight: 0 }}>
         {/* Live call panel */}
         <div>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "rgba(246,246,253,0.5)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 0, marginBottom: 12 }}>Live Call</h3>
-          <LiveCallPanel live={live} />
+          <LiveCallPanel
+            live={live}
+            sentimentHistory={sentimentHistory}
+            emotions={emotions}
+            buyingSignals={buyingSignals}
+            callDuration={callDuration}
+          />
         </div>
 
         {/* Call history */}
@@ -1084,6 +1710,14 @@ export default function AtomCampaign() {
     dialed: 0, connected: 0, qualified: 0, hotLeads: 0, remaining: 0, total: 0, avgSentiment: 0, avgIntent: 0,
   });
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [sentimentHistory, setSentimentHistory] = useState<SentimentPoint[]>([]);
+  const [emotions, setEmotions] = useState<EmotionData[]>(DEFAULT_EMOTIONS);
+  const [buyingSignals, setBuyingSignals] = useState<string[]>([]);
+  const [callDuration, setCallDuration] = useState(0);
+  const callStartRef = useRef<number | null>(null);
+  const callDurationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const simIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const simTickRef = useRef(0);
   const toastIdRef = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
   const wsReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1166,6 +1800,18 @@ export default function AtomCampaign() {
           callStage: "Initiating call…",
           transcript: [],
         });
+        // Reset per-call state
+        setSentimentHistory([]);
+        setEmotions(DEFAULT_EMOTIONS);
+        setBuyingSignals([]);
+        setCallDuration(0);
+        callStartRef.current = Date.now();
+        if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
+        callDurationTimerRef.current = setInterval(() => {
+          if (callStartRef.current !== null) {
+            setCallDuration(Math.floor((Date.now() - callStartRef.current) / 1000));
+          }
+        }, 1000);
         break;
       }
 
@@ -1187,16 +1833,42 @@ export default function AtomCampaign() {
       }
 
       case "call_metrics": {
+        const newSentiment = (msg.sentiment as number) ?? 0;
+        const newIntent = (msg.intent as number) ?? 0;
+        const newStage = (msg.callStage as string) ?? "";
         setLive((prev) => ({
           ...prev,
-          sentiment: (msg.sentiment as number) ?? prev.sentiment,
-          intent: (msg.intent as number) ?? prev.intent,
-          callStage: (msg.callStage as string) ?? prev.callStage,
+          sentiment: newSentiment || prev.sentiment,
+          intent: newIntent || prev.intent,
+          callStage: newStage || prev.callStage,
         }));
+        // Update sentiment history
+        if (newSentiment > 0) {
+          setSentimentHistory((prev) => [
+            ...prev,
+            { time: callStartRef.current ? Math.floor((Date.now() - callStartRef.current) / 1000) : prev.length * 3, score: newSentiment },
+          ]);
+        }
+        // Map emotions from WS if provided
+        if (msg.emotions && typeof msg.emotions === "object") {
+          const wsEmotions = msg.emotions as Record<string, number>;
+          setEmotions(DEFAULT_EMOTIONS.map((e) =>
+            wsEmotions[e.name] !== undefined ? { ...e, value: Math.round(wsEmotions[e.name] * 100) } : e
+          ));
+        }
+        // Map buying signals from WS if provided
+        if (Array.isArray(msg.buyingSignals)) {
+          setBuyingSignals(msg.buyingSignals as string[]);
+        }
         break;
       }
 
       case "call_complete": {
+        if (callDurationTimerRef.current) {
+          clearInterval(callDurationTimerRef.current);
+          callDurationTimerRef.current = null;
+        }
+        callStartRef.current = null;
         const targetId = msg.targetId as string;
         const disposition = (msg.disposition as Disposition) ?? "no_answer";
         const sentiment = (msg.sentiment as number) ?? 0;
@@ -1278,6 +1950,8 @@ export default function AtomCampaign() {
     return () => {
       wsRef.current?.close();
       if (wsReconnectRef.current) clearTimeout(wsReconnectRef.current);
+      if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
+      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
     };
   }, []);
 
@@ -1396,12 +2070,19 @@ export default function AtomCampaign() {
   const handleNewCampaign = useCallback(() => {
     wsRef.current?.close();
     wsRef.current = null;
+    if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    callStartRef.current = null;
     setCampaignId("");
     setTargets([]);
     setHistory([]);
     setHotLeads([]);
     setLive({ targetId: null, companyName: "", contactName: "", contactTitle: "", sentiment: 0, intent: 0, callStage: "", transcript: [] });
     setStats({ dialed: 0, connected: 0, qualified: 0, hotLeads: 0, remaining: 0, total: 0, avgSentiment: 0, avgIntent: 0 });
+    setSentimentHistory([]);
+    setEmotions(DEFAULT_EMOTIONS);
+    setBuyingSignals([]);
+    setCallDuration(0);
     setForm({ brief: "", targetIndustry: "", targetGeo: "US", targetCount: 10, productSlug: "", alertEmail: "" });
     setPhase("setup");
   }, []);
@@ -1409,6 +2090,99 @@ export default function AtomCampaign() {
   const handleToggleHistoryExpand = useCallback((id: string) => {
     setHistory((prev) => prev.map((e) => e.targetId === id ? { ...e, expanded: !e.expanded } : e));
   }, []);
+
+  // ── Simulation: animate emotions + sentiment history when a call is live ───────────
+  // Only fires when there's a live targetId and sentiment history is sparse
+  // (i.e., no real WS data is streaming rich metrics)
+  useEffect(() => {
+    if (!live.targetId) {
+      if (simIntervalRef.current) {
+        clearInterval(simIntervalRef.current);
+        simIntervalRef.current = null;
+      }
+      simTickRef.current = 0;
+      return;
+    }
+
+    simTickRef.current = 0;
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+
+    const SIGNALS = [
+      "Asked about pricing",
+      "Mentioned competitor",
+      "Requested demo",
+      "Expressed urgency",
+      "Asked about integrations",
+      "Mentioned budget approval",
+    ];
+
+    simIntervalRef.current = setInterval(() => {
+      simTickRef.current += 1;
+      const t = simTickRef.current;
+
+      // Interpolated emotion progression: neutral -> interest -> excitement
+      const progress = Math.min(t / 40, 1); // 0 to 1 over 40 ticks (40s)
+
+      // Only run simulation if sentiment history looks sparse (no active real data)
+      setSentimentHistory((prev) => {
+        // If real data is arriving (score was set via WS), don't simulate
+        if (prev.length > 0 && prev[prev.length - 1].time > t - 2) return prev;
+        // Simulate a realistic curve: starts at 35, rises to 70 by end
+        const baseScore = 35 + progress * 35;
+        const jitter = (Math.random() - 0.5) * 12;
+        const score = Math.round(Math.max(15, Math.min(95, baseScore + jitter)));
+        return [...prev, { time: t, score }];
+      });
+
+      // Simulate emotion shifts
+      setEmotions(() => {
+        // We still animate — but if WS provides them, handleWsEvent updates directly
+        const conf = Math.round(20 + progress * 55 + (Math.random() - 0.5) * 8);
+        const interest = Math.round(15 + progress * 55 + (Math.random() - 0.5) * 10);
+        const skep = Math.round(40 - progress * 30 + (Math.random() - 0.5) * 8);
+        const exc = Math.round(5 + progress * 50 + (Math.random() - 0.5) * 12);
+        const frust = Math.round(20 - progress * 15 + (Math.random() - 0.5) * 6);
+        const neut = Math.round(60 - progress * 40 + (Math.random() - 0.5) * 8);
+        return [
+          { name: "Confidence", value: Math.max(0, Math.min(99, conf)), color: EMOTION_COLORS.Confidence },
+          { name: "Interest", value: Math.max(0, Math.min(99, interest)), color: EMOTION_COLORS.Interest },
+          { name: "Skepticism", value: Math.max(0, Math.min(99, skep)), color: EMOTION_COLORS.Skepticism },
+          { name: "Excitement", value: Math.max(0, Math.min(99, exc)), color: EMOTION_COLORS.Excitement },
+          { name: "Frustration", value: Math.max(0, Math.min(99, frust)), color: EMOTION_COLORS.Frustration },
+          { name: "Neutrality", value: Math.max(0, Math.min(99, neut)), color: EMOTION_COLORS.Neutrality },
+        ];
+      });
+
+      // Simulate buying signals appearing
+      setBuyingSignals((prev) => {
+        if (prev.length >= 4) return prev;
+        if (t === 10 && prev.length < 1) return [SIGNALS[0]];
+        if (t === 20 && prev.length < 2) return [...prev, SIGNALS[1]];
+        if (t === 32 && prev.length < 3) return [...prev, SIGNALS[2]];
+        if (t === 45 && prev.length < 4) return [...prev, SIGNALS[3]];
+        return prev;
+      });
+
+      // Simulate live.sentiment update (only when not getting real WS data)
+      setLive((prev) => {
+        if (prev.sentiment > 5) return prev; // real WS data is present, skip
+        const baseScore = 35 + Math.min(t / 40, 1) * 35;
+        const score = Math.round(Math.max(15, Math.min(95, baseScore + (Math.random() - 0.5) * 10)));
+        const intentBase = 20 + Math.min(t / 50, 1) * 60;
+        const intent = Math.round(Math.max(10, Math.min(95, intentBase + (Math.random() - 0.5) * 10)));
+        const stages = ["Discovery", "Evaluation", "Negotiation"];
+        const stageIdx = Math.min(Math.floor(t / 20), 2);
+        return { ...prev, sentiment: score, intent, callStage: stages[stageIdx] };
+      });
+    }, 1000);
+
+    return () => {
+      if (simIntervalRef.current) {
+        clearInterval(simIntervalRef.current);
+        simIntervalRef.current = null;
+      }
+    };
+  }, [live.targetId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll status while active (in case WS misses events)
   useEffect(() => {
@@ -1439,6 +2213,18 @@ export default function AtomCampaign() {
         @keyframes pulse {
           0%, 100% { transform: scale(1); opacity: 0.4; }
           50% { transform: scale(2); opacity: 0; }
+        }
+        @keyframes hotPulse {
+          0%, 100% { box-shadow: 0 0 10px rgba(105,106,172,0.6); }
+          50% { box-shadow: 0 0 20px rgba(105,106,172,1), 0 0 40px rgba(105,106,172,0.4); }
+        }
+        @keyframes gaugeGlow {
+          0%, 100% { filter: drop-shadow(0 0 6px rgba(105,106,172,0.3)); }
+          50% { filter: drop-shadow(0 0 16px rgba(105,106,172,0.8)); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -1527,6 +2313,10 @@ export default function AtomCampaign() {
               history={history}
               hotLeads={hotLeads}
               phase={phase}
+              sentimentHistory={sentimentHistory}
+              emotions={emotions}
+              buyingSignals={buyingSignals}
+              callDuration={callDuration}
               onPause={handlePause}
               onResume={handleResume}
               onToggleHistoryExpand={handleToggleHistoryExpand}
