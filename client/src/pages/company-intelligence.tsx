@@ -178,7 +178,7 @@ function PitchTab({ activeCompany }: { activeCompany: string }) {
     setLoading(true);
     setResult(null);
     try {
-      const data = await apiPost("/api/rag/company?action=pitch", {
+      const data = await apiPost("/api/rag?action=pitch", {
         company_name: activeCompany,
         prospect_title: prospectTitle,
         product_to_pitch: productToPitch || undefined,
@@ -296,7 +296,7 @@ function ObjectionTab({ activeCompany }: { activeCompany: string }) {
     setLoading(true);
     setResult(null);
     try {
-      const data = await apiPost("/api/rag/company?action=objection", {
+      const data = await apiPost("/api/rag?action=objection", {
         company_name: activeCompany,
         objection_text: objectionText,
         product_to_pitch: productToPitch || undefined,
@@ -461,7 +461,7 @@ function IntentTab({ activeCompany }: { activeCompany: string }) {
     setLoading(true);
     setResult(null);
     try {
-      const data = await apiPost("/api/rag/company?action=context", {
+      const data = await apiPost("/api/rag?action=context", {
         company_name: activeCompany,
         module: "market_intent",
       });
@@ -562,7 +562,7 @@ function ProspectsTab({ activeCompany }: { activeCompany: string }) {
     setLoading(true);
     setResult(null);
     try {
-      const data = await apiPost("/api/rag/company?action=context", {
+      const data = await apiPost("/api/rag?action=context", {
         company_name: activeCompany,
         module: "prospects",
       });
@@ -707,7 +707,7 @@ function PlaybookTab({ activeCompany }: { activeCompany: string }) {
     setLoading(true);
     setResult(null);
     try {
-      const data = await apiPost("/api/rag/company?action=context", {
+      const data = await apiPost("/api/rag?action=context", {
         company_name: activeCompany,
         module: "call_playbook",
       });
@@ -832,7 +832,7 @@ export default function CompanyIntelligence() {
 
   const fetchCompanies = useCallback(async () => {
     try {
-      const data = await apiGet("/api/rag/company?action=companies");
+      const data = await apiGet("/api/rag?action=companies");
       if (Array.isArray(data)) setLoadedCompanies(data);
       else if (data.companies) setLoadedCompanies(data.companies);
     } catch {
@@ -851,7 +851,7 @@ export default function CompanyIntelligence() {
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
-          const data = await apiGet(`/api/rag/company?action=status&company=${encodeURIComponent(company)}`);
+          const data = await apiGet(`/api/rag?action=status&company=${encodeURIComponent(company)}`);
           if (data.status === "ready") {
             clearInterval(pollRef.current!);
             if (stepRef.current) clearInterval(stepRef.current);
@@ -908,7 +908,7 @@ export default function CompanyIntelligence() {
     }, 6000);
 
     try {
-      await apiPost("/api/rag/company?action=load", {
+      await apiPost("/api/rag?action=load", {
         company_name: name,
         force_refresh: false,
       });
