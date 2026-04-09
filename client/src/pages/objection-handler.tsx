@@ -1,118 +1,327 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { store, useObjections, type ObjectionEntry } from "@/lib/store";
+import { store, useObjections } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquareWarning, Loader2, Copy, Zap, History, ShieldCheck, DollarSign, Clock, Users, AlertTriangle, Lock, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  MessageSquareWarning, Loader2, Copy, Zap, History,
+  ShieldCheck, DollarSign, Clock, Users, AlertTriangle, Lock,
+  Plus, ChevronDown, ChevronUp, Trash2, Check, Brain,
+  TrendingUp, MessageCircle, BarChart3, Target, RefreshCw
+} from "lucide-react";
 import type { Product } from "@shared/schema";
 
-const categoryIcons: Record<string, any> = { price: DollarSign, competition: ShieldCheck, timing: Clock, authority: Users, need: AlertTriangle, trust: Lock };
-const categoryColors: Record<string, string> = { price: "bg-amber-500/15 text-amber-500", competition: "bg-blue-500/15 text-blue-500", timing: "bg-purple-500/15 text-purple-500", authority: "bg-emerald-500/15 text-emerald-500", need: "bg-rose-500/15 text-rose-500", trust: "bg-cyan-500/15 text-cyan-500" };
+// ─── Types ─────────────────────────────────────────────────────────────────
 
-const quickObjections = ["We already have something in place","It's too expensive","We're not ready for AI yet","I need to check with my boss","We've been burned by vendors before","Quantum threats aren't real yet","Our team won't adopt new tools","Can you prove ROI?"];
+interface ObjectionSentiment {
+  hostility: number;
+  curiosity: number;
+  buyingSignalStrength: number;
+  recommendedTone: string;
+}
 
-const STORAGE_KEY = "atom_objection_history";
+interface ObjectionStrategy {
+  type: string;
+  headline: string;
+  response: string;
+}
+
+interface ObjectionResult {
+  primaryResponse: string;
+  detectedCategory: string;
+  categoryConfidence: number;
+  sentiment: ObjectionSentiment;
+  strategies: ObjectionStrategy[];
+  followUpQuestions: string[];
+  urgencyLevel: string;
+  closingProbability: number;
+  keyInsight: string;
+  response?: string;
+  content?: string;
+  category?: string;
+  hasRagContext?: boolean;
+}
 
 interface LocalObjectionEntry {
   id: string;
-  selectedProduct: string;
+  product: string;
   objectionText: string;
   context: string;
-  selectedCategory: string;
-  response: string;
+  result: ObjectionResult;
   timestamp: number;
 }
 
-function formatTimestamp(ts: number): string {
-  const now = Date.now();
-  const diff = now - ts;
-  const hours = diff / (1000 * 60 * 60);
-  if (hours < 1) {
-    const mins = Math.floor(diff / (1000 * 60));
-    return mins <= 1 ? "just now" : `${mins}m ago`;
-  }
-  if (hours < 24) return `${Math.floor(hours)}h ago`;
-  const d = new Date(ts);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+// ─── Constants ────────────────────────────────────────────────────────────
+
+const PRODUCTS = [
+  { value: "antimatter-ai-platform", label: "Antimatter AI Platform" },
+  { value: "atom-enterprise-ai", label: "ATOM Enterprise AI" },
+  { value: "vidzee", label: "Vidzee" },
+  { value: "clinix-agent", label: "Clinix Agent" },
+  { value: "clinix-ai", label: "Clinix AI" },
+  { value: "red-team-atom", label: "Red Team ATOM" },
+];
+
+const QUICK_OBJECTIONS = [
+  "We already have something in place",
+  "It's too expensive",
+  "We're not ready for AI yet",
+  "I need to check with my boss",
+  "We've been burned by vendors before",
+  "Quantum threats aren't real yet",
+  "Our team won't adopt new tools",
+  "Can you prove ROI?",
+  "We're mid-contract with a competitor",
+  "Our security team will block this",
+];
+
+const CATEGORY_CONFIG: Record<string, { icon: any; color: string; bg: string; border: string; label: string }> = {
+  price:       { icon: DollarSign,        color: "text-amber-400",   bg: "bg-amber-500/10",  border: "border-amber-500/20",  label: "Price" },
+  competition: { icon: ShieldCheck,       color: "text-blue-400",    bg: "bg-blue-500/10",   border: "border-blue-500/20",   label: "Competition" },
+  timing:      { icon: Clock,             color: "text-purple-400",  bg: "bg-purple-500/10", border: "border-purple-500/20", label: "Timing" },
+  authority:   { icon: Users,             color: "text-emerald-400", bg: "bg-emerald-500/10",border: "border-emerald-500/20",label: "Authority" },
+  need:        { icon: AlertTriangle,     color: "text-rose-400",    bg: "bg-rose-500/10",   border: "border-rose-500/20",   label: "Need" },
+  trust:       { icon: Lock,              color: "text-cyan-400",    bg: "bg-cyan-500/10",   border: "border-cyan-500/20",   label: "Trust" },
+  general:     { icon: MessageSquareWarning, color: "text-white/50", bg: "bg-white/5",       border: "border-white/10",      label: "General" },
+};
+
+const TONE_COLORS: Record<string, string> = {
+  "Empathetic":   "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  "Direct":       "bg-rose-500/15 text-rose-400 border-rose-500/25",
+  "Educational":  "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  "Reassuring":   "bg-[#696aac]/15 text-[#a2a3e9] border-[#696aac]/25",
+};
+
+const URGENCY_COLORS: Record<string, string> = {
+  "high":   "text-rose-400 bg-rose-500/10 border-rose-500/20",
+  "medium": "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  "low":    "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+};
+
+const STORAGE_KEY = "atom_objection_history";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+function formatTs(ts: number): string {
+  const diff = Date.now() - ts;
+  const h = diff / 3600000;
+  if (h < 0.017) return "just now";
+  if (h < 1) return `${Math.floor(diff / 60000)}m ago`;
+  if (h < 24) return `${Math.floor(h)}h ago`;
+  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function loadHistory(): LocalObjectionEntry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
 }
 
-function saveHistory(entries: LocalObjectionEntry[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {}
+function saveHistory(e: LocalObjectionEntry[]) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(e)); } catch {}
 }
+
+// ─── Sub-components ───────────────────────────────────────────────────────
+
+function SentimentMeter({ label, value, low, high }: { label: string; value: number; low: string; high: string }) {
+  const leftPct = Math.max(0, Math.min(100, 100 - value));
+  const rightPct = Math.max(0, Math.min(100, value));
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-[10px] text-white/30">
+        <span>{low}</span>
+        <span>{high}</span>
+      </div>
+      <div className="relative h-2 rounded-full overflow-hidden bg-white/5">
+        <div
+          className="absolute left-0 h-full rounded-l-full transition-all duration-1000"
+          style={{
+            width: `${leftPct}%`,
+            background: "linear-gradient(to right, #22c55e20, #22c55e60)",
+          }}
+        />
+        <div
+          className="absolute right-0 h-full rounded-r-full transition-all duration-1000"
+          style={{
+            width: `${rightPct}%`,
+            background: "linear-gradient(to left, #ef444420, #ef444460)",
+          }}
+        />
+        {/* Indicator needle */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 rounded-full bg-white/60 transition-all duration-1000"
+          style={{ left: `${value}%`, transform: `translateX(-50%) translateY(-50%)` }}
+        />
+      </div>
+      <div className="text-center text-[10px] text-white/40">{label}: <span className="text-white/60">{value}%</span></div>
+    </div>
+  );
+}
+
+function BuyingSignalGauge({ score }: { score: number }) {
+  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const radius = 32;
+  const circumference = Math.PI * radius; // half circle
+  const progress = (score / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative w-24 h-12 overflow-hidden">
+        <svg width={96} height={64} viewBox="0 0 96 64" className="absolute top-0 left-0">
+          {/* Background track */}
+          <path
+            d="M 8 56 A 40 40 0 0 1 88 56"
+            fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={8} strokeLinecap="round"
+          />
+          {/* Progress */}
+          <path
+            d="M 8 56 A 40 40 0 0 1 88 56"
+            fill="none" stroke={color} strokeWidth={8} strokeLinecap="round"
+            strokeDasharray={`${(score / 100) * 125.66} 125.66`}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)", filter: `drop-shadow(0 0 6px ${color}80)` }}
+          />
+        </svg>
+        <div className="absolute bottom-0 left-0 right-0 text-center">
+          <span className="text-lg font-bold" style={{ color }}>{score}</span>
+        </div>
+      </div>
+      <span className="text-[10px] text-white/40 uppercase tracking-wider">Buying Signal</span>
+    </div>
+  );
+}
+
+function CircularClosingProb({ score }: { score: number }) {
+  const color = score >= 65 ? "#696aac" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-16 h-16">
+        <svg width={64} height={64} viewBox="0 0 64 64" className="-rotate-90">
+          <circle cx={32} cy={32} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={6} />
+          <circle
+            cx={32} cy={32} r={radius} fill="none" stroke={color} strokeWidth={6}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (score / 100) * circumference}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dashoffset 1s ease", filter: `drop-shadow(0 0 5px ${color}80)` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-bold" style={{ color }}>{score}%</span>
+        </div>
+      </div>
+      <span className="text-[10px] text-white/40">Close Prob.</span>
+    </div>
+  );
+}
+
+function SkeletonLoader() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="grid grid-cols-3 gap-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-24 rounded-xl bg-white/[0.04]" />)}
+      </div>
+      <div className="space-y-2">
+        {[100, 90, 75, 85, 60].map((w, i) => (
+          <div key={i} className="h-3.5 rounded bg-white/[0.04]" style={{ width: `${w}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────
 
 export default function ObjectionHandler() {
   const { toast } = useToast();
-  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-  const [selectedProduct, setSelectedProduct] = useState(params.get("product") || "");
+
+  // Form state
+  const [selectedProduct, setSelectedProduct] = useState("");
   const [objectionText, setObjectionText] = useState("");
   const [context, setContext] = useState("");
-  const objectionHistory = useObjections();
 
+  // UI state
   const [showHistory, setShowHistory] = useState(false);
   const [localHistory, setLocalHistory] = useState<LocalObjectionEntry[]>([]);
-  const [activeResponse, setActiveResponse] = useState<LocalObjectionEntry | null>(null);
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const [activeResult, setActiveResult] = useState<ObjectionResult | null>(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [activeStrategyTab, setActiveStrategyTab] = useState(0);
 
-  useEffect(() => {
-    setLocalHistory(loadHistory());
-  }, []);
+  useEffect(() => { setLocalHistory(loadHistory()); }, []);
 
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
 
+  const allProducts = [
+    ...PRODUCTS,
+    ...products.filter(p => !PRODUCTS.find(sp => sp.value === p.slug)).map(p => ({ value: p.slug, label: p.name })),
+  ];
+
   const handleObjection = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/objection/handle", { productSlug: selectedProduct, objection: objectionText, context: context || undefined });
+      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
+      const res = await apiRequest("POST", "/api/objection/handle", {
+        productSlug: selectedProduct,
+        selectedProduct: productLabel,
+        objection: objectionText,
+        objectionText,
+        context: context || undefined,
+      });
       return res.json();
     },
-    onSuccess: (data: ObjectionEntry) => {
-      store.addObjection(data);
+    onSuccess: (data: ObjectionResult) => {
+      setActiveResult(data);
+      setActiveStrategyTab(0);
 
-      const productName = products.find(p => p.slug === selectedProduct)?.name || selectedProduct;
+      // Store in global store (legacy)
+      store.addObjection({
+        id: Date.now(),
+        productId: 0,
+        objection: objectionText,
+        response: data.primaryResponse || data.response || "",
+        category: data.detectedCategory || data.category || "general",
+        createdAt: new Date().toISOString(),
+      });
+
+      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
       const entry: LocalObjectionEntry = {
         id: `${Date.now()}-${Math.random()}`,
-        selectedProduct: productName,
+        product: productLabel,
         objectionText,
         context,
-        selectedCategory: data.category || "general",
-        response: data.response,
+        result: data,
         timestamp: Date.now(),
       };
       const updated = [entry, ...loadHistory()].slice(0, 50);
       saveHistory(updated);
       setLocalHistory(updated);
-      setActiveResponse(entry);
 
       toast({ title: "Response ready", description: "Counter-objection crafted." });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied" }); };
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(key);
+    setTimeout(() => setCopiedSection(null), 2000);
+    toast({ title: "Copied" });
+  };
 
-  const restoreEntry = (entry: LocalObjectionEntry) => {
-    const productObj = products.find(p => p.name === entry.selectedProduct);
-    if (productObj) setSelectedProduct(productObj.slug);
+  const loadFromHistory = (entry: LocalObjectionEntry) => {
+    const productObj = allProducts.find(p => p.label === entry.product || p.value === entry.product);
+    if (productObj) setSelectedProduct(productObj.value);
     setObjectionText(entry.objectionText);
-    setContext(entry.context);
-    setActiveResponse(entry);
+    setContext(entry.context || "");
+    setActiveResult(entry.result);
     setShowHistory(false);
-    setExpandedEntry(null);
   };
 
   const clearHistory = () => {
@@ -121,99 +330,98 @@ export default function ObjectionHandler() {
     toast({ title: "History cleared" });
   };
 
-  // Only show result from current session (not old store data)
-  const currentResponse = activeResponse;
+  const category = activeResult?.detectedCategory || "general";
+  const catConfig = CATEGORY_CONFIG[category] || CATEGORY_CONFIG["general"];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><MessageSquareWarning className="w-5 h-5 text-amber-500" /></div>
+        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/15">
+          <MessageSquareWarning className="w-5 h-5 text-amber-400" />
+        </div>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">Objection Handler</h1>
-          <p className="text-sm text-muted-foreground">Counter any pushback with AI-powered responses</p>
+          <h1 className="text-xl font-semibold text-white">Objection Handler</h1>
+          <p className="text-sm text-white/40">Counter any pushback with AI-precision responses</p>
         </div>
         <div className="flex items-center gap-2">
           {showHistory && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" onClick={() => setShowHistory(false)}>
-              <Plus className="w-3.5 h-3.5" />New Search
+            <Button variant="outline" size="sm"
+              className="h-8 text-xs gap-1.5 border-white/10 hover:border-amber-500/30"
+              onClick={() => { setShowHistory(false); setActiveResult(null); }}>
+              <Plus className="w-3.5 h-3.5" />New Objection
             </Button>
           )}
           <Button
-            variant="outline"
-            size="sm"
-            className={`h-8 text-xs gap-1.5 ${showHistory ? "bg-[#696aac]/10 border-[#696aac]" : ""}`}
+            variant="outline" size="sm"
+            className={`h-8 text-xs gap-1.5 border-white/10 transition-colors ${showHistory ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : "hover:border-white/20"}`}
             onClick={() => setShowHistory(!showHistory)}
-          >
+            data-testid="button-toggle-history">
             <History className="w-3.5 h-3.5" />
             History
             {localHistory.length > 0 && (
-              <span className="bg-[#696aac] text-white text-xs rounded-full px-1.5 py-0 leading-4">{localHistory.length}</span>
+              <span className="bg-amber-500 text-white text-[10px] rounded-full px-1.5 leading-4 py-0">{localHistory.length}</span>
             )}
           </Button>
         </div>
       </div>
 
+      {/* History Panel */}
       {showHistory ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {localHistory.length === 0 ? (
-            <Card className="border-border/50">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <History className="w-8 h-8 mb-3 opacity-40" />
-                <p className="text-sm">No objections handled yet</p>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-20 text-white/30">
+              <History className="w-8 h-8 mb-3 opacity-40" />
+              <p className="text-sm">No objections handled yet</p>
+            </div>
           ) : (
             <>
-              {localHistory.map((entry) => {
-                const CatIcon = categoryIcons[entry.selectedCategory] || AlertTriangle;
+              {localHistory.map(entry => {
+                const cat = entry.result?.detectedCategory || entry.result?.category || "general";
+                const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG["general"];
+                const CatIcon = cfg.icon;
                 return (
-                  <div
-                    key={entry.id}
-                    className="rounded-xl border border-[rgba(246,246,253,0.08)] bg-[rgba(246,246,253,0.03)] overflow-hidden"
-                    style={{ borderLeftWidth: "2px", borderLeftColor: "#696aac" }}
-                  >
-                    <button
-                      className="w-full text-left p-4"
-                      onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {entry.selectedCategory} objection for {entry.selectedProduct}
-                          </p>
-                          <p className="text-xs text-foreground/40 mt-0.5">{formatTimestamp(entry.timestamp)}</p>
+                  <div key={entry.id}
+                    className="rounded-xl bg-black/30 border border-white/[0.07] overflow-hidden backdrop-blur-sm hover:bg-black/40 transition-colors"
+                    style={{ borderLeftWidth: 2, borderLeftColor: "#f59e0b" }}>
+                    <button className="w-full text-left p-4"
+                      onClick={() => setExpandedHistoryId(expandedHistoryId === entry.id ? null : entry.id)}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white/80 truncate">{entry.product}</p>
+                          <p className="text-xs text-white/30 mt-0.5">{formatTs(entry.timestamp)}</p>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Badge className={`${categoryColors[entry.selectedCategory] || "bg-muted"} text-[10px]`}>
-                            <CatIcon className="w-3 h-3 mr-1" />{entry.selectedCategory}
-                          </Badge>
-                          {expandedEntry === entry.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+                            {cfg.label}
+                          </span>
+                          {expandedHistoryId === entry.id
+                            ? <ChevronUp className="w-4 h-4 text-white/30" />
+                            : <ChevronDown className="w-4 h-4 text-white/30" />}
                         </div>
                       </div>
-                      {expandedEntry !== entry.id && (
-                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2 italic">"{entry.objectionText}"</p>
+                      {expandedHistoryId !== entry.id && (
+                        <p className="text-xs text-white/30 mt-2 line-clamp-2 italic">"{entry.objectionText}"</p>
                       )}
                     </button>
-
-                    {expandedEntry === entry.id && (
-                      <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge variant="secondary">{entry.selectedProduct}</Badge>
-                          <Badge className={categoryColors[entry.selectedCategory] || "bg-muted"}>
-                            <CatIcon className="w-3 h-3 mr-1" />{entry.selectedCategory}
-                          </Badge>
+                    {expandedHistoryId === entry.id && (
+                      <div className="px-4 pb-4 space-y-3 border-t border-white/[0.05] pt-3">
+                        <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 p-3">
+                          <p className="text-[10px] text-amber-400/60 uppercase tracking-wider mb-1">Objection</p>
+                          <p className="text-sm italic text-white/60">"{entry.objectionText}"</p>
                         </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">OBJECTION:</p>
-                          <p className="text-sm italic">"{entry.objectionText}"</p>
+                        <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                          {entry.result?.primaryResponse || entry.result?.response}
                         </div>
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">{entry.response}</div>
-                        <div className="flex gap-2 pt-1">
-                          <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => restoreEntry(entry)}>
-                            <Plus className="w-3 h-3" />Restore & Edit
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-xs h-7 gap-1 border-white/10 hover:border-amber-500/30"
+                            onClick={() => loadFromHistory(entry)}>
+                            <Plus className="w-3 h-3" />Restore
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-xs h-7 gap-1" onClick={() => copyToClipboard(entry.response)}>
-                            <Copy className="w-3 h-3" />Copy
+                          <Button size="sm" variant="ghost" className="text-xs h-7 gap-1 text-white/40 hover:text-white/70"
+                            onClick={() => copyToClipboard(entry.result?.primaryResponse || entry.result?.response || "", entry.id)}>
+                            {copiedSection === entry.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            Copy
                           </Button>
                         </div>
                       </div>
@@ -222,68 +430,257 @@ export default function ObjectionHandler() {
                 );
               })}
               <div className="flex justify-end pt-1">
-                <button onClick={clearHistory} className="text-xs text-red-400 hover:text-red-300 transition-colors">Clear History</button>
+                <button onClick={clearHistory} className="text-xs text-red-400/60 hover:text-red-400 transition-colors flex items-center gap-1">
+                  <Trash2 className="w-3 h-3" />Clear History
+                </button>
               </div>
             </>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="border-border/50 lg:col-span-1">
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Objection Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Input Panel */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5 space-y-4">
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Objection Details</h2>
+
+              {/* Product */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Product</label>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger><SelectValue placeholder="Select a product" /></SelectTrigger>
-                  <SelectContent>{products.map((p) => <SelectItem key={p.slug} value={p.slug}>{p.name}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-sm" data-testid="select-product">
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allProducts.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">The Objection</label>
-                <Textarea placeholder="Type the objection..." value={objectionText} onChange={(e) => setObjectionText(e.target.value)} className="min-h-[100px] text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Quick Select</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {quickObjections.map((obj) => <button key={obj} onClick={() => setObjectionText(obj)} className="text-[10px] px-2 py-1 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors">{obj}</button>)}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Context (optional)</label>
-                <Textarea placeholder="E.g., 200-bed hospital using Epic..." value={context} onChange={(e) => setContext(e.target.value)} className="min-h-[60px] text-sm" />
-              </div>
-              <Button className="w-full" onClick={() => handleObjection.mutate()} disabled={!selectedProduct || !objectionText || handleObjection.isPending}>
-                {handleObjection.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Crafting response...</> : <><Zap className="w-4 h-4 mr-2" />Destroy This Objection</>}
-              </Button>
-            </CardContent>
-          </Card>
 
-          <Card className="border-border/50 lg:col-span-2">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">AI Response</CardTitle>
-              {currentResponse && <Button variant="ghost" size="sm" onClick={() => copyToClipboard(currentResponse.response)}><Copy className="w-3.5 h-3.5 mr-1.5" />Copy</Button>}
-            </CardHeader>
-            <CardContent>
-              {handleObjection.isPending ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground"><Loader2 className="w-8 h-8 animate-spin text-primary mb-3" /><p className="text-sm font-medium">Crafting your counter-response...</p></div>
-              ) : currentResponse ? (
-                <div className="space-y-3">
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <Badge variant="secondary">{currentResponse.selectedProduct}</Badge>
-                    <Badge className={categoryColors[currentResponse.selectedCategory] || "bg-muted"}>{currentResponse.selectedCategory}</Badge>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">OBJECTION:</p>
-                    <p className="text-sm italic">"{currentResponse.objectionText}"</p>
-                  </div>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{currentResponse.response}</div>
+              {/* Objection */}
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">The Objection</label>
+                <Textarea
+                  placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
+                  value={objectionText}
+                  onChange={e => setObjectionText(e.target.value)}
+                  className="bg-white/[0.03] border-white/10 text-sm min-h-[100px] resize-none"
+                  data-testid="textarea-objection"
+                />
+              </div>
+
+              {/* Quick Select */}
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Quick Select</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_OBJECTIONS.map(obj => (
+                    <button key={obj}
+                      onClick={() => setObjectionText(obj)}
+                      className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${
+                        objectionText === obj
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                          : "border-white/[0.07] text-white/30 hover:text-white/60 hover:border-white/15"
+                      }`}
+                      data-testid={`button-quick-objection-${obj.slice(0, 10)}`}>
+                      {obj}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground"><MessageSquareWarning className="w-8 h-8 mb-3 opacity-40" /><p className="text-sm">Enter an objection to get your counter-response</p></div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+
+              {/* Context */}
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Context <span className="text-white/20 normal-case">(optional)</span></label>
+                <Textarea
+                  placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
+                  value={context}
+                  onChange={e => setContext(e.target.value)}
+                  className="bg-white/[0.03] border-white/10 text-sm min-h-[60px] resize-none"
+                  data-testid="textarea-context"
+                />
+              </div>
+
+              <Button
+                className="w-full bg-amber-500/80 hover:bg-amber-500 text-white font-medium transition-all"
+                onClick={() => handleObjection.mutate()}
+                disabled={!selectedProduct || !objectionText || handleObjection.isPending}
+                data-testid="button-handle-objection">
+                {handleObjection.isPending
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Crafting response...</>
+                  : <><Zap className="w-4 h-4 mr-2" />Destroy This Objection</>}
+              </Button>
+            </div>
+          </div>
+
+          {/* Output Panel */}
+          <div className="lg:col-span-3 space-y-3">
+            {handleObjection.isPending ? (
+              <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                  <p className="text-sm text-white/50">Analyzing objection and crafting counter-response...</p>
+                </div>
+                <SkeletonLoader />
+              </div>
+            ) : activeResult ? (
+              <>
+                {/* Sentiment Dashboard */}
+                <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Sentiment Analysis</p>
+                    <div className="flex items-center gap-2">
+                      {/* Category Badge */}
+                      <span className={`text-[11px] px-2.5 py-1 rounded-full border font-medium flex items-center gap-1.5 ${catConfig.bg} ${catConfig.color} ${catConfig.border}`}>
+                        <catConfig.icon className="w-3 h-3" />
+                        {catConfig.label} Objection
+                      </span>
+                      {/* Urgency */}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium capitalize ${URGENCY_COLORS[activeResult.urgencyLevel] || URGENCY_COLORS["medium"]}`}>
+                        {activeResult.urgencyLevel} urgency
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    {/* Hostility vs Curiosity meter */}
+                    <div className="col-span-2 space-y-4">
+                      <SentimentMeter
+                        label="Hostility vs Curiosity"
+                        value={activeResult.sentiment?.hostility || 40}
+                        low="Curious"
+                        high="Hostile"
+                      />
+                      {/* Recommended tone */}
+                      <div>
+                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5">Recommended Tone</p>
+                        <span className={`text-[11px] px-3 py-1 rounded-full border font-medium ${TONE_COLORS[activeResult.sentiment?.recommendedTone] || TONE_COLORS["Empathetic"]}`}>
+                          {activeResult.sentiment?.recommendedTone || "Empathetic"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 flex flex-col items-center">
+                      <BuyingSignalGauge score={activeResult.sentiment?.buyingSignalStrength || 50} />
+                      <CircularClosingProb score={activeResult.closingProbability || 50} />
+                    </div>
+                  </div>
+
+                  {/* Key Insight */}
+                  {activeResult.keyInsight && (
+                    <div className="mt-4 pt-3 border-t border-white/[0.05] flex items-start gap-2">
+                      <Brain className="w-3.5 h-3.5 text-[#a2a3e9] shrink-0 mt-0.5" />
+                      <p className="text-xs text-white/50 italic">{activeResult.keyInsight}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Primary Response */}
+                <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" style={{ boxShadow: "0 0 6px #f59e0b" }} />
+                      <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Primary Response</p>
+                    </div>
+                    <Button variant="ghost" size="sm"
+                      className="h-7 text-xs text-white/40 hover:text-white/70 gap-1.5"
+                      onClick={() => copyToClipboard(activeResult.primaryResponse || activeResult.response || "", "primary")}
+                      data-testid="button-copy-primary">
+                      {copiedSection === "primary"
+                        ? <><Check className="w-3 h-3 text-emerald-400" />Copied</>
+                        : <><Copy className="w-3 h-3" />Copy</>}
+                    </Button>
+                  </div>
+
+                  {/* Objection quote */}
+                  <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 p-3 mb-4">
+                    <p className="text-[10px] text-amber-400/60 uppercase tracking-wider mb-1">Their Objection</p>
+                    <p className="text-sm italic text-white/60">"{objectionText}"</p>
+                  </div>
+
+                  <div className="text-sm leading-[1.8] text-white/80 font-light whitespace-pre-wrap">
+                    {activeResult.primaryResponse || activeResult.response}
+                  </div>
+
+                  {activeResult.hasRagContext && (
+                    <div className="mt-3 flex items-center gap-1 text-[10px] text-emerald-400">
+                      <Brain className="w-3 h-3" />RAG-enhanced with company intelligence
+                    </div>
+                  )}
+                </div>
+
+                {/* Response Strategies */}
+                {activeResult.strategies?.length > 0 && (
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Response Strategies</p>
+
+                    {/* Strategy tabs */}
+                    <div className="flex gap-1.5 mb-4">
+                      {activeResult.strategies.map((s, i) => (
+                        <button key={i}
+                          onClick={() => setActiveStrategyTab(i)}
+                          className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all ${
+                            activeStrategyTab === i
+                              ? "bg-[#696aac]/20 text-[#a2a3e9] border border-[#696aac]/30"
+                              : "text-white/30 hover:text-white/50 border border-transparent"
+                          }`}
+                          data-testid={`button-strategy-tab-${i}`}>
+                          {s.type}
+                        </button>
+                      ))}
+                    </div>
+
+                    {activeResult.strategies[activeStrategyTab] && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-white/80">
+                            {activeResult.strategies[activeStrategyTab].headline}
+                          </p>
+                          <Button variant="ghost" size="sm"
+                            className="h-6 text-[10px] text-white/30 hover:text-white/60 gap-1"
+                            onClick={() => copyToClipboard(activeResult.strategies[activeStrategyTab].response, `strat-${activeStrategyTab}`)}>
+                            {copiedSection === `strat-${activeStrategyTab}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                            Copy
+                          </Button>
+                        </div>
+                        <p className="text-sm text-white/60 leading-relaxed">{activeResult.strategies[activeStrategyTab].response}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Follow-Up Questions */}
+                {activeResult.followUpQuestions?.length > 0 && (
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
+                      <MessageCircle className="w-3 h-3" />Follow-Up Questions
+                    </p>
+                    <div className="space-y-2">
+                      {activeResult.followUpQuestions.map((q, i) => (
+                        <div key={i}
+                          className="group flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] hover:border-[#696aac]/15 transition-all">
+                          <span className="text-[#696aac]/50 text-xs shrink-0 font-mono">{i + 1}.</span>
+                          <p className="text-sm text-white/60 flex-1">{q}</p>
+                          <Button variant="ghost" size="sm"
+                            className="h-5 text-[9px] text-white/20 hover:text-white/50 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            onClick={() => copyToClipboard(q, `fq-${i}`)}>
+                            {copiedSection === `fq-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-xl bg-black/30 backdrop-blur-sm border border-white/[0.05] flex flex-col items-center justify-center py-20 text-white/20">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/15">
+                  <Zap className="w-7 h-7 text-amber-500/40" />
+                </div>
+                <p className="text-sm font-medium text-white/30">Enter an objection to get your counter-response</p>
+                <p className="text-xs text-white/15 mt-1">Select product and paste what the prospect said</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
