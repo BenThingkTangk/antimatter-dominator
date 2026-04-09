@@ -8,6 +8,21 @@ import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search } f
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 const ARC_LENGTH = Math.PI * 80; // radius=80, semicircle
 
+// ─── Phone number formatter ───────────────────────────────────────────────────
+// Ensures US numbers have +1 prefix. Passes through numbers that already have
+// a country code (start with +). Strips spaces, dashes, parens.
+function formatPhoneNumber(raw: string): string {
+  const stripped = raw.replace(/[\s\-().]/g, "");
+  // Already has a + prefix — pass through as-is
+  if (stripped.startsWith("+")) return stripped;
+  // 10-digit US number — prepend +1
+  if (/^\d{10}$/.test(stripped)) return `+1${stripped}`;
+  // 11-digit number starting with 1 (e.g. 14155552671)
+  if (/^1\d{10}$/.test(stripped)) return `+${stripped}`;
+  // Return with + prefix as best-effort for other formats
+  return `+${stripped}`;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Emotions {
@@ -773,6 +788,12 @@ export default function ATOMLeadGen() {
       toast({ title: "Phone number required", variant: "destructive" });
       return;
     }
+
+    // Format phone number — ensure +1 prefix for US numbers
+    const formattedPhone = formatPhoneNumber(phone.trim());
+    console.log("[handleDial] Formatted phone:", formattedPhone);
+    console.log("[handleDial] Bridge URL:", BRIDGE_URL);
+
     setCallStatus("dialing");
     setTranscript([]);
     setBuyingSignals([]);
@@ -800,30 +821,40 @@ export default function ATOMLeadGen() {
           }).then(r => r.ok ? r.json() : null).catch(() => null)
         : Promise.resolve(null);
 
+      const callPayload = {
+        to: formattedPhone,
+        firstName: contactName.trim() || undefined,
+        companyName: companyName.trim() || undefined,
+        product: productSlug.trim() || undefined,
+        productIntel: productIntelData || undefined,
+      };
+
+      console.log("[handleDial] POST", `${BRIDGE_URL}/call`, JSON.stringify(callPayload));
+
       // Start the call immediately — don't wait for intel
       const res = await fetch(`${BRIDGE_URL}/call`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: phone.trim(),
-          firstName: contactName.trim() || undefined,
-          companyName: companyName.trim() || undefined,
-          product: productSlug.trim() || undefined,
-          productIntel: productIntelData || undefined,
-        }),
+        body: JSON.stringify(callPayload),
       });
 
+      console.log("[handleDial] Response status:", res.status);
+
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        const errText = await res.text().catch(() => "");
+        console.error("[handleDial] Error response body:", errText);
+        throw new Error(`HTTP ${res.status}: ${errText}`);
       }
 
       const json = await res.json();
+      console.log("[handleDial] Success response:", json);
       const sid: string = json.callSid;
       setCallSid(sid);
       callSidRef.current = sid;
       connectWebSocket(sid);
       setCallStatus("active");
     } catch (err: any) {
+      console.error("[handleDial] Caught error:", err);
       setCallStatus("idle");
       toast({
         title: "Failed to connect",

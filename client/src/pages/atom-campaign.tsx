@@ -3,6 +3,15 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 
+// ─── Phone number formatter ───────────────────────────────────────────────────
+function formatPhoneNumber(raw: string): string {
+  const stripped = raw.replace(/[\s\-().]/g, "");
+  if (stripped.startsWith("+")) return stripped;
+  if (/^\d{10}$/.test(stripped)) return `+1${stripped}`;
+  if (/^1\d{10}$/.test(stripped)) return `+${stripped}`;
+  return `+${stripped}`;
+}
+
 // Product is now free-text input, not a fixed list
 
 const GEO_OPTIONS = [
@@ -1964,14 +1973,15 @@ export default function AtomCampaign() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
-  const connectWs = useCallback((id: string) => {
+  // ── WebSocket — connects to bridge's /events/:callSid endpoint ───────────
+  const connectWs = useCallback((callSid: string) => {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
 
-    const wsUrl = `wss://${BRIDGE_URL.replace(/^https?:\/\//, "")}/campaign/${id}/events`;
+    // Bridge only has /events/:callSid — not campaign-level WS
+    const wsUrl = `wss://${BRIDGE_URL.replace(/^https?:\/\//, "")}/events/${callSid}`;
     let ws: WebSocket;
 
     try {
@@ -1984,6 +1994,7 @@ export default function AtomCampaign() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      console.log("[Campaign WS] connected", wsUrl);
       if (wsReconnectRef.current) {
         clearTimeout(wsReconnectRef.current);
         wsReconnectRef.current = null;
@@ -2001,17 +2012,11 @@ export default function AtomCampaign() {
 
     ws.onclose = () => {
       wsRef.current = null;
-      // Attempt reconnect if campaign still active
-      setPhase((ph) => {
-        if (ph === "active" || ph === "paused") {
-          wsReconnectRef.current = setTimeout(() => connectWs(id), 3000);
-        }
-        return ph;
-      });
+      console.log("[Campaign WS] closed for callSid:", callSid);
     };
 
-    ws.onerror = () => {
-      addToast("WebSocket connection error — reconnecting…", "error");
+    ws.onerror = (e) => {
+      console.error("[Campaign WS] error", e);
     };
   }, [addToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2205,65 +2210,92 @@ export default function AtomCampaign() {
     };
   }, []);
 
+  // ── Refs for campaign dialing loop ────────────────────────────────────────
+  const isPausedRef = useRef(false);
+  const isStoppedRef = useRef(false);
+  const targetsRef = useRef<Target[]>([]);
+  useEffect(() => { targetsRef.current = targets; }, [targets]);
+
   // ── API calls ─────────────────────────────────────────────────────────────
 
   const handleResearch = useCallback(async () => {
     setPhase("researching");
 
     try {
-      // Create campaign
-      const createRes = await fetch(`${BRIDGE_URL}/campaign/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brief: form.brief,
-          targetIndustry: form.targetIndustry,
-          targetGeo: form.targetGeo,
-          targetCount: form.targetCount,
-          productSlug: form.productSlug,
-          alertEmail: form.alertEmail,
-        }),
-      });
+      // Generate a local campaign ID — we don't use bridge for campaign management
+      const localCampaignId = `cam-${Date.now()}`;
+      setCampaignId(localCampaignId);
 
-      if (!createRes.ok) {
-        const text = await createRes.text().catch(() => "");
-        throw new Error(`Create failed: ${createRes.status}${text ? ` — ${text}` : ""}`);
+      // Use the Vercel prospects/scan API to find real targets from Apollo
+      const scanPayload: Record<string, any> = {
+        industry: form.targetIndustry || undefined,
+        geo: form.targetGeo || "All US",
+        productFocus: form.productSlug || undefined,
+        jobTitles: [],
+        excludeCompanies: [],
+      };
+
+      // Parse brief for additional context keywords
+      if (form.brief && form.brief.trim()) {
+        scanPayload.keywords = form.brief.trim().slice(0, 200);
       }
 
-      const createData = await createRes.json();
-      const id: string = createData.id ?? createData.campaignId ?? `cam-${Date.now()}`;
-      setCampaignId(id);
+      console.log("[Campaign] Researching targets via /api/prospects/scan:", scanPayload);
 
-      // Research targets
-      const researchRes = await fetch(`${BRIDGE_URL}/campaign/${id}/research`, {
+      const scanRes = await fetch("/api/prospects/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(scanPayload),
       });
 
-      if (!researchRes.ok) {
-        const text = await researchRes.text().catch(() => "");
-        throw new Error(`Research failed: ${researchRes.status}${text ? ` — ${text}` : ""}`);
+      if (!scanRes.ok) {
+        const text = await scanRes.text().catch(() => "");
+        throw new Error(`Prospect scan failed: ${scanRes.status}${text ? ` — ${text}` : ""}`);
       }
 
-      const researchData = await researchRes.json();
-      const fetchedTargets: Target[] = (researchData.targets ?? []).map((t: Record<string, unknown>, i: number) => ({
-        id: (t.id as string) ?? `t-${i}`,
-        rank: i + 1,
-        companyName: (t.companyName as string) ?? (t.company as string) ?? `Company ${i + 1}`,
-        industry: (t.companyIndustry as string) || (t.industry as string) || "",
-        size: (t.companySize as string) || (t.size as string) || "",
-        location: (t.location as string) || "",
-        decisionMaker: {
-          name: ((t.decisionMaker as Record<string, unknown>)?.name as string) || (t.contactName as string) || "",
-          title: ((t.decisionMaker as Record<string, unknown>)?.title as string) || (t.title as string) || "",
-          linkedin: ((t.decisionMaker as Record<string, unknown>)?.linkedin as string) || (t.linkedin as string) || undefined,
-        },
-        email: (t.email as string) || undefined,
-        phone: (t.phone as string) || undefined,
-        tags: (t.tags as string[]) || [],
-        status: "queued" as TargetStatus,
-      }));
+      const scanData: any[] = await scanRes.json();
+      console.log(`[Campaign] Got ${scanData.length} prospects from Apollo`);
+
+      // Map Apollo prospect data to Target format
+      const fetchedTargets: Target[] = [];
+      let rank = 1;
+      for (const p of scanData) {
+        // Parse contacts JSON if it's a string
+        let contacts: any[] = [];
+        try {
+          contacts = typeof p.contacts === "string" ? JSON.parse(p.contacts) : (p.contacts || []);
+        } catch { contacts = []; }
+
+        // Use best contact as decision maker
+        const topContact = contacts[0] || {};
+        const contactName = topContact.firstName && topContact.lastName
+          ? `${topContact.firstName} ${topContact.lastName}`
+          : topContact.firstName || topContact.lastName || "";
+
+        fetchedTargets.push({
+          id: `t-${rank}-${localCampaignId}`,
+          rank,
+          companyName: p.companyName || `Company ${rank}`,
+          industry: p.industry || "",
+          size: p.companySize || "",
+          location: "",
+          decisionMaker: {
+            name: contactName,
+            title: topContact.position || topContact.title || "",
+            linkedin: topContact.linkedin || undefined,
+          },
+          email: topContact.email || undefined,
+          phone: topContact.phone || topContact.mobilePhone || p.companyPhone || undefined,
+          tags: (() => {
+            try { return JSON.parse(p.signals || "[]"); } catch { return []; }
+          })(),
+          status: "queued" as TargetStatus,
+        });
+        rank++;
+
+        // Honor targetCount limit
+        if (rank > form.targetCount) break;
+      }
 
       setTargets(fetchedTargets);
       setStats((prev) => ({
@@ -2272,52 +2304,190 @@ export default function AtomCampaign() {
         remaining: fetchedTargets.length,
       }));
       setPhase("review");
+      addToast(`Found ${fetchedTargets.length} real prospects from Apollo.`, "success");
     } catch (err) {
+      console.error("[Campaign] Research error:", err);
       addToast(err instanceof Error ? err.message : "Research failed. Please try again.", "error");
       setPhase("setup");
     }
   }, [form, addToast]);
 
-  const handleLaunch = useCallback(async () => {
+  // ── Sequential dialing loop — uses bridge POST /call for each target ──────
+  const dialNextTarget = useCallback(async (targetList: Target[]) => {
+    const pending = targetList.filter((t) => t.status === "queued");
+    if (pending.length === 0) {
+      setPhase("complete");
+      addToast("Campaign complete! All targets dialed.", "success");
+      return;
+    }
+
+    if (isStoppedRef.current) return;
+
+    // Wait while paused
+    if (isPausedRef.current) {
+      setTimeout(() => dialNextTarget(targetsRef.current), 2000);
+      return;
+    }
+
+    const target = pending[0];
+
+    // Mark as calling
+    setTargets((prev) => prev.map((t) => t.id === target.id ? { ...t, status: "calling" as TargetStatus } : t));
+    setLive({
+      targetId: target.id,
+      companyName: target.companyName,
+      contactName: target.decisionMaker.name,
+      contactTitle: target.decisionMaker.title,
+      sentiment: 0,
+      intent: 0,
+      callStage: "Initiating call…",
+      transcript: [],
+    });
+    setSentimentHistory([]);
+    setEmotions(DEFAULT_EMOTIONS);
+    setBuyingSignals([]);
+    setCallDuration(0);
+    callStartRef.current = Date.now();
+    if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
+    callDurationTimerRef.current = setInterval(() => {
+      if (callStartRef.current !== null) {
+        setCallDuration(Math.floor((Date.now() - callStartRef.current) / 1000));
+      }
+    }, 1000);
+
+    // Dial via bridge POST /call
+    if (!target.phone) {
+      console.warn(`[Campaign] No phone for target ${target.companyName} — skipping`);
+      setTargets((prev) => prev.map((t) => t.id === target.id ? { ...t, status: "skipped" as TargetStatus } : t));
+      setLive((prev) => ({ ...prev, targetId: null, callStage: "" }));
+      if (callDurationTimerRef.current) { clearInterval(callDurationTimerRef.current); callDurationTimerRef.current = null; }
+      callStartRef.current = null;
+      setStats((prev) => ({ ...prev, remaining: Math.max(0, prev.remaining - 1) }));
+      // Continue to next
+      setTimeout(() => dialNextTarget(targetsRef.current), 1500);
+      return;
+    }
+
+    const formattedPhone = formatPhoneNumber(target.phone);
+    console.log(`[Campaign] Dialing ${target.companyName} at ${formattedPhone}`);
+
     try {
-      const res = await fetch(`${BRIDGE_URL}/campaign/${campaignId}/launch`, {
+      const callPayload = {
+        to: formattedPhone,
+        firstName: target.decisionMaker.name.split(" ")[0] || undefined,
+        companyName: target.companyName || undefined,
+        product: form.productSlug || undefined,
+      };
+
+      const res = await fetch(`${BRIDGE_URL}/call`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(callPayload),
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Launch failed: ${res.status}${text ? ` — ${text}` : ""}`);
+        const errText = await res.text().catch(() => "");
+        console.error(`[Campaign] Call failed for ${target.companyName}: ${res.status} ${errText}`);
+        throw new Error(`Call failed: ${res.status}`);
       }
 
-      setPhase("active");
-      connectWs(campaignId);
-      addToast("Campaign launched — ATOM is dialing.", "success");
+      const json = await res.json();
+      const callSid: string = json.callSid;
+      console.log(`[Campaign] Call started for ${target.companyName}, SID: ${callSid}`);
+
+      setTargets((prev) => prev.map((t) => t.id === target.id ? { ...t, status: "connected" as TargetStatus } : t));
+      setLive((prev) => ({ ...prev, callStage: "Connected" }));
+      setStats((prev) => ({ ...prev, dialed: prev.dialed + 1, connected: prev.connected + 1 }));
+
+      // Connect WS to monitor this specific call
+      connectWs(callSid);
+
+      // Wait for call to end before dialing next — poll call status via bridge
+      // We listen to the WS call_ended event, with a 5-minute timeout fallback
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log(`[Campaign] Call timeout for ${target.companyName}`);
+          resolve();
+        }, 5 * 60 * 1000);
+
+        const checkInterval = setInterval(() => {
+          if (isStoppedRef.current) { clearTimeout(timeout); clearInterval(checkInterval); resolve(); }
+        }, 1000);
+
+        // Listen for call_ended via GET /call/:callSid/summary polling
+        const pollSummary = async () => {
+          while (!isStoppedRef.current) {
+            await new Promise((r) => setTimeout(r, 5000));
+            try {
+              const summaryRes = await fetch(`${BRIDGE_URL}/call/${callSid}/summary`);
+              if (summaryRes.ok) {
+                const summaryData = await summaryRes.json();
+                if (summaryData.status === "completed" || summaryData.duration > 0) {
+                  clearTimeout(timeout);
+                  clearInterval(checkInterval);
+                  resolve();
+                  return;
+                }
+              }
+            } catch { /* silent */ }
+          }
+        };
+        pollSummary();
+      });
+
+      // Mark completed
+      setTargets((prev) => prev.map((t) => t.id === target.id ? { ...t, status: "completed" as TargetStatus } : t));
+      setLive((prev) => ({ ...prev, targetId: null, callStage: "" }));
+      if (callDurationTimerRef.current) { clearInterval(callDurationTimerRef.current); callDurationTimerRef.current = null; }
+      callStartRef.current = null;
+      setStats((prev) => ({ ...prev, remaining: Math.max(0, prev.remaining - 1) }));
+
+      // Brief pause between calls
+      if (!isStoppedRef.current) {
+        await new Promise((r) => setTimeout(r, 3000));
+        dialNextTarget(targetsRef.current);
+      }
     } catch (err) {
-      addToast(err instanceof Error ? err.message : "Launch failed. Please try again.", "error");
+      console.error(`[Campaign] Error dialing ${target.companyName}:`, err);
+      setTargets((prev) => prev.map((t) => t.id === target.id ? { ...t, status: "failed" as TargetStatus } : t));
+      setLive((prev) => ({ ...prev, targetId: null, callStage: "" }));
+      if (callDurationTimerRef.current) { clearInterval(callDurationTimerRef.current); callDurationTimerRef.current = null; }
+      callStartRef.current = null;
+      setStats((prev) => ({ ...prev, dialed: prev.dialed + 1, remaining: Math.max(0, prev.remaining - 1) }));
+      addToast(`Failed to reach ${target.companyName} — continuing.`, "info");
+      await new Promise((r) => setTimeout(r, 2000));
+      if (!isStoppedRef.current) dialNextTarget(targetsRef.current);
     }
-  }, [campaignId, connectWs, addToast]);
+  }, [form, connectWs, addToast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleLaunch = useCallback(async () => {
+    isPausedRef.current = false;
+    isStoppedRef.current = false;
+    setPhase("active");
+    addToast("Campaign launched — ATOM is dialing.", "success");
+    // Start the sequential dialing loop using locally tracked targets
+    dialNextTarget(targetsRef.current);
+  }, [dialNextTarget, addToast]);
 
   const handlePause = useCallback(async () => {
-    try {
-      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/pause`, { method: "POST", headers: { "Content-Type": "text/plain" } });
-      setPhase("paused");
-    } catch {
-      addToast("Failed to pause campaign.", "error");
-    }
-  }, [campaignId, addToast]);
+    // Pause is managed locally — no bridge endpoint needed
+    isPausedRef.current = true;
+    setPhase("paused");
+    addToast("Campaign paused.", "info");
+  }, [addToast]);
 
   const handleResume = useCallback(async () => {
-    try {
-      await fetch(`${BRIDGE_URL}/campaign/${campaignId}/resume`, { method: "POST", headers: { "Content-Type": "text/plain" } });
-      setPhase("active");
-    } catch {
-      addToast("Failed to resume campaign.", "error");
-    }
-  }, [campaignId, addToast]);
+    // Resume is managed locally — continues the dialing loop
+    isPausedRef.current = false;
+    setPhase("active");
+    addToast("Campaign resumed.", "success");
+    dialNextTarget(targetsRef.current);
+  }, [dialNextTarget, addToast]);
 
   const handleNewCampaign = useCallback(() => {
+    // Stop the dialing loop
+    isStoppedRef.current = true;
+    isPausedRef.current = false;
     wsRef.current?.close();
     wsRef.current = null;
     if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
@@ -2439,25 +2609,9 @@ export default function AtomCampaign() {
     };
   }, [live.targetId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll status while active (in case WS misses events)
-  useEffect(() => {
-    if (phase !== "active" || !campaignId) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${BRIDGE_URL}/campaign/${campaignId}/status`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === "complete") {
-            setPhase("complete");
-            clearInterval(interval);
-          }
-        }
-      } catch {
-        // silent
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [phase, campaignId]);
+  // Note: Status polling removed — campaign state is tracked locally.
+  // The bridge only has POST /call, GET /calls, GET /call/:callSid/summary.
+  // Campaign progress is managed via the local dialNextTarget loop.
 
   // ── Render ─────────────────────────────────────────────────────────────────
 

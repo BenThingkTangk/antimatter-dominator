@@ -1,10 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const PDL_API_KEY = process.env.PDL_API_KEY;
-const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -93,180 +91,228 @@ function geoToApolloFilters(geo: string | undefined): {
   return {};
 }
 
-// ─── Employee size → Apollo num_employees range ──────────────────────────────
+// ─── Employee size → Apollo num_employees range string ───────────────────────
 
-function employeeSizeToApolloRange(size: string | undefined): [number, number] | null {
+function employeeSizeToApolloRangeStr(size: string | undefined): string | null {
   if (!size || size === "any") return null;
-  const map: Record<string, [number, number]> = {
-    "1-10": [1, 10],
-    "11-50": [11, 50],
-    "51-200": [51, 200],
-    "201-500": [201, 500],
-    "501-1000": [501, 1000],
-    "1001-5000": [1001, 5000],
-    "5001-10000": [5001, 10000],
-    "10001+": [10001, 9999999],
+  const map: Record<string, string> = {
+    "1-10": "1,10",
+    "11-50": "11,50",
+    "51-200": "51,200",
+    "201-500": "201,500",
+    "501-1000": "501,1000",
+    "1001-5000": "1001,5000",
+    "5001-10000": "5001,10000",
+    "10001+": "10001,9999999",
   };
   return map[size] || null;
 }
 
-// ─── Revenue range → human-readable string for AI prompt ────────────────────
+// ─── Industry → Apollo keyword tags ──────────────────────────────────────────
 
-function revenueToDescription(range: string | undefined): string {
-  if (!range || range === "any") return "";
-  const map: Record<string, string> = {
-    "under-1m": "under $1M in annual revenue",
-    "1m-10m": "$1M–$10M in annual revenue",
-    "10m-50m": "$10M–$50M in annual revenue",
-    "50m-100m": "$50M–$100M in annual revenue",
-    "100m-500m": "$100M–$500M in annual revenue",
-    "500m-1b": "$500M–$1B in annual revenue",
-    "1b+": "over $1B in annual revenue",
-  };
-  return map[range] || "";
+function industryToApolloTags(industry: string | undefined): string[] {
+  if (!industry || industry === "All Industries") return [];
+  // Apollo accepts partial keyword tags — just pass the industry string lowercased
+  return [industry.toLowerCase()];
 }
 
-// ─── Apollo.io enrichment (primary) ─────────────────────────────────────────
+// ─── Apollo primary search — returns people + their organizations ─────────────
+// Uses POST /v1/mixed_people/search which is the real Apollo API endpoint
 
-async function enrichWithApollo(
-  companyName: string,
-  domain?: string,
-  geoFilters?: { personLocations?: string[]; organizationLocations?: string[] },
-  jobTitles?: string[],
-  employeeSizeRange?: [number, number] | null
-): Promise<{ contacts: EnrichedContact[]; companyPhone: string; employeeCount: number; revenue: string; techStack: string[] }> {
-  if (!APOLLO_API_KEY) return { contacts: [], companyPhone: "", employeeCount: 0, revenue: "", techStack: [] };
-
-  let companyPhone = "";
-  let employeeCount = 0;
-  let revenue = "";
-  let techStack: string[] = [];
-  const contacts: EnrichedContact[] = [];
+async function searchApolloProspects(
+  filters: ScanFilters,
+  geoFilters: { personLocations?: string[]; organizationLocations?: string[] },
+  employeeSizeRangeStr: string | null,
+  perPage: number = 25
+): Promise<any[]> {
+  if (!APOLLO_API_KEY) return [];
 
   try {
-    // Step 1: Org enrichment for company data
-    const cleanDomain = domain ? domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "") : "";
-    if (cleanDomain) {
-      const orgRes = await fetch(
-        `https://api.apollo.io/api/v1/organizations/enrich?domain=${encodeURIComponent(cleanDomain)}`,
-        { headers: { "X-Api-Key": APOLLO_API_KEY } }
-      );
-      if (orgRes.ok) {
-        const orgData = await orgRes.json();
-        const org = orgData.organization || {};
-        companyPhone = org.phone || "";
-        employeeCount = org.estimated_num_employees || 0;
-        revenue = org.annual_revenue_printed || "";
-        techStack = org.technology_names || [];
-      }
-    }
+    const seniorityCriteria = ["vp", "director", "c_suite", "owner", "founder", "partner", "head", "manager"];
 
-    // Step 2: Build people search payload
-    const seniorityCriteria = ["vp", "director", "c_suite", "owner", "founder", "partner", "head"];
-
-    const searchBody: any = {
+    const searchBody: Record<string, any> = {
       person_seniorities: seniorityCriteria,
       page: 1,
-      per_page: 10,
+      per_page: perPage,
     };
 
-    if (cleanDomain) {
-      searchBody.q_organization_domains = cleanDomain;
-    } else {
-      searchBody.q_organization_name = companyName;
+    // Geography filters
+    if (geoFilters.organizationLocations?.length) {
+      searchBody.organization_locations = geoFilters.organizationLocations;
     }
-
-    // Apply geo filters
-    if (geoFilters?.personLocations?.length) {
+    if (geoFilters.personLocations?.length) {
       searchBody.person_locations = geoFilters.personLocations;
     }
 
-    // Apply org location filters
-    if (geoFilters?.organizationLocations?.length) {
-      searchBody.organization_locations = geoFilters.organizationLocations;
+    // Job title filter
+    if (filters.jobTitles && filters.jobTitles.length > 0) {
+      searchBody.person_titles = filters.jobTitles;
     }
 
-    // Apply job title filter
-    if (jobTitles && jobTitles.length > 0) {
-      searchBody.person_titles = jobTitles;
+    // Employee size filter
+    if (employeeSizeRangeStr) {
+      searchBody.organization_num_employees_ranges = [employeeSizeRangeStr];
     }
 
-    // Apply employee count filter
-    if (employeeSizeRange) {
-      searchBody.organization_num_employees_ranges = [`${employeeSizeRange[0]},${employeeSizeRange[1]}`];
+    // Industry filter via keyword tags
+    const industryTags = industryToApolloTags(filters.industry);
+    if (industryTags.length > 0) {
+      searchBody.q_organization_keyword_tags = industryTags;
     }
 
-    const peopleRes = await fetch("https://api.apollo.io/api/v1/mixed_people/api_search", {
+    // Keywords filter
+    if (filters.keywords) {
+      searchBody.q_keywords = filters.keywords;
+    }
+
+    // Exclude known companies
+    if (filters.excludeCompanies && filters.excludeCompanies.length > 0) {
+      searchBody.organization_not_names = filters.excludeCompanies;
+    }
+
+    const res = await fetch("https://api.apollo.io/v1/mixed_people/search", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Api-Key": APOLLO_API_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": APOLLO_API_KEY,
+      },
       body: JSON.stringify(searchBody),
     });
 
-    if (peopleRes.ok) {
-      const peopleData = await peopleRes.json();
-      const rawPeople = peopleData.people || [];
-
-      // Reveal each person via people/match (uses Pro credits for email reveal)
-      const revealPromises = rawPeople.slice(0, 10).map(async (rp: any) => {
-        if (!rp.id) return null;
-        try {
-          const revealRes = await fetch("https://api.apollo.io/api/v1/people/match", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Api-Key": APOLLO_API_KEY },
-            body: JSON.stringify({ id: rp.id, reveal_personal_emails: true, reveal_phone_number: true }),
-          });
-          if (!revealRes.ok) return null;
-          const revealData = await revealRes.json();
-          const p = revealData.person;
-          if (!p || (!p.first_name && !p.last_name)) return null;
-          return {
-            email: p.email || "",
-            firstName: p.first_name || "",
-            lastName: p.last_name || "",
-            position: p.title || rp.title || "",
-            seniority: p.seniority || rp.seniority || "",
-            department: p.departments?.[0] || "",
-            linkedin: p.linkedin_url || null,
-            phone: p.sanitized_phone || companyPhone || null,
-            mobilePhone: p.mobile_phone || null,
-            city: p.city || null,
-            state: p.state || null,
-            confidence: 95,
-            verification: p.email_status || "verified",
-            source: "apollo",
-          } as EnrichedContact;
-        } catch {
-          // Fall back to search data without reveal
-          if (!rp.first_name) return null;
-          return {
-            email: "",
-            firstName: rp.first_name || "",
-            lastName: rp.last_name || "",
-            position: rp.title || "",
-            seniority: rp.seniority || "",
-            department: "",
-            linkedin: null,
-            phone: companyPhone || null,
-            mobilePhone: null,
-            city: null,
-            state: null,
-            confidence: 50,
-            verification: "unverified",
-            source: "apollo",
-          } as EnrichedContact;
-        }
-      });
-
-      const revealed = await Promise.all(revealPromises);
-      for (const c of revealed) {
-        if (c) contacts.push(c);
-      }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`Apollo mixed_people/search failed: ${res.status} ${errText}`);
+      return [];
     }
-  } catch (err) {
-    console.error(`Apollo enrichment failed for ${companyName}:`, err);
-  }
 
-  return { contacts, companyPhone, employeeCount, revenue, techStack };
+    const data = await res.json();
+    return data.people || [];
+  } catch (err) {
+    console.error("Apollo search error:", err);
+    return [];
+  }
+}
+
+// ─── Apollo people/match — reveal full contact details ────────────────────────
+
+async function revealApolloContact(person: any): Promise<EnrichedContact | null> {
+  if (!APOLLO_API_KEY) return null;
+
+  try {
+    const matchPayload: Record<string, any> = {
+      reveal_personal_emails: true,
+      reveal_phone_number: true,
+    };
+
+    if (person.id) {
+      matchPayload.id = person.id;
+    } else {
+      // Fall back to name + org match
+      if (person.first_name) matchPayload.first_name = person.first_name;
+      if (person.last_name) matchPayload.last_name = person.last_name;
+      if (person.organization_name) matchPayload.organization_name = person.organization_name;
+    }
+
+    const revealRes = await fetch("https://api.apollo.io/v1/people/match", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": APOLLO_API_KEY,
+      },
+      body: JSON.stringify(matchPayload),
+    });
+
+    if (!revealRes.ok) {
+      // Fall back to data from the search result itself
+      if (!person.first_name && !person.last_name) return null;
+      return {
+        email: person.email || "",
+        firstName: person.first_name || "",
+        lastName: person.last_name || "",
+        position: person.title || "",
+        seniority: person.seniority || "",
+        department: person.departments?.[0] || "",
+        linkedin: person.linkedin_url || null,
+        phone: person.sanitized_phone || null,
+        mobilePhone: person.mobile_phone || null,
+        city: person.city || null,
+        state: person.state || null,
+        confidence: 50,
+        verification: "unverified",
+        source: "apollo",
+      };
+    }
+
+    const revealData = await revealRes.json();
+    const p = revealData.person;
+    if (!p || (!p.first_name && !p.last_name)) return null;
+
+    return {
+      email: p.email || "",
+      firstName: p.first_name || "",
+      lastName: p.last_name || "",
+      position: p.title || person.title || "",
+      seniority: p.seniority || person.seniority || "",
+      department: p.departments?.[0] || "",
+      linkedin: p.linkedin_url || null,
+      phone: p.sanitized_phone || null,
+      mobilePhone: p.mobile_phone || null,
+      city: p.city || null,
+      state: p.state || null,
+      confidence: 95,
+      verification: p.email_status || "verified",
+      source: "apollo",
+    };
+  } catch (err) {
+    // Fall back to raw search data
+    if (!person.first_name && !person.last_name) return null;
+    return {
+      email: person.email || "",
+      firstName: person.first_name || "",
+      lastName: person.last_name || "",
+      position: person.title || "",
+      seniority: person.seniority || "",
+      department: "",
+      linkedin: null,
+      phone: null,
+      mobilePhone: null,
+      city: null,
+      state: null,
+      confidence: 40,
+      verification: "unverified",
+      source: "apollo",
+    };
+  }
+}
+
+// ─── Apollo org enrichment — get company data from a domain ─────────────────
+
+async function enrichOrgWithApollo(domain: string): Promise<{
+  companyPhone: string;
+  employeeCount: number;
+  revenue: string;
+  techStack: string[];
+}> {
+  if (!APOLLO_API_KEY || !domain) return { companyPhone: "", employeeCount: 0, revenue: "", techStack: [] };
+
+  try {
+    const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const orgRes = await fetch(
+      `https://api.apollo.io/api/v1/organizations/enrich?domain=${encodeURIComponent(cleanDomain)}`,
+      { headers: { "x-api-key": APOLLO_API_KEY } }
+    );
+    if (!orgRes.ok) return { companyPhone: "", employeeCount: 0, revenue: "", techStack: [] };
+    const orgData = await orgRes.json();
+    const org = orgData.organization || {};
+    return {
+      companyPhone: org.phone || "",
+      employeeCount: org.estimated_num_employees || 0,
+      revenue: org.annual_revenue_printed || "",
+      techStack: org.technology_names || [],
+    };
+  } catch {
+    return { companyPhone: "", employeeCount: 0, revenue: "", techStack: [] };
+  }
 }
 
 // ─── Hunter.io enrichment (supplement) ──────────────────────────────────────
@@ -387,127 +433,112 @@ function mergeContacts(apollo: EnrichedContact[], hunter: EnrichedContact[]): En
   return Array.from(all.values()).sort((a, b) => b.confidence - a.confidence);
 }
 
-// ─── Fetch RAG context for product intelligence ──────────────────────────────
+// ─── Group Apollo people by organization ─────────────────────────────────────
 
-async function fetchRagContext(productFocus: string): Promise<string> {
-  try {
-    const res = await fetch(`${RAG_URL}/company/context`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company_name: productFocus, module: "pitch" }),
-    });
-    if (!res.ok) return "";
-    const data = await res.json();
-    return data.context || data.summary || "";
-  } catch {
-    return "";
-  }
+interface ApolloOrg {
+  companyName: string;
+  domain: string;
+  industry: string;
+  companySize: string;
+  people: any[];
+  location: string;
+  apolloOrgData: any;
 }
 
-// ─── Build AI prompt with all granular filters ───────────────────────────────
+function groupPeopleByOrg(people: any[]): ApolloOrg[] {
+  const orgMap = new Map<string, ApolloOrg>();
 
-function buildPrompt(filters: ScanFilters, ragContext: string, geoDescription: string): { system: string; user: string } {
-  const {
-    industry,
-    employeeSize,
-    revenueRange,
-    productFocus,
-    jobTitles,
-    techStack,
-    keywords,
-    excludeCompanies = [],
-  } = filters;
+  for (const person of people) {
+    const org = person.organization || person.employment_history?.[0] || {};
+    const orgName = org.name || person.organization_name || "";
+    if (!orgName) continue;
 
-  const isCustomProduct = productFocus && productFocus.trim().length > 0;
+    const domain = (org.website_url || org.domain || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const key = domain || orgName.toLowerCase().replace(/\s+/g, "-");
 
-  const constraints: string[] = [];
-  if (industry && industry !== "All Industries") {
-    constraints.push(`Industry: ${industry}`);
-  }
-  if (employeeSize && employeeSize !== "any") {
-    const sizeMap: Record<string, string> = {
-      "1-10": "1–10 employees (micro/startup)",
-      "11-50": "11–50 employees (small startup)",
-      "51-200": "51–200 employees (growing startup/SMB)",
-      "201-500": "201–500 employees (mid-market lower)",
-      "501-1000": "501–1,000 employees (mid-market)",
-      "1001-5000": "1,001–5,000 employees (upper mid-market)",
-      "5001-10000": "5,001–10,000 employees (enterprise lower)",
-      "10001+": "10,000+ employees (large enterprise)",
-    };
-    constraints.push(`Company size: ${sizeMap[employeeSize] || employeeSize}`);
-  }
-  if (revenueRange && revenueRange !== "any") {
-    const revDesc = revenueToDescription(revenueRange);
-    if (revDesc) constraints.push(`Revenue: ${revDesc}`);
-  }
-  if (jobTitles && jobTitles.length > 0) {
-    constraints.push(`Target decision-maker titles: ${jobTitles.join(", ")}`);
-  }
-  if (techStack) {
-    constraints.push(`Tech stack / tools they use: ${techStack}`);
-  }
-  if (keywords) {
-    constraints.push(`Keywords / company description match: ${keywords}`);
+    if (!orgMap.has(key)) {
+      const empCount = org.estimated_num_employees || 0;
+      let companySize = "mid-market";
+      if (empCount >= 5000) companySize = "enterprise";
+      else if (empCount <= 200) companySize = "smb";
+
+      // Build location from person or org data
+      const location = [
+        org.city || person.city,
+        org.state || person.state,
+        org.country || person.country,
+      ].filter(Boolean).join(", ");
+
+      orgMap.set(key, {
+        companyName: orgName,
+        domain,
+        industry: org.industry || person.organization_industry || "",
+        companySize,
+        people: [],
+        location,
+        apolloOrgData: org,
+      });
+    }
+
+    orgMap.get(key)!.people.push(person);
   }
 
-  const constraintBlock = constraints.length > 0
-    ? `\n\nSTRICT FILTER REQUIREMENTS — all companies must match:\n${constraints.map(c => `• ${c}`).join("\n")}`
-    : "";
+  return Array.from(orgMap.values());
+}
 
-  const excludeBlock = excludeCompanies.length > 0
-    ? `\n\nDo NOT suggest any of these companies (already shown): ${excludeCompanies.join(", ")}`
-    : "";
+// ─── Scoring heuristic for Apollo-sourced companies ──────────────────────────
 
-  const system = `You are an elite B2B sales intelligence analyst specializing in identifying ideal-fit prospects.
+function scoreCompany(org: ApolloOrg, filters: ScanFilters): number {
+  let score = 50;
 
-Rules:
-- Only return REAL companies with real website domains
-- Focus on companies most likely to NEED and BUY the product — consider their tech stack, pain points, contract cycles, and buying signals
-- Rank by likelihood to buy (score 0-100)
-- Include the company's actual website domain (e.g. "walmart.com", "ge.com")
-- Vary company sub-sectors — do not return multiple companies in the exact same niche
-- Return ONLY a valid JSON array with no markdown, no code blocks, no explanation${excludeBlock}`;
-
-  let userPrompt: string;
-
-  if (isCustomProduct) {
-    const ragSection = ragContext
-      ? `\n\nProduct Intelligence (RAG context):\n${ragContext}\n\nUse the above to identify companies with the most relevant pain points.`
-      : "";
-
-    userPrompt = `Find 8 real companies located in ${geoDescription} that would be ideal prospects for selling them: ${productFocus}.${ragSection}${constraintBlock}
-
-Think about:
-- What does ${productFocus} do? Who buys it?
-- Which companies have the pain points ${productFocus} solves?
-- Which companies might be using a competitor and could be displaced?
-- Which companies are at the right size/revenue stage?
-${jobTitles && jobTitles.length > 0 ? `- The key buyers at these companies would be: ${jobTitles.join(", ")}` : ""}
-${techStack ? `- Prefer companies using: ${techStack}` : ""}
-${keywords ? `- Look for companies described by: ${keywords}` : ""}
-
-Return a JSON array (no markdown):
-[{"companyName":"string","domain":"company.com","industry":"string","score":0-100,"reason":"1-2 sentences explaining exactly why this company would buy ${productFocus}","matchedProducts":["${productFocus.toLowerCase().replace(/\s+/g, "-")}"],"signals":["buying signal 1","buying signal 2","buying signal 3"],"companySize":"enterprise|mid-market|smb","urgency":"critical|high|medium|low"}]`;
-  } else {
-    userPrompt = `Find 8 real companies located in ${geoDescription} that would be ideal prospects for Antimatter AI's product ecosystem:${constraintBlock}
-
-Products:
-- Antimatter AI Platform: Custom AI development and digital product studio
-- ATOM Enterprise: Enterprise AI deployment framework (on-prem, VPC, edge)
-- Vidzee: AI cinematic video from listing photos (real estate)
-- Clinix Agent: AI healthcare billing and denied claims recovery
-- Clinix AI: AI clinical documentation automation
-- Red Team ATOM: Quantum-ready autonomous cybersecurity red teaming
-${techStack ? `\nPrefer companies using: ${techStack}` : ""}
-${keywords ? `\nLook for companies matching: ${keywords}` : ""}
-
-Return a JSON array (no markdown):
-[{"companyName":"string","domain":"company.com","industry":"string","score":0-100,"reason":"1-2 sentences why they need a specific product","matchedProducts":["product-slug"],"signals":["signal1","signal2","signal3"],"companySize":"enterprise|mid-market|smb","urgency":"critical|high|medium|low"}]
-Use slugs: antimatter-ai, atom-enterprise, vidzee, clinix-agent, clinix-ai, red-team-atom`;
+  // More senior contacts = higher score
+  const seniorityWeights: Record<string, number> = {
+    c_suite: 15, vp: 12, director: 10, head: 8, owner: 12, founder: 12, partner: 10, manager: 5,
+  };
+  for (const person of org.people) {
+    const s = (person.seniority || "").toLowerCase();
+    score += seniorityWeights[s] || 0;
   }
 
-  return { system, user: userPrompt };
+  // Industry match
+  if (filters.industry && filters.industry !== "All Industries") {
+    const orgIndustry = (org.industry || "").toLowerCase();
+    const filterIndustry = filters.industry.toLowerCase();
+    if (orgIndustry.includes(filterIndustry) || filterIndustry.includes(orgIndustry)) {
+      score += 15;
+    }
+  }
+
+  // Cap at 97
+  return Math.min(97, score);
+}
+
+// ─── Build reason text from Apollo data ──────────────────────────────────────
+
+function buildReason(org: ApolloOrg, filters: ScanFilters): string {
+  const parts: string[] = [];
+
+  if (org.people.length > 0) {
+    const topPerson = org.people[0];
+    const title = topPerson.title || topPerson.headline || "";
+    if (title) {
+      parts.push(`Has ${title} in their organization`);
+    }
+  }
+
+  if (filters.productFocus) {
+    parts.push(`identified as a strong fit for ${filters.productFocus}`);
+  } else if (org.industry) {
+    parts.push(`operates in the ${org.industry} sector`);
+  }
+
+  if (filters.jobTitles && filters.jobTitles.length > 0) {
+    parts.push(`with direct access to target decision-maker roles`);
+  }
+
+  return parts.length > 0
+    ? parts.join(", ") + "."
+    : `Real company sourced directly from Apollo's database matching your search criteria.`;
 }
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
@@ -530,115 +561,129 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Resolve geo filters
     const geoFilters = geoToApolloFilters(filters.geo);
-    const employeeSizeRange = employeeSizeToApolloRange(filters.employeeSize);
+    const employeeSizeRangeStr = employeeSizeToApolloRangeStr(filters.employeeSize);
 
-    const geoDescription =
-      filters.geo && filters.geo !== "All US" && filters.geo !== "Global"
-        ? filters.geo
-        : filters.geo === "Global"
-        ? "anywhere in the world"
-        : "the United States";
+    // ── STEP 1: Query Apollo's real search API as PRIMARY source ─────────────
+    console.log("[scan] Querying Apollo mixed_people/search with filters:", JSON.stringify({
+      geo: filters.geo,
+      industry: filters.industry,
+      employeeSize: filters.employeeSize,
+      jobTitles: filters.jobTitles,
+      keywords: filters.keywords,
+    }));
 
-    // Fetch RAG context if product specified
-    let ragContext = "";
-    if (filters.productFocus && filters.productFocus.trim().length > 0) {
-      ragContext = await fetchRagContext(filters.productFocus.trim());
-    }
+    const apolloPeople = await searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 25);
+    console.log(`[scan] Apollo returned ${apolloPeople.length} people`);
 
-    // Build and send AI prompt
-    const { system, user } = buildPrompt(filters, ragContext, geoDescription);
+    // ── STEP 2: Group people by organization to get distinct companies ────────
+    const orgs = groupPeopleByOrg(apolloPeople);
+    console.log(`[scan] Grouped into ${orgs.length} organizations`);
 
-    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: 0.4,
-        max_tokens: 3000,
-      }),
-    });
+    // Filter out excluded companies
+    const excludeSet = new Set((filters.excludeCompanies || []).map((c) => c.toLowerCase()));
+    const filteredOrgs = orgs.filter((o) => !excludeSet.has(o.companyName.toLowerCase()));
 
-    const aiData = await aiRes.json();
-    const content = aiData.choices?.[0]?.message?.content || "[]";
-    let prospectsList: any[] = [];
-    try {
-      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      prospectsList = JSON.parse(cleaned);
-    } catch {
-      const match = content.match(/\[[\s\S]*\]/);
-      if (match) {
-        try {
-          prospectsList = JSON.parse(match[0]);
-        } catch {
-          prospectsList = [];
+    // Score and sort, take top 8
+    const scoredOrgs = filteredOrgs
+      .map((o) => ({ org: o, score: scoreCompany(o, filters) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+
+    // ── STEP 3: For each org, reveal contacts + enrich with Hunter & PDL ──────
+    const results = await Promise.all(
+      scoredOrgs.map(async ({ org, score }, i) => {
+        const domain = org.domain;
+        const companyName = org.companyName;
+
+        // Reveal Apollo contacts (up to 5 per company to conserve credits)
+        const revealPromises = org.people.slice(0, 5).map((person) => revealApolloContact(person));
+        const [apolloContacts, hunterContacts, pdlData, apolloOrgData] = await Promise.all([
+          Promise.all(revealPromises).then((contacts) => contacts.filter(Boolean) as EnrichedContact[]),
+          enrichWithHunter(companyName, domain),
+          enrichWithPDL(companyName, domain),
+          enrichOrgWithApollo(domain),
+        ]);
+
+        const mergedContacts = mergeContacts(apolloContacts, hunterContacts);
+
+        // Merge company data — Apollo primary, PDL supplement
+        const finalEmployeeCount = apolloOrgData.employeeCount || pdlData.employeeCount || org.apolloOrgData?.estimated_num_employees || 0;
+        const finalRevenue = apolloOrgData.revenue || pdlData.revenue || "";
+        const finalTechStack = Array.from(new Set(apolloOrgData.techStack.concat(pdlData.techStack))).slice(0, 10);
+        const finalIndustry = org.industry || pdlData.industry || "Technology";
+
+        // Determine company size label
+        const empCount = finalEmployeeCount;
+        let companySize = org.companySize;
+        if (empCount >= 5000) companySize = "enterprise";
+        else if (empCount >= 201) companySize = "mid-market";
+        else if (empCount > 0) companySize = "smb";
+
+        // Determine urgency from score
+        let urgency: "critical" | "high" | "medium" | "low" = "medium";
+        if (score >= 85) urgency = "critical";
+        else if (score >= 70) urgency = "high";
+        else if (score < 40) urgency = "low";
+
+        // Build matched products based on industry
+        const matchedProducts: string[] = [];
+        if (filters.productFocus) {
+          matchedProducts.push(filters.productFocus.toLowerCase().replace(/\s+/g, "-"));
+        } else {
+          const industry = finalIndustry.toLowerCase();
+          if (industry.includes("health") || industry.includes("medical")) {
+            matchedProducts.push("clinix-agent", "clinix-ai");
+          } else if (industry.includes("real estate") || industry.includes("property")) {
+            matchedProducts.push("vidzee");
+          } else if (industry.includes("cyber") || industry.includes("security")) {
+            matchedProducts.push("red-team-atom");
+          } else {
+            matchedProducts.push("atom-enterprise", "antimatter-ai");
+          }
         }
-      }
-    }
 
-    if (!Array.isArray(prospectsList)) prospectsList = [];
+        // Build buying signals from person titles and org data
+        const signals: string[] = [];
+        for (const person of org.people.slice(0, 3)) {
+          const title = (person.title || "").toLowerCase();
+          if (title.includes("ai") || title.includes("machine learning") || title.includes("ml")) {
+            signals.push("AI/ML initiative in progress");
+          }
+          if (title.includes("cto") || title.includes("chief technology")) {
+            signals.push("CTO-level engagement");
+          }
+          if (title.includes("vp") || title.includes("director")) {
+            signals.push("VP/Director-level decision makers present");
+          }
+        }
+        if (finalEmployeeCount > 200 && finalEmployeeCount < 2000) signals.push("Mid-market growth stage");
+        if (pdlData.founded && parseInt(pdlData.founded) >= 2018) signals.push("Recently founded — likely scaling tech");
+        // Deduplicate
+        const uniqueSignals = Array.from(new Set(signals)).slice(0, 4);
 
-    // Enrich each prospect in parallel — Apollo (primary) + Hunter (supplement) + PDL (company data)
-    const enrichmentPromises = prospectsList.map(async (p: any) => {
-      const company = p.companyName || "Unknown";
-      const domain = p.domain || "";
+        return {
+          id: Date.now() + i,
+          companyName,
+          domain: domain || "",
+          industry: finalIndustry,
+          score: Math.min(100, Math.max(0, score)),
+          reason: buildReason(org, filters),
+          matchedProducts: JSON.stringify(matchedProducts),
+          signals: JSON.stringify(uniqueSignals),
+          companySize,
+          urgency,
+          lastUpdated: new Date().toISOString(),
+          status: "new",
+          contacts: JSON.stringify(mergedContacts),
+          companyPhone: apolloOrgData.companyPhone || "",
+          employeeCount: finalEmployeeCount,
+          revenue: finalRevenue,
+          techStack: JSON.stringify(finalTechStack),
+        };
+      })
+    );
 
-      const [apolloResult, hunterContacts, pdlData] = await Promise.all([
-        enrichWithApollo(company, domain, geoFilters, filters.jobTitles, employeeSizeRange),
-        enrichWithHunter(company, domain),
-        enrichWithPDL(company, domain),
-      ]);
-
-      const mergedContacts = mergeContacts(apolloResult.contacts, hunterContacts);
-
-      // Merge company data — Apollo primary, PDL supplement
-      const finalEmployeeCount = apolloResult.employeeCount || pdlData.employeeCount || 0;
-      const finalRevenue = apolloResult.revenue || pdlData.revenue || "";
-      const finalTechStack = Array.from(new Set(apolloResult.techStack.concat(pdlData.techStack))).slice(0, 10);
-
-      return {
-        apolloResult,
-        pdlData,
-        mergedContacts,
-        finalEmployeeCount,
-        finalRevenue,
-        finalTechStack,
-      };
-    });
-
-    const enrichments = await Promise.all(enrichmentPromises);
-
-    // Assemble final results
-    const results = prospectsList.map((p: any, i: number) => {
-      const { mergedContacts, finalEmployeeCount, finalRevenue, finalTechStack, apolloResult } = enrichments[i];
-
-      return {
-        id: Date.now() + i,
-        companyName: p.companyName || "Unknown",
-        domain: p.domain || "",
-        industry: p.industry || "Technology",
-        score: Math.min(100, Math.max(0, Number(p.score) || 50)),
-        reason: p.reason || "",
-        matchedProducts: JSON.stringify(p.matchedProducts || []),
-        signals: JSON.stringify(p.signals || []),
-        companySize: p.companySize || "mid-market",
-        urgency: p.urgency || "medium",
-        lastUpdated: new Date().toISOString(),
-        status: "new",
-        contacts: JSON.stringify(mergedContacts),
-        companyPhone: apolloResult.companyPhone || "",
-        employeeCount: finalEmployeeCount,
-        revenue: finalRevenue,
-        techStack: JSON.stringify(finalTechStack),
-      };
-    });
-
+    console.log(`[scan] Returning ${results.length} real Apollo prospects`);
     return res.json(results);
   } catch (err: any) {
     console.error("Prospect scan error:", err);
@@ -646,4 +691,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// v2.0 — Gold Standard rebuild 2026-04-09T12:33:45Z
+// v3.0 — Apollo-first real search (no GPT hallucination) 2026-04-09
