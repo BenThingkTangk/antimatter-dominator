@@ -1,3 +1,4 @@
+// GOLD STANDARD v2.0
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -127,6 +128,7 @@ Return ONLY this JSON structure (no markdown):
     }
 
     // Also include legacy 'content' field for backward compatibility
+    res.setHeader('X-ATOM-Version', 'gold-v2');
     return res.json({
       ...parsed,
       content: parsed.mainPitch || raw,
