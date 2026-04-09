@@ -407,13 +407,15 @@ WHEN THEY PUSH BACK:
 
 KEEP RESPONSES UNDER 2 SENTENCES. Ask one question at a time. Listen more than you talk.`;
 
-  // Use the Hume EVI Config ID from the platform (ATOM Sales Agent with Cheerful Irishman voice + Claude Sonnet)
+  // LOCKED: ATOM Sales Agent config + ATOM Jobs High voice
   const HUME_CONFIG_ID = "42271e30-8773-43bd-81e5-c411e6aa990a";
+  const HUME_VOICE_ID = "0aa00500-ee13-47c1-b056-1fa14d9db2f1"; // ATOM Jobs High
 
   return (
     <VoiceProvider
       auth={{ type: "accessToken", value: accessToken }}
       configId={HUME_CONFIG_ID}
+      sessionSettings={{ voice: { id: HUME_VOICE_ID } }}
     >
       <LiveCallInterface
         companyName={companyName}
