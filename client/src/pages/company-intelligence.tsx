@@ -938,7 +938,7 @@ export default function CompanyIntelligence() {
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 md:gap-4">
+      <div className="flex items-start gap-4">
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
           style={{
@@ -950,7 +950,7 @@ export default function CompanyIntelligence() {
           <Brain className="w-6 h-6 text-[#a2a3e9]" />
         </div>
         <div>
-          <h1 className="text-lg md:text-2xl font-semibold tracking-tight text-[rgba(246,246,253,0.95)]">
+          <h1 className="text-2xl font-semibold tracking-tight text-[rgba(246,246,253,0.95)]">
             Company Intelligence Engine
           </h1>
           <p className="text-sm text-[rgba(246,246,253,0.4)] mt-0.5">
@@ -969,7 +969,7 @@ export default function CompanyIntelligence() {
         }}
       >
         <CardContent className="p-6 space-y-5">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(246,246,253,0.25)]" />
               <input
@@ -1162,7 +1162,7 @@ export default function CompanyIntelligence() {
         >
           {/* Tab bar */}
           <div
-            className="flex overflow-x-auto tabs-scroll"
+            className="flex overflow-x-auto"
             style={{ borderBottom: "1px solid rgba(246,246,253,0.08)" }}
           >
             {TABS.map((tab) => {
@@ -1187,7 +1187,7 @@ export default function CompanyIntelligence() {
           </div>
 
           {/* Tab content */}
-          <div className="p-4 md:p-6">
+          <div className="p-6">
             {activeTab === "pitch" && <PitchTab activeCompany={activeCompany} />}
             {activeTab === "objection" && <ObjectionTab activeCompany={activeCompany} />}
             {activeTab === "intent" && <IntentTab activeCompany={activeCompany} />}

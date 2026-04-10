@@ -82,14 +82,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Products" value={products.length} icon={Atom} description="In ecosystem" color="bg-primary/10 text-primary" />
         <StatCard title="AI Agents" value={4} icon={Target} description="Ready to deploy" color="bg-chart-5/10 text-rose-500" />
         <StatCard title="Pitch Types" value={5} icon={Activity} description="Generation modes" color="bg-chart-3/10 text-emerald-500" />
         <StatCard title="Industries" value="12+" icon={TrendingUp} description="Market coverage" color="bg-chart-4/10 text-amber-500" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href="/pitch">
           <Card className="border-border/50 hover:border-primary/50 transition-all cursor-pointer group" data-testid="link-pitch-generator">
             <div className="p-4 flex items-center gap-3">
