@@ -745,11 +745,11 @@ export default function AtomCampaign() {
     setCalls((prev) => new Map(prev).set(target.id, rec));
 
     try {
-      const res = await fetch(`${BRIDGE_URL}/call`, {
+      const res = await fetch("/api/atom-leadgen/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: formatPhoneNumber(target.phone),
+          phoneNumber: formatPhoneNumber(target.phone),
           firstName: target.contactName.split(" ")[0],
           companyName: target.companyName,
           product: brief.split("\n")[0].slice(0, 80),
@@ -758,7 +758,7 @@ export default function AtomCampaign() {
         }),
       });
 
-      if (!res.ok) throw new Error(`Bridge ${res.status}`);
+      if (!res.ok) throw new Error(`Call failed: ${res.status}`);
       const data = await res.json();
       const callSid = data.callSid || data.sid;
 

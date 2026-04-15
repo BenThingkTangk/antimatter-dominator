@@ -5,7 +5,8 @@ import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search } f
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BRIDGE_URL = "https://45-79-202-76.sslip.io";
+// Direct Hume EVI — calls go through Vercel API, no bridge
+const BRIDGE_URL = "https://45-79-202-76.sslip.io"; // kept for WebSocket events only
 const ARC_LENGTH = Math.PI * 80; // radius=80, semicircle
 
 // ─── Phone number formatter ───────────────────────────────────────────────────
@@ -822,17 +823,17 @@ export default function ATOMLeadGen() {
         : Promise.resolve(null);
 
       const callPayload = {
-        to: formattedPhone,
+        phoneNumber: formattedPhone,
         firstName: contactName.trim() || undefined,
         companyName: companyName.trim() || undefined,
         product: productSlug.trim() || undefined,
         productIntel: productIntelData || undefined,
       };
 
-      console.log("[handleDial] POST", `${BRIDGE_URL}/call`, JSON.stringify(callPayload));
+      console.log("[handleDial] POST /api/atom-leadgen/call", JSON.stringify(callPayload));
 
       // Start the call immediately — don't wait for intel
-      const res = await fetch(`${BRIDGE_URL}/call`, {
+      const res = await fetch("/api/atom-leadgen/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(callPayload),
@@ -858,7 +859,7 @@ export default function ATOMLeadGen() {
       setCallStatus("idle");
       toast({
         title: "Failed to connect",
-        description: err?.message ?? "Bridge unreachable. Check your network.",
+        description: err?.message ?? "Call service unreachable. Check your network.",
         variant: "destructive",
       });
     }
