@@ -238,7 +238,7 @@ export default function PitchGenerator() {
   const [industry, setIndustry] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [tone, setTone] = useState("Professional");
-  const [customContext, setCustomContext] = useState("");
+  const [customContext, setCustomContext] = useState(params.get("context") || "");
 
   // UI state
   const [showHistory, setShowHistory] = useState(false);
@@ -305,6 +305,15 @@ export default function PitchGenerator() {
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Auto-generate when navigated from another module with context
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (!autoGenRef.current && params.get("context") && selectedProduct) {
+      autoGenRef.current = true;
+      setTimeout(() => generatePitch.mutate(), 400);
+    }
+  }, [selectedProduct]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

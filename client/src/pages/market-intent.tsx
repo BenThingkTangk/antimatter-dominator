@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { store, useIntel } from "@/lib/store";
@@ -297,6 +297,7 @@ function SkeletonLoader() {
 // ─── Main Component ──────────────────────────────────────────────────────
 
 export default function MarketIntent() {
+  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
   const { toast } = useToast();
 
   // Form state
@@ -305,7 +306,7 @@ export default function MarketIntent() {
   const [selectedRegion, setSelectedRegion] = useState("North America");
   const [analysisType, setAnalysisType] = useState("Trend Analysis");
   const [timeHorizon, setTimeHorizon] = useState("90 days");
-  const [customQuery, setCustomQuery] = useState("");
+  const [customQuery, setCustomQuery] = useState(params.get("query") || "");
 
   // UI state
   const [showHistory, setShowHistory] = useState(false);
@@ -371,6 +372,15 @@ export default function MarketIntent() {
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Auto-generate when navigated from another module with query
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (!autoGenRef.current && params.get("query")) {
+      autoGenRef.current = true;
+      setTimeout(() => analyzeIntent.mutate(), 400);
+    }
+  }, []);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

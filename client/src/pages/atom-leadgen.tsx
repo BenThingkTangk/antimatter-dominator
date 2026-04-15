@@ -606,12 +606,13 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
 
 export default function ATOMLeadGen() {
   const { toast } = useToast();
+  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
 
-  // Form
-  const [phone, setPhone] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [productSlug, setProductSlug] = useState("");
+  // Form — pre-fill from cross-module navigation
+  const [phone, setPhone] = useState(params.get("phone") || "");
+  const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || "");
+  const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
+  const [productSlug, setProductSlug] = useState(params.get("product") || "");
 
   // Call state
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");

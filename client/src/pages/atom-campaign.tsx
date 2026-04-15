@@ -478,12 +478,13 @@ const DEFAULT_ADVANCED: AdvancedFilters = {
 
 export default function AtomCampaign() {
   const { toast } = useToast();
+  const campaignParams = new URLSearchParams(window.location.hash.split("?")[1] || "");
 
   // Step flow
   const [step, setStep] = useState<Step>("brief");
 
-  // Step 1 — Campaign Brief
-  const [brief, setBrief] = useState("");
+  // Step 1 — Campaign Brief (pre-fill from cross-module navigation)
+  const [brief, setBrief] = useState(campaignParams.get("brief") || campaignParams.get("pitch") || "");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(DEFAULT_ADVANCED);
 

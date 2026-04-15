@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { store, useObjections } from "@/lib/store";
@@ -243,12 +243,13 @@ function SkeletonLoader() {
 
 export default function ObjectionHandler() {
   const { toast } = useToast();
+  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
 
   // Form state
   const [, navigate] = useLocation();
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [objectionText, setObjectionText] = useState("");
-  const [context, setContext] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(params.get("product") || "");
+  const [objectionText, setObjectionText] = useState(params.get("objection") || "");
+  const [context, setContext] = useState(params.get("context") || "");
 
   // UI state
   const [showHistory, setShowHistory] = useState(false);
@@ -310,6 +311,15 @@ export default function ObjectionHandler() {
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Auto-generate when navigated from Pitch with objection pre-filled
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (!autoGenRef.current && params.get("objection") && selectedProduct) {
+      autoGenRef.current = true;
+      setTimeout(() => handleObjection.mutate(), 400);
+    }
+  }, [selectedProduct]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
