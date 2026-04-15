@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const PDL_API_KEY = process.env.PDL_API_KEY;
+const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 const THEIRSTACK_API_KEY = process.env.THEIRSTACK_API_KEY;
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY;
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
@@ -233,22 +234,24 @@ async function revealApolloContact(person: any): Promise<EnrichedContact | null>
     });
 
     if (!revealRes.ok) {
+      console.log(`[scan] Apollo people/match failed ${revealRes.status} for ${person.first_name} ${person.last_name} — using raw search data`);
       // Fall back to data from the search result itself
+      // Apollo mixed_people/api_search often includes partial contact data
       if (!person.first_name && !person.last_name) return null;
       return {
-        email: person.email || "",
+        email: person.email || person.personal_emails?.[0] || "",
         firstName: person.first_name || "",
         lastName: person.last_name || "",
-        position: person.title || "",
+        position: person.title || person.headline || "",
         seniority: person.seniority || "",
         department: person.departments?.[0] || "",
         linkedin: person.linkedin_url || null,
-        phone: person.sanitized_phone || null,
-        mobilePhone: person.mobile_phone || null,
-        city: person.city || null,
-        state: person.state || null,
-        confidence: 50,
-        verification: "unverified",
+        phone: person.sanitized_phone || person.phone_numbers?.[0]?.sanitized_number || null,
+        mobilePhone: person.mobile_phone || person.phone_numbers?.[0]?.raw_number || null,
+        city: person.city || person.organization?.city || null,
+        state: person.state || person.organization?.state || null,
+        confidence: person.email ? 70 : 50,
+        verification: person.email_status || "unverified",
         source: "apollo",
       };
     }
@@ -379,6 +382,40 @@ function extractBullets(text: string): string[] {
     .map(s => s.replace(/^[-•*]\s*/, "").trim())
     .filter(s => s.length > 10 && s.length < 300)
     .slice(0, 4);
+}
+
+// ─── Hunter.io: discover emails by domain ─────────────────────────────────
+
+async function hunterDomainSearch(
+  domain?: string
+): Promise<EnrichedContact[]> {
+  if (!HUNTER_API_KEY || !domain) return [];
+  try {
+    const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const res = await fetch(
+      `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(cleanDomain)}&api_key=${HUNTER_API_KEY}&limit=10&type=personal`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const emails = data.data?.emails || [];
+    return emails.map((e: any) => ({
+      email: e.value || "",
+      firstName: e.first_name || "",
+      lastName: e.last_name || "",
+      position: e.position || "",
+      seniority: e.seniority || "",
+      department: e.department || "",
+      linkedin: e.linkedin || null,
+      phone: e.phone_number || null,
+      mobilePhone: null,
+      city: null,
+      state: null,
+      confidence: e.confidence || 70,
+      verification: e.verification?.status || "unverified",
+      source: "hunter",
+    }));
+  } catch { return []; }
 }
 
 // ─── TheirStack: find companies by actual technology used ───────────────────
@@ -656,8 +693,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Reveal Apollo contacts (up to 5 per company to conserve credits)
         const revealPromises = org.people.slice(0, 5).map((person) => revealApolloContact(person));
-        const [apolloContacts, pdlData, apolloOrgData, theirStackTech, builtWithTech, webIntel] = await Promise.all([
+        const [apolloContacts, hunterContacts, pdlData, apolloOrgData, theirStackTech, builtWithTech, webIntel] = await Promise.all([
           Promise.all(revealPromises).then((contacts) => contacts.filter(Boolean) as EnrichedContact[]),
+          hunterDomainSearch(domain),
           enrichWithPDL(companyName, domain),
           enrichOrgWithApollo(domain),
           enrichTechWithTheirStack(domain, filters.techStack),
@@ -665,7 +703,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           getCompanyWebIntel(companyName, domain, filters.productFocus),
         ]);
 
-        const mergedContacts = deduplicateContacts(apolloContacts);
+        // Merge contacts: Apollo revealed + Hunter discovered, then deduplicate
+        const mergedContacts = deduplicateContacts([...apolloContacts, ...hunterContacts]);
 
         // Merge company data — Apollo primary, PDL supplement
         const finalEmployeeCount = apolloOrgData.employeeCount || pdlData.employeeCount || org.apolloOrgData?.estimated_num_employees || 0;
