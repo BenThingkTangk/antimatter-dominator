@@ -1,61 +1,27 @@
 /**
- * ATOM Campaign — AI Brief Analyzer via Perplexity Agent API
+ * ATOM Campaign — Personalized Email Draft Generator
  * 
- * Takes a free-text campaign brief and uses the Agent API to:
- * 1. Research the market/competitor mentioned in the brief
- * 2. Extract targeting parameters (industry, geography, company size, personas)
- * 3. Generate the campaign pitch and objection playbook
- * 4. Return structured filters for the Prospect Engine
+ * Takes a target's role, company signals, and matched product,
+ * generates a personalized cold email using GPT-4o-mini.
+ * Returns the draft subject + body for sending via Outlook.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY;
 
-// ─── Perplexity Agent API: research + reasoning in one call ──────────────────
-async function agentResearch(brief: string): Promise<{ content: string; citations: string[] }> {
-  if (!PERPLEXITY_API_KEY) return { content: "", citations: [] };
-
-  try {
-    // Use Agent API with web_search tool for real-time competitive research
-    const res = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar-pro",
-        messages: [
-          {
-            role: "system",
-            content: `You are an elite sales campaign strategist. Analyze the campaign brief and provide deep competitive intelligence. Research the companies/products mentioned, identify the target market, and build a targeting strategy. Be specific with company names, market data, and actionable insights.`
-          },
-          {
-            role: "user",
-            content: `Analyze this campaign brief and research the market:\n\n"${brief}"\n\nProvide:\n1. Competitive analysis of the companies/products mentioned\n2. Target customer profile (industry, company size, geography, job titles)\n3. Key pain points of the competitor's customers\n4. Strongest selling angles\n5. Likely objections and how to handle them`
-          }
-        ],
-        stream: false,
-        web_search_options: { search_context_size: "high" },
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!res.ok) {
-      console.error(`Agent API ${res.status}: ${await res.text().catch(() => "")}`);
-      return { content: "", citations: [] };
-    }
-
-    const data = await res.json();
-    return {
-      content: data.choices?.[0]?.message?.content || "",
-      citations: (data.citations || []) as string[],
-    };
-  } catch (e: any) {
-    console.error(`Agent research error: ${e.message}`);
-    return { content: "", citations: [] };
-  }
+interface EmailRequest {
+  contactName: string;
+  title: string;
+  companyName: string;
+  domain?: string;
+  industry?: string;
+  buyingSignals?: string[];
+  painPoints?: string[];
+  techStack?: string[];
+  recentNews?: string[];
+  matchedProduct?: string;
+  brief?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -67,74 +33,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
-  const { brief } = req.body || {};
-  if (!brief) return res.status(400).json({ error: "Missing: brief" });
+  const data: EmailRequest = req.body || {};
+  if (!data.contactName || !data.companyName) {
+    return res.status(400).json({ error: "Missing: contactName and companyName" });
+  }
+
+  const firstName = data.contactName.split(" ")[0];
+  const signals = (data.buyingSignals || []).slice(0, 3).join("; ");
+  const pains = (data.painPoints || []).slice(0, 2).join("; ");
+  const news = (data.recentNews || []).slice(0, 2).join("; ");
+  const tech = (data.techStack || []).slice(0, 5).join(", ");
+
+  const productDescriptions: Record<string, string> = {
+    "antimatter-ai": "Antimatter AI — full-service AI development, product design, and go-to-market strategy",
+    "atom-enterprise": "ATOM Enterprise — deploy AI agents in your VPC, on-prem, or at the edge with full IP ownership",
+    "vidzee": "Vidzee — transform listing photos into cinematic property videos in 5 minutes",
+    "clinix-agent": "Clinix Agent — AI-powered billing denial appeals with success-based pricing",
+    "clinix-ai": "Clinix AI — AI clinical documentation and ICD-10/CPT coding, saving providers 2-3 hours daily",
+    "red-team-atom": "Red Team ATOM — quantum-ready autonomous red teaming with MITRE ATLAS mapping",
+  };
+
+  const product = productDescriptions[data.matchedProduct || "antimatter-ai"] || "Antimatter AI solutions";
+
+  const prompt = `Write a personalized cold email from Adam at Antimatter AI to ${data.contactName}, ${data.title} at ${data.companyName}.
+
+CONTEXT:
+- Product to pitch: ${product}
+- Industry: ${data.industry || "Technology"}
+${signals ? `- Buying signals: ${signals}` : ""}
+${pains ? `- Pain points: ${pains}` : ""}
+${news ? `- Recent news: ${news}` : ""}
+${tech ? `- Their tech stack: ${tech}` : ""}
+${data.brief ? `- Campaign brief: ${data.brief}` : ""}
+
+RULES:
+- Subject line: 5-8 words, no spam triggers, personalized to their company
+- Body: 4-6 sentences max. Sound like a real human, not a template.
+- Reference something SPECIFIC about their company (from the signals/news/tech stack above)
+- One clear value proposition tied to their role (${data.title})
+- End with a soft CTA: suggest a 15-minute call, not a hard sell
+- Sign off as: Adam | Antimatter AI | atom@antimatterai.com
+- Use contractions. Be warm. No corporate jargon.
+- NO "I hope this email finds you well" or any generic opener
+
+Return JSON only: {"subject": "...", "body": "..."}`;
 
   try {
-    // Step 1: Use Perplexity Agent to research the brief
-    const research = await agentResearch(brief);
+    // Try SambaNova first (faster), fall back to OpenAI
+    let result: { subject: string; body: string } | null = null;
 
-    // Step 2: Use GPT to extract structured targeting filters + campaign assets
-    const extractPrompt = `You are building an ATOM AI sales campaign. Based on this campaign brief and research, extract structured targeting data. Return ONLY valid JSON.
+    if (SAMBANOVA_API_KEY) {
+      try {
+        const sambaRes = await fetch("https://api.sambanova.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${SAMBANOVA_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "Meta-Llama-3.3-70B-Instruct",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.4,
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (sambaRes.ok) {
+          const d = await sambaRes.json();
+          const raw = d.choices?.[0]?.message?.content || "";
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) result = JSON.parse(match[0]);
+        }
+      } catch {}
+    }
 
-CAMPAIGN BRIEF: "${brief}"
+    if (!result && OPENAI_API_KEY) {
+      const gptRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.4,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (gptRes.ok) {
+        const d = await gptRes.json();
+        result = JSON.parse(d.choices[0].message.content);
+      }
+    }
 
-MARKET RESEARCH:
-${research.content || "No research available — infer from the brief."}
-
-Return this exact JSON:
-{
-  "campaignName": "short campaign name",
-  "targetProduct": "the product being sold",
-  "competitor": "the competitor being targeted (if any)",
-  "industry": "target industry (e.g., Technology, Financial Services, Healthcare)",
-  "geography": "target geography (e.g., US, California, Northeast US, Global)",
-  "companySize": "target company size tier (e.g., 51-200, 201-500, 501-1000, 1001-5000)",
-  "jobTitles": ["list", "of", "target", "job", "titles"],
-  "techStack": "technology filter if relevant (e.g., Cloudflare, AWS)",
-  "keywords": "search keywords for company description matching",
-  "pitch": {
-    "opener": "2-sentence cold call opener",
-    "valueProposition": "core value proposition in one sentence",
-    "differentiators": ["key differentiator 1", "key differentiator 2", "key differentiator 3"],
-    "closingQuestion": "question to book the meeting"
-  },
-  "objections": [
-    {"objection": "likely objection", "response": "recommended response"}
-  ],
-  "competitiveIntel": {
-    "competitorWeaknesses": ["weakness 1", "weakness 2"],
-    "ourAdvantages": ["advantage 1", "advantage 2"],
-    "switchingIncentive": "what makes switching compelling"
-  },
-  "estimatedTargetCount": "estimated number of companies matching these filters"
-}`;
-
-    const gptRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: extractPrompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.3,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-
-    if (!gptRes.ok) throw new Error(`GPT ${gptRes.status}`);
-    const gptData = await gptRes.json();
-    const campaign = JSON.parse(gptData.choices[0].message.content);
+    if (!result) {
+      return res.status(500).json({ error: "Failed to generate email" });
+    }
 
     return res.json({
-      ...campaign,
-      research: research.content,
-      citations: research.citations,
-      sources: { perplexity: !!research.content, openai: true },
-      generatedAt: new Date().toISOString(),
+      subject: result.subject,
+      body: result.body,
+      to: data.contactName,
+      company: data.companyName,
+      product: data.matchedProduct || "antimatter-ai",
     });
-  } catch (e: any) {
-    console.error(`[Campaign Analyze] ${e.message}`);
-    return res.status(500).json({ error: e.message });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 }

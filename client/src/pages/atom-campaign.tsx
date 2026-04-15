@@ -923,6 +923,53 @@ export default function AtomCampaign() {
 
   const deselectAll = () => setTargets((prev) => prev.map((t) => ({ ...t, selected: false })));
 
+  // ─── Email outreach per target ───────────────────────────────────────────────
+  const [emailingTarget, setEmailingTarget] = useState<string | null>(null);
+
+  const sendEmailOutreach = async (target: Target) => {
+    if (!target.email) {
+      toast({ title: "No email", description: `${target.contactName} has no email address.`, variant: "destructive" });
+      return;
+    }
+    setEmailingTarget(target.id);
+    try {
+      // Step 1: Generate personalized email via AI
+      const genRes = await fetch("/api/campaign/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contactName: target.contactName,
+          title: target.title,
+          companyName: target.companyName,
+          domain: target.domain,
+          industry: target.industry,
+          buyingSignals: target.buyingSignals,
+          painPoints: target.painPoints,
+          techStack: target.techStack,
+          recentNews: target.recentNews,
+          matchedProduct: target.techStack?.some((t: string) => t.toLowerCase().includes("aws") || t.toLowerCase().includes("cloud")) ? "atom-enterprise" : "antimatter-ai",
+          brief,
+        }),
+      });
+      if (!genRes.ok) throw new Error("Failed to generate email");
+      const email = await genRes.json();
+
+      // Step 2: Send via Outlook (the external tool handles this)
+      // We'll open a mailto link as fallback, but the real send goes through the backend
+      const mailtoUrl = `mailto:${target.email}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+      window.open(mailtoUrl, "_blank");
+
+      toast({
+        title: "Email drafted",
+        description: `Personalized email to ${target.contactName} at ${target.companyName} — check your email client.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Email failed", description: err.message, variant: "destructive" });
+    } finally {
+      setEmailingTarget(null);
+    }
+  };
+
   // ─── Sorting ───────────────────────────────────────────────────────────────
 
   const sortedTargets = [...targets].sort((a, b) => {
@@ -1636,8 +1683,20 @@ export default function AtomCampaign() {
                           )}
                         </div>
 
-                        {/* Confidence */}
-                        <div className="flex flex-col items-end gap-0.5">
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {t.email && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
+                              disabled={emailingTarget === t.id}
+                              className="h-6 text-[10px] px-2 gap-1 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                            >
+                              {emailingTarget === t.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
+                              Email
+                            </Button>
+                          )}
                           <Badge className={`text-[9px] font-mono px-1.5 shrink-0 ${
                             t.confidence >= 70
                               ? "bg-emerald-500/10 text-emerald-400/70 border-emerald-500/20"
@@ -1647,11 +1706,6 @@ export default function AtomCampaign() {
                           }`}>
                             {t.confidence}%
                           </Badge>
-                          {t.phone && (
-                            <Badge className="bg-violet-500/10 text-violet-400/80 border-violet-500/15 text-[9px] font-mono px-1 py-0 h-4">
-                              callable
-                            </Badge>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -1676,6 +1730,26 @@ export default function AtomCampaign() {
                       data-testid="button-export-campaign-csv"
                     >
                       <Download className="w-3 h-3" />Export CSV
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Bulk email all selected targets with email addresses
+                        const emailTargets = selectedTargets.filter((t) => t.email);
+                        if (emailTargets.length === 0) {
+                          toast({ title: "No emails", description: "None of the selected targets have email addresses.", variant: "destructive" });
+                          return;
+                        }
+                        // For bulk, just fire them sequentially with a small delay
+                        toast({ title: "Drafting emails", description: `Generating ${emailTargets.length} personalized emails...` });
+                        emailTargets.slice(0, 10).forEach((t, i) => {
+                          setTimeout(() => sendEmailOutreach(t), i * 2000);
+                        });
+                      }}
+                      className="h-8 text-xs gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                    >
+                      <Mail className="w-3 h-3" />Email Selected ({selectedTargets.filter((t) => t.email).length})
                     </Button>
                     <Button
                       onClick={launchCampaign}
