@@ -12,8 +12,10 @@ import {
   MessageSquareWarning, Loader2, Copy, Zap, History,
   ShieldCheck, DollarSign, Clock, Users, AlertTriangle, Lock,
   Plus, ChevronDown, ChevronUp, Trash2, Check, Brain,
-  TrendingUp, MessageCircle, BarChart3, Target, RefreshCw
+  TrendingUp, MessageCircle, BarChart3, Target, RefreshCw,
+  ArrowRight, Sparkles, PhoneCall, Mail, Megaphone
 } from "lucide-react";
+import { useLocation } from "wouter";
 import type { Product } from "@shared/schema";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -243,6 +245,7 @@ export default function ObjectionHandler() {
   const { toast } = useToast();
 
   // Form state
+  const [, navigate] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState("");
   const [objectionText, setObjectionText] = useState("");
   const [context, setContext] = useState("");
@@ -630,7 +633,7 @@ export default function ObjectionHandler() {
                     </div>
 
                     {activeResult.strategies[activeStrategyTab] && (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-white/80">
                             {activeResult.strategies[activeStrategyTab].headline}
@@ -643,30 +646,90 @@ export default function ObjectionHandler() {
                           </Button>
                         </div>
                         <p className="text-sm text-white/60 leading-relaxed">{activeResult.strategies[activeStrategyTab].response}</p>
+                        {/* Action buttons — turn this strategy into action */}
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.05]">
+                          <Button variant="outline" size="sm"
+                            className="h-7 text-[10px] gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                            onClick={() => navigate(`/pitch?context=${encodeURIComponent(`Rebuild pitch using this objection handling strategy: ${activeResult.strategies[activeStrategyTab].type} — ${activeResult.strategies[activeStrategyTab].response}`)}&product=${encodeURIComponent(selectedProduct)}`)}
+                          >
+                            <Sparkles className="w-3 h-3" />Build Pitch from This
+                          </Button>
+                          <Button variant="outline" size="sm"
+                            className="h-7 text-[10px] gap-1.5 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 bg-transparent"
+                            onClick={() => navigate(`/atom-leadgen?script=${encodeURIComponent(activeResult.strategies[activeStrategyTab].response)}&product=${encodeURIComponent(selectedProduct)}`)}
+                          >
+                            <PhoneCall className="w-3 h-3" />Use in Call Script
+                          </Button>
+                          <Button variant="outline" size="sm"
+                            className="h-7 text-[10px] gap-1.5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10 bg-transparent"
+                            onClick={() => navigate(`/atom-campaign?brief=${encodeURIComponent(`Objection: ${objectionText}. Counter-strategy: ${activeResult.strategies[activeStrategyTab].response}`)}`)}
+                          >
+                            <Megaphone className="w-3 h-3" />Use in Campaign
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Follow-Up Questions */}
+                {/* Follow-Up Questions — clickable to deep-dive */}
                 {activeResult.followUpQuestions?.length > 0 && (
                   <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
-                      <MessageCircle className="w-3 h-3" />Follow-Up Questions
+                      <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-violet-400/40">· click to prepare response</span>
                     </p>
                     <div className="space-y-2">
                       {activeResult.followUpQuestions.map((q, i) => (
                         <div key={i}
-                          className="group flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] hover:border-violet-500/15 transition-all">
-                          <span className="text-violet-400/50 text-xs shrink-0 font-mono">{i + 1}.</span>
-                          <p className="text-sm text-white/60 flex-1">{q}</p>
-                          <Button variant="ghost" size="sm"
-                            className="h-5 text-[9px] text-white/20 hover:text-white/50 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                            onClick={() => copyToClipboard(q, `fq-${i}`)}>
-                            {copiedSection === `fq-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
-                          </Button>
+                          className="group flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-violet-500/[0.06] hover:border-violet-500/20 transition-all cursor-pointer"
+                          onClick={() => {
+                            // Pre-fill objection with the follow-up question as the new scenario
+                            setObjectionText(q);
+                            setContext(`Previous objection was: "${objectionText}". The prospect then asked: "${q}". Generate a response that continues the conversation and moves toward closing.`);
+                            setTimeout(() => {
+                              const btn = document.querySelector('[data-testid="button-destroy-objection"]') as HTMLButtonElement;
+                              btn?.click();
+                            }, 200);
+                          }}>
+                          <span className="text-violet-400/50 text-xs shrink-0 font-mono group-hover:text-violet-400">{i + 1}.</span>
+                          <p className="text-sm text-white/60 flex-1 group-hover:text-white/85 transition-colors">{q}</p>
+                          <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="sm"
+                              className="h-5 text-[9px] text-white/40 hover:text-white/70 gap-0.5"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(q, `fq-${i}`); }}>
+                              {copiedSection === `fq-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                            </Button>
+                            <span className="text-[9px] text-violet-400/50 flex items-center gap-0.5">
+                              <ArrowRight className="w-2.5 h-2.5" />Prepare
+                            </span>
+                          </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Additional tactical follow-ups */}
+                    <div className="mt-3 pt-3 border-t border-white/[0.05] space-y-2">
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Tactical Moves</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm"
+                          className="h-7 text-[10px] gap-1 border-violet-500/15 text-violet-400/70 hover:bg-violet-500/10 bg-transparent"
+                          onClick={() => navigate(`/pitch?context=${encodeURIComponent(`They said: "${objectionText}". Build a pitch that directly addresses this concern and turns it into a reason to buy.`)}&product=${encodeURIComponent(selectedProduct)}`)}
+                        >
+                          <Sparkles className="w-3 h-3" />Rebuild Pitch Around This
+                        </Button>
+                        <Button variant="outline" size="sm"
+                          className="h-7 text-[10px] gap-1 border-emerald-500/15 text-emerald-400/70 hover:bg-emerald-500/10 bg-transparent"
+                          onClick={() => navigate(`/company-intelligence?query=${encodeURIComponent(objectionText)}`)}
+                        >
+                          <Brain className="w-3 h-3" />Research Their Pain Point
+                        </Button>
+                        <Button variant="outline" size="sm"
+                          className="h-7 text-[10px] gap-1 border-amber-500/15 text-amber-400/70 hover:bg-amber-500/10 bg-transparent"
+                          onClick={() => navigate(`/market?query=${encodeURIComponent(objectionText)}`)}
+                        >
+                          <TrendingUp className="w-3 h-3" />Market Intel on This
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
