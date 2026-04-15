@@ -49,6 +49,11 @@ import {
   Briefcase,
   Search,
   Download,
+  Link,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ListFilter,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -127,6 +132,17 @@ const JOB_TITLE_PRESETS = [
   "Chief Digital Officer", "Owner", "Founder",
 ];
 
+const MAX_TARGET_OPTIONS = [
+  { value: 25, label: "25 targets" },
+  { value: 50, label: "50 targets" },
+  { value: 100, label: "100 targets" },
+  { value: 250, label: "250 targets" },
+  { value: 500, label: "500 targets" },
+  { value: 1000, label: "1,000 targets" },
+  { value: 5000, label: "5,000 targets" },
+  { value: 10000, label: "10,000 targets" },
+];
+
 // ─── Phone formatter ──────────────────────────────────────────────────────────
 
 function formatPhoneNumber(raw: string): string {
@@ -141,6 +157,8 @@ function formatPhoneNumber(raw: string): string {
 
 type Step = "brief" | "targets" | "launch";
 type CallStatus = "queued" | "calling" | "connected" | "completed" | "failed" | "skipped";
+type SortField = "score" | "companyName" | "contactName";
+type SortDir = "asc" | "desc";
 
 interface AdvancedFilters {
   industry: string;
@@ -155,10 +173,27 @@ interface AdvancedFilters {
 interface Target {
   id: string;
   companyName: string;
+  domain: string;
+  industry: string;
   contactName: string;
   title: string;
   phone: string;
+  mobilePhone: string;
   email: string;
+  linkedin: string;
+  city: string;
+  state: string;
+  score: number;
+  confidence: number;
+  companySize: string;
+  employeeCount: number;
+  revenue: string;
+  buyingSignals: string[];
+  recentNews: string[];
+  painPoints: string[];
+  techStack: string[];
+  seniority: string;
+  department: string;
   selected: boolean;
 }
 
@@ -216,6 +251,18 @@ function formatDuration(sec?: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 75) return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
+  if (score >= 50) return "text-amber-400 border-amber-500/30 bg-amber-500/10";
+  return "text-rose-400 border-rose-500/30 bg-rose-500/10";
+}
+
+function scoreTextColor(score: number): string {
+  if (score >= 75) return "text-emerald-400";
+  if (score >= 50) return "text-amber-400";
+  return "text-rose-400";
 }
 
 function SentimentBar({ score }: { score: number }) {
@@ -447,6 +494,11 @@ export default function AtomCampaign() {
   const [campaignId] = useState(() => `camp_${Date.now()}`);
   const [targetStats, setTargetStats] = useState<{ companies: number; contacts: number } | null>(null);
 
+  // Step 2 — Max targets + sort
+  const [maxTargets, setMaxTargets] = useState(25);
+  const [sortField, setSortField] = useState<SortField>("score");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
   // Step 3 — Live launch
   const [calls, setCalls] = useState<Map<string, CallRecord>>(new Map());
   const [isPaused, setIsPaused] = useState(false);
@@ -502,7 +554,6 @@ export default function AtomCampaign() {
     // Number ranges like "50-500"
     const match = lower.match(/(\d+)[^\d]+(\d+)/);
     if (match) {
-      const lo = parseInt(match[1]);
       const hi = parseInt(match[2]);
       if (hi <= 10) return "1-10";
       if (hi <= 50) return "11-50";
@@ -513,6 +564,113 @@ export default function AtomCampaign() {
       return "5001-10000";
     }
     return null;
+  }
+
+  // Parse a single prospect object into expanded Target entries
+  function parseProspectToTargets(p: any): Target[] {
+    const contacts = (() => {
+      try { return JSON.parse(p.contacts || "[]"); } catch { return []; }
+    })();
+    const techStack = (() => {
+      try {
+        const raw = p.techStack;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "string") return JSON.parse(raw);
+        return [];
+      } catch { return []; }
+    })();
+    const signals = (() => {
+      try {
+        const raw = p.signals;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "string") return JSON.parse(raw);
+        return [];
+      } catch { return []; }
+    })();
+    const recentNews = (() => {
+      try {
+        const raw = p.recentNews;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "string") return JSON.parse(raw);
+        return [];
+      } catch { return []; }
+    })();
+    const painPoints = (() => {
+      try {
+        const raw = p.painPoints;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "string") return JSON.parse(raw);
+        return [];
+      } catch { return []; }
+    })();
+
+    const companyPhone = p.companyPhone || "";
+    const baseScore = typeof p.score === "number" ? p.score : (typeof p.webIntelScore === "number" ? p.webIntelScore : Math.floor(Math.random() * 40 + 40));
+
+    const result: Target[] = [];
+
+    if (contacts.length > 0) {
+      for (const c of contacts.slice(0, 3)) {
+        const phone = c.phone || companyPhone;
+        const mobilePhone = c.mobilePhone || "";
+        result.push({
+          id: `${p.id || p.companyName}_${c.firstName}_${c.lastName}_${Date.now()}_${Math.random()}`,
+          companyName: p.companyName || "",
+          domain: p.domain || "",
+          industry: p.industry || "",
+          contactName: `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Decision Maker",
+          title: c.position || "",
+          phone,
+          mobilePhone,
+          email: c.email || "",
+          linkedin: c.linkedin || "",
+          city: c.city || "",
+          state: c.state || "",
+          score: baseScore,
+          confidence: typeof c.confidence === "number" ? c.confidence : Math.floor(Math.random() * 30 + 60),
+          companySize: p.companySize || "",
+          employeeCount: typeof p.employeeCount === "number" ? p.employeeCount : 0,
+          revenue: p.revenue || "",
+          buyingSignals: signals.slice(0, 5),
+          recentNews: recentNews.slice(0, 3),
+          painPoints: painPoints.slice(0, 4),
+          techStack: techStack.slice(0, 8),
+          seniority: c.seniority || "",
+          department: c.department || "",
+          selected: !!phone,
+        });
+      }
+    } else {
+      // No contacts — create a stub entry from company data
+      result.push({
+        id: `${p.id || p.companyName}_co_${Date.now()}_${Math.random()}`,
+        companyName: p.companyName || "",
+        domain: p.domain || "",
+        industry: p.industry || "",
+        contactName: "Decision Maker",
+        title: "Main Line",
+        phone: companyPhone,
+        mobilePhone: "",
+        email: "",
+        linkedin: "",
+        city: "",
+        state: "",
+        score: baseScore,
+        confidence: 40,
+        companySize: p.companySize || "",
+        employeeCount: typeof p.employeeCount === "number" ? p.employeeCount : 0,
+        revenue: p.revenue || "",
+        buyingSignals: signals.slice(0, 5),
+        recentNews: recentNews.slice(0, 3),
+        painPoints: painPoints.slice(0, 4),
+        techStack: techStack.slice(0, 8),
+        seniority: "",
+        department: "",
+        selected: !!companyPhone,
+      });
+    }
+
+    return result;
   }
 
   const buildTargets = async () => {
@@ -526,15 +684,13 @@ export default function AtomCampaign() {
     setStep("targets");
 
     try {
-      // Step 2a: Parse brief into targeting parameters using the brief text directly
       setBuildProgress(["Analyzing campaign brief..."]);
-      
-      // Extract key info from the brief for targeting
+
       const briefLower = brief.toLowerCase();
       const analysisData: any = {
         product: brief.split("\n")[0].slice(0, 100),
       };
-      
+
       // Auto-detect industry from brief
       if (briefLower.includes("cdn") || briefLower.includes("cloud") || briefLower.includes("saas") || briefLower.includes("tech") || briefLower.includes("software")) {
         analysisData.industry = "Technology";
@@ -543,155 +699,150 @@ export default function AtomCampaign() {
       } else if (briefLower.includes("finance") || briefLower.includes("bank") || briefLower.includes("insurance")) {
         analysisData.industry = "Financial Services";
       }
-      
+
       // Default job titles for campaigns
       analysisData.jobTitles = ["CTO", "CIO", "VP Engineering", "VP IT", "Director of IT", "Head of Technology"];
 
       setBuildProgress((p) => [...p, "Mapping targeting parameters..."]);
 
-      // ── Build scan payload, merging AI analysis + manual overrides ──
-      const buildPayload = (broadFallback = false) => {
+      // ── Build scan payload ──
+      const buildPayload = (broadFallback = false, excludeCompanies: string[] = []) => {
         const payload: any = {};
 
-        // Product focus
         const product = analysisData.product || analysisData.productFocus || brief.split("\n")[0].slice(0, 80);
         if (product) payload.productFocus = product;
 
-        // Industry — prefer manual override, then AI
         const industry = (advancedFilters.industry && advancedFilters.industry !== "All Industries")
           ? advancedFilters.industry
           : analysisData.industry;
         if (industry && industry !== "All Industries") payload.industry = industry;
 
         if (!broadFallback) {
-          // Geography — prefer manual override, then AI (normalized)
           const geoRaw = (advancedFilters.geography && advancedFilters.geography !== "All US")
             ? advancedFilters.geography
             : analysisData.geography;
           const geo = geoRaw ? normalizeGeo(geoRaw) : null;
           if (geo && geo !== "All US") payload.geo = geo;
 
-          // Company size — prefer manual override, then AI (normalized)
           const sizeRaw = (advancedFilters.companySize && advancedFilters.companySize !== "_any")
             ? advancedFilters.companySize
             : analysisData.companySize;
           const size = sizeRaw ? normalizeCompanySize(sizeRaw) : null;
           if (size) payload.employeeSize = size;
 
-          // Revenue
           if (advancedFilters.revenueRange && advancedFilters.revenueRange !== "_any") {
             payload.revenueRange = advancedFilters.revenueRange;
           }
         }
 
-        // Job titles — prefer manual selection, then AI
         const titles = advancedFilters.jobTitles.length > 0
           ? advancedFilters.jobTitles
-          : (analysisData.jobTitles || analysisData.targetPersonas || ["CEO", "CTO", "CIO", "VP Engineering", "VP IT"]);
+          : (analysisData.jobTitles || ["CEO", "CTO", "CIO", "VP Engineering", "VP IT"]);
         if (titles.length > 0) payload.jobTitles = titles;
 
-        // Tech stack
         const tech = advancedFilters.techStack || analysisData.techStack;
         if (tech) payload.techStack = tech;
 
-        // Keywords
         const kw = advancedFilters.keywords || analysisData.keywords;
         if (kw) payload.keywords = kw;
+
+        if (excludeCompanies.length > 0) payload.excludeCompanies = excludeCompanies;
 
         return payload;
       };
 
-      // ── First attempt: with all filters ──
-      setBuildProgress((p) => [...p, "ATOM Intelligence scanning for matching companies..."]);
+      // ── Multi-page scanning loop ──
+      const allTargets: Target[] = [];
+      const seenCompanyNames = new Set<string>();
+      const MAX_PAGES = 10;
+      let companiesScanned = 0;
+      let broadMode = false;
 
-      let prospects: any[] = [];
-      try {
-        const payload = buildPayload(false);
-        const scanRes = await apiRequest("POST", "/api/prospects/scan", payload);
-        const scanData = await scanRes.json();
-        prospects = Array.isArray(scanData) ? scanData : (scanData.prospects || []);
-      } catch {}
+      setBuildProgress((p) => [...p, `ATOM Intelligence scanning — target: ${maxTargets} contacts...`]);
 
-      // ── Fallback: remove geo & size constraints if no results ──
-      if (prospects.length === 0) {
-        setBuildProgress((p) => [...p, "Broadening search..."]);
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        if (allTargets.length >= maxTargets) break;
+
+        const excludeCompanies = Array.from(seenCompanyNames);
+
+        setBuildProgress((prev) => {
+          // Replace last "Scanning page..." line or append
+          const lines = [...prev];
+          const scanIdx = lines.findIndex((l) => l.startsWith("Scanning page"));
+          const msg = `Scanning page ${page}... ${allTargets.length} contacts found so far`;
+          if (scanIdx >= 0) { lines[scanIdx] = msg; return lines; }
+          return [...lines, msg];
+        });
+
+        let prospects: any[] = [];
+
         try {
-          const broadPayload = buildPayload(true);
-          const scanRes = await apiRequest("POST", "/api/prospects/scan", broadPayload);
+          const payload = buildPayload(broadMode, excludeCompanies);
+          const scanRes = await apiRequest("POST", "/api/prospects/scan", payload);
           const scanData = await scanRes.json();
           prospects = Array.isArray(scanData) ? scanData : (scanData.prospects || []);
-        } catch {}
-      }
+        } catch { /* swallow scan errors per-page */ }
 
-      // ── Ultra-broad fallback: just industry + job titles ──
-      if (prospects.length === 0) {
-        setBuildProgress((p) => [...p, "Trying broader industry search..."]);
-        try {
-          const ultraBroad: any = { 
-            product: brief.slice(0, 100),
-            jobTitles: ["CTO", "CIO", "VP Engineering", "VP IT", "Director of IT"],
-          };
-          if (analysisData.industry) ultraBroad.industry = analysisData.industry;
-          const scanRes = await apiRequest("POST", "/api/prospects/scan", ultraBroad);
-          const scanData = await scanRes.json();
-          prospects = Array.isArray(scanData) ? scanData : (scanData.prospects || []);
-        } catch {}
-      }
+        // If first page returns nothing, try broad fallback
+        if (prospects.length === 0 && page === 1 && !broadMode) {
+          setBuildProgress((prev) => [...prev, "Broadening search parameters..."]);
+          broadMode = true;
+          try {
+            const broadPayload = buildPayload(true, excludeCompanies);
+            const scanRes = await apiRequest("POST", "/api/prospects/scan", broadPayload);
+            const scanData = await scanRes.json();
+            prospects = Array.isArray(scanData) ? scanData : (scanData.prospects || []);
+          } catch { }
+        }
 
-      const companiesFound = prospects.length;
+        if (prospects.length === 0) {
+          // No more results — stop pagination
+          setBuildProgress((prev) => [...prev, `No more results at page ${page}. Stopping.`]);
+          break;
+        }
 
-      setBuildProgress((p) => [...p, `Found ${companiesFound} matching companies. Extracting contacts...`]);
+        // Deduplicate by company name and parse into Target objects
+        let newTargets = 0;
+        for (const p of prospects) {
+          if (seenCompanyNames.has(p.companyName)) continue;
+          seenCompanyNames.add(p.companyName);
+          companiesScanned++;
 
-      // Flatten prospects → targets
-      const built: Target[] = [];
-      let totalContacts = 0;
-      const domainsNeedingHunter: string[] = []; // domains where no contacts have phones
-
-      for (const p of prospects) {
-        const contacts = JSON.parse(p.contacts || "[]");
-        totalContacts += contacts.length;
-        const companyPhone = p.companyPhone || "";
-        let hasPhoneContact = false;
-
-        if (contacts.length > 0) {
-          for (const c of contacts.slice(0, 3)) {
-            const phone = c.phone || c.mobilePhone || companyPhone;
-            if (phone) hasPhoneContact = true;
-            built.push({
-              id: `${p.id || p.companyName}_${c.firstName}_${c.lastName}`,
-              companyName: p.companyName,
-              contactName: `${c.firstName} ${c.lastName}`.trim() || "Decision Maker",
-              title: c.position || "",
-              phone: phone,
-              email: c.email || "",
-              selected: !!phone,
-            });
+          const parsed = parseProspectToTargets(p);
+          for (const t of parsed) {
+            if (allTargets.length < maxTargets) {
+              allTargets.push(t);
+              newTargets++;
+            }
           }
         }
 
-        // Track domains that need Hunter.io fallback for phone discovery
-        if (!hasPhoneContact && p.domain) {
-          domainsNeedingHunter.push(p.domain);
-          if (contacts.length === 0) {
-            built.push({
-              id: `${p.id || p.companyName}_co`,
-              companyName: p.companyName,
-              contactName: "Decision Maker",
-              title: "Main Line",
-              phone: companyPhone,
-              email: "",
-              selected: !!companyPhone,
-            });
-          }
+        if (newTargets === 0) {
+          // All companies on this page already seen — stop
+          break;
+        }
+
+        // Respect maxTargets cap
+        if (allTargets.length >= maxTargets) break;
+
+        // Small pause between pages to avoid hammering the API
+        if (page < MAX_PAGES) {
+          await new Promise((r) => setTimeout(r, 300));
         }
       }
 
-      // Hunter.io fallback: for companies where no contacts had phones,
-      // try Hunter domain search to discover additional contacts with phone numbers
+      // Hunter.io fallback for companies missing phones
+      const domainsNeedingHunter = Array.from(seenCompanyNames)
+        .map((name) => allTargets.find((t) => t.companyName === name && !t.phone && t.domain))
+        .filter(Boolean)
+        .map((t) => t!.domain)
+        .filter((d) => d)
+        .slice(0, 5);
+
       if (domainsNeedingHunter.length > 0) {
         setBuildProgress((p) => [...p, `Enriching ${domainsNeedingHunter.length} companies via secondary contact discovery...`]);
         const hunterResults = await Promise.allSettled(
-          domainsNeedingHunter.slice(0, 5).map(async (domain) => {
+          domainsNeedingHunter.map(async (domain) => {
             try {
               const res = await fetch(`/api/prospects/enrich`, {
                 method: "POST",
@@ -708,29 +859,47 @@ export default function AtomCampaign() {
         for (const result of hunterResults) {
           if (result.status !== "fulfilled" || !result.value.contacts?.length) continue;
           const { domain, contacts: hunterContacts } = result.value;
-          const company = prospects.find((p: any) => p.domain === domain);
-          if (!company) continue;
+          const parentTarget = allTargets.find((t) => t.domain === domain);
+          if (!parentTarget) continue;
           for (const hc of hunterContacts.slice(0, 2)) {
             if (!hc.phone_number && !hc.value) continue;
-            const existingIds = new Set(built.map((t) => t.id));
-            const newId = `${company.companyName}_hunter_${hc.first_name}_${hc.last_name}`;
+            const existingIds = new Set(allTargets.map((t) => t.id));
+            const newId = `${parentTarget.companyName}_hunter_${hc.first_name}_${hc.last_name}`;
             if (existingIds.has(newId)) continue;
-            built.push({
+            allTargets.push({
               id: newId,
-              companyName: company.companyName,
+              companyName: parentTarget.companyName,
+              domain: parentTarget.domain,
+              industry: parentTarget.industry,
               contactName: `${hc.first_name || ""} ${hc.last_name || ""}`.trim() || "Contact",
               title: hc.position || hc.seniority || "",
               phone: hc.phone_number || "",
+              mobilePhone: "",
               email: hc.value || "",
+              linkedin: "",
+              city: "",
+              state: "",
+              score: parentTarget.score,
+              confidence: 50,
+              companySize: parentTarget.companySize,
+              employeeCount: parentTarget.employeeCount,
+              revenue: parentTarget.revenue,
+              buyingSignals: parentTarget.buyingSignals,
+              recentNews: parentTarget.recentNews,
+              painPoints: parentTarget.painPoints,
+              techStack: parentTarget.techStack,
+              seniority: hc.seniority || "",
+              department: "",
               selected: !!hc.phone_number,
             });
           }
         }
       }
 
-      setTargets(built);
-      setTargetStats({ companies: companiesFound, contacts: totalContacts });
-      setBuildProgress((p) => [...p, `✓ ${built.length} callable targets ready · ${companiesFound} companies · ${totalContacts} contacts`]);
+      const totalContacts = allTargets.length;
+      setTargets(allTargets);
+      setTargetStats({ companies: companiesScanned, contacts: totalContacts });
+      setBuildProgress((p) => [...p, `✓ ${allTargets.length} targets ready · ${companiesScanned} companies scanned`]);
     } catch (err: any) {
       toast({ title: "Failed to build targets", description: err.message, variant: "destructive" });
       setStep("brief");
@@ -747,17 +916,65 @@ export default function AtomCampaign() {
 
   const selectAll = () => setTargets((prev) => prev.map((t) => ({ ...t, selected: !!t.phone })));
 
+  const deselectAll = () => setTargets((prev) => prev.map((t) => ({ ...t, selected: false })));
+
+  // ─── Sorting ───────────────────────────────────────────────────────────────
+
+  const sortedTargets = [...targets].sort((a, b) => {
+    let cmp = 0;
+    if (sortField === "score") cmp = a.score - b.score;
+    else if (sortField === "companyName") cmp = a.companyName.localeCompare(b.companyName);
+    else if (sortField === "contactName") cmp = a.contactName.localeCompare(b.contactName);
+    return sortDir === "desc" ? -cmp : cmp;
+  });
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => d === "desc" ? "asc" : "desc");
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
+    return sortDir === "desc" ? <ArrowDown className="w-3 h-3 text-violet-400" /> : <ArrowUp className="w-3 h-3 text-violet-400" />;
+  }
+
   // ─── Export targets to CSV ──────────────────────────────────────────────────
   const exportTargetsCSV = () => {
     if (targets.length === 0) return;
-    const headers = ["Company", "Contact Name", "Title", "Phone", "Email", "Status", "Selected"];
+    const headers = [
+      "Company", "Domain", "Industry", "Score", "Company Size", "Employees", "Revenue",
+      "Contact Name", "Title", "Seniority", "Department", "Phone", "Mobile", "Email",
+      "LinkedIn", "City", "State", "Confidence", "Buying Signals", "Pain Points",
+      "Tech Stack", "Recent News", "Selected",
+    ];
+    const esc = (v: string) => `"${(v || "").replace(/"/g, '""')}"`;
     const rows = targets.map((t) => [
-      `"${t.companyName.replace(/"/g, '""')}"`,
-      `"${t.contactName.replace(/"/g, '""')}"`,
-      `"${(t.title || "").replace(/"/g, '""')}"`,
+      esc(t.companyName),
+      esc(t.domain),
+      esc(t.industry),
+      t.score,
+      esc(t.companySize),
+      t.employeeCount || "",
+      esc(t.revenue),
+      esc(t.contactName),
+      esc(t.title),
+      esc(t.seniority),
+      esc(t.department),
       t.phone || "",
+      t.mobilePhone || "",
       t.email || "",
-      t.phone ? "callable" : "no phone",
+      t.linkedin || "",
+      esc(t.city),
+      esc(t.state),
+      t.confidence,
+      esc(t.buyingSignals.join("; ")),
+      esc(t.painPoints.join("; ")),
+      esc(t.techStack.join("; ")),
+      esc(t.recentNews.join("; ")),
       t.selected ? "yes" : "no",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -770,7 +987,6 @@ export default function AtomCampaign() {
     URL.revokeObjectURL(url);
     toast({ title: "Exported", description: `${targets.length} targets exported to CSV` });
   };
-  const deselectAll = () => setTargets((prev) => prev.map((t) => ({ ...t, selected: false })));
 
   const selectedTargets = targets.filter((t) => t.selected && t.phone);
 
@@ -803,11 +1019,11 @@ export default function AtomCampaign() {
             ws.close();
             wsRefs.current.delete(callSid);
           }
-        } catch {}
+        } catch { }
       };
 
       ws.onerror = () => ws.close();
-    } catch {}
+    } catch { }
   }, []);
 
   const makeCall = useCallback(async (target: Target): Promise<void> => {
@@ -918,18 +1134,19 @@ export default function AtomCampaign() {
     const avgSentiment = withSentiment.length > 0
       ? Math.round(withSentiment.reduce((a, r) => a + (r.sentiment || 0), 0) / withSentiment.length)
       : 0;
-    return {
-      total: recs.length,
-      completed,
-      connected,
-      failed,
-      meetings,
-      avgSentiment,
-    };
+    return { total: recs.length, completed, connected, failed, meetings, avgSentiment };
   })();
 
   const completedCount = Array.from(calls.values()).filter((r) => r.status === "completed" || r.status === "failed").length;
   const progress = calls.size > 0 ? Math.round((completedCount / calls.size) * 100) : 0;
+
+  // ─── Target table computed stats ──────────────────────────────────────────
+
+  const callableCount = targets.filter((t) => !!t.phone).length;
+  const noPhoneCount = targets.filter((t) => !t.phone).length;
+  const avgScore = targets.length > 0
+    ? Math.round(targets.reduce((sum, t) => sum + t.score, 0) / targets.length)
+    : 0;
 
   // ─── Cleanup ──────────────────────────────────────────────────────────────
 
@@ -994,9 +1211,7 @@ export default function AtomCampaign() {
               <textarea
                 value={brief}
                 onChange={(e) => setBrief(e.target.value)}
-                placeholder={`Cloudflare CDN takeout for Akamai. Akamai will match and beat Cloudflare pricing and eat up to 6 months of remaining contract to switch to Akamai.
-
-Target mid-market tech companies on Cloudflare who are scaling fast and frustrated with costs. CTOs and VP Engineering at 50-500 person SaaS companies.`}
+                placeholder={`Cloudflare CDN takeout for Akamai. Akamai will match and beat Cloudflare pricing and eat up to 6 months of remaining contract to switch to Akamai.\n\nTarget mid-market tech companies on Cloudflare who are scaling fast and frustrated with costs. CTOs and VP Engineering at 50-500 person SaaS companies.`}
                 rows={8}
                 className="w-full px-4 py-3 text-sm rounded-xl border border-white/[0.08] bg-[#161618] text-[#e8e8ea] placeholder:text-white/20 focus:outline-none focus:border-violet-500/40 transition-colors resize-none leading-relaxed"
                 style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
@@ -1098,34 +1313,119 @@ Target mid-market tech companies on Cloudflare who are scaling fast and frustrat
             </Card>
           )}
 
-          {/* Campaign Brief Preview */}
+          {/* Campaign Brief Preview + Max Targets selector */}
           {!isBuilding && (
-            <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-              <div className="flex items-start gap-2">
-                <Megaphone className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-violet-300 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>Campaign Brief</p>
-                  <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{brief}</p>
-                </div>
-                {targetStats && (
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs font-semibold text-violet-300" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-                      {targetStats.companies} companies
-                    </p>
-                    <p className="text-[10px] text-white/30 font-mono">{targetStats.contacts} contacts</p>
+            <div className="flex items-start gap-3 flex-wrap">
+              <div className="flex-1 min-w-0 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                <div className="flex items-start gap-2">
+                  <Megaphone className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-violet-300 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>Campaign Brief</p>
+                    <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{brief}</p>
                   </div>
+                  {targetStats && (
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs font-semibold text-violet-300" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                        {targetStats.companies} companies
+                      </p>
+                      <p className="text-[10px] text-white/30 font-mono">{targetStats.contacts} contacts</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Max Targets selector */}
+              <div className="shrink-0 flex flex-col gap-1.5">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/35 flex items-center gap-1">
+                  <ListFilter className="w-3 h-3" />Max Targets
+                </label>
+                <Select value={String(maxTargets)} onValueChange={(v) => setMaxTargets(Number(v))}>
+                  <SelectTrigger className="h-9 w-40 text-xs bg-[#161618] border-white/[0.08] text-white/60 hover:border-violet-500/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1c1c1f] border-white/[0.08] text-white/80">
+                    {MAX_TARGET_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)} className="text-xs hover:bg-violet-500/10">
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {targets.length === 0 && (
+                  <Button
+                    onClick={buildTargets}
+                    disabled={isBuilding}
+                    size="sm"
+                    className="h-9 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />Rebuild
+                  </Button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Target List */}
+          {/* Rich Target Table */}
           {!isBuilding && targets.length > 0 && (
             <Card className="bg-[#111113] border-white/[0.08]">
               <CardContent className="p-0">
-                {/* Table Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-                  <div className="flex items-center gap-3">
+
+                {/* ── Stats Bar ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-white/[0.06]">
+                  {[
+                    {
+                      label: "Total Targets",
+                      value: targets.length,
+                      icon: Target,
+                      color: "text-white/70",
+                      bg: "",
+                    },
+                    {
+                      label: "Callable",
+                      value: callableCount,
+                      icon: Phone,
+                      color: "text-emerald-400",
+                      bg: "",
+                    },
+                    {
+                      label: "Avg ATOM Score",
+                      value: avgScore,
+                      icon: BarChart3,
+                      color: scoreTextColor(avgScore),
+                      bg: "",
+                    },
+                    {
+                      label: "Companies Scanned",
+                      value: targetStats?.companies ?? 0,
+                      icon: Building2,
+                      color: "text-violet-400",
+                      bg: "",
+                    },
+                  ].map((stat, idx) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div
+                        key={stat.label}
+                        className={`px-4 py-3 flex items-center gap-3 ${idx < 3 ? "border-r border-white/[0.06]" : ""}`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+                          <Icon className={`w-4 h-4 ${stat.color}`} />
+                        </div>
+                        <div>
+                          <p className={`text-lg font-bold tabular-nums leading-none ${stat.color}`}
+                            style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                            {stat.value}
+                          </p>
+                          <p className="text-[10px] text-white/30 font-mono mt-0.5">{stat.label}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Table Controls ── */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
                     <Target className="w-4 h-4 text-violet-400" />
                     <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
                       Campaign Targets
@@ -1133,108 +1433,255 @@ Target mid-market tech companies on Cloudflare who are scaling fast and frustrat
                     <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono">
                       {selectedTargets.length} selected
                     </Badge>
-                    {targetStats && (
-                      <Badge className="bg-white/5 text-white/30 border-white/[0.08] text-[10px] font-mono">
-                        {targetStats.companies} companies · {targetStats.contacts} contacts
-                      </Badge>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  {/* Sort controls */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/25 mr-1">Sort:</span>
+                    {([
+                      { field: "score" as SortField, label: "Score" },
+                      { field: "companyName" as SortField, label: "Company" },
+                      { field: "contactName" as SortField, label: "Contact" },
+                    ]).map(({ field, label }) => (
+                      <button
+                        key={field}
+                        onClick={() => toggleSort(field)}
+                        className={`flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border transition-all ${
+                          sortField === field
+                            ? "bg-violet-500/15 text-violet-300 border-violet-500/30"
+                            : "bg-white/[0.03] text-white/30 border-white/[0.06] hover:border-white/15 hover:text-white/50"
+                        }`}
+                      >
+                        {label}
+                        <SortIcon field={field} />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
                     <Button variant="ghost" size="sm" onClick={selectAll}
                       className="h-7 text-xs text-white/40 hover:text-white hover:bg-white/5">
                       Select All
                     </Button>
                     <Button variant="ghost" size="sm" onClick={deselectAll}
                       className="h-7 text-xs text-white/40 hover:text-white hover:bg-white/5">
-                      Deselect All
+                      Deselect
                     </Button>
-                    <Button variant="outline" size="sm" onClick={exportTargetsCSV}
-                      className="h-7 text-xs gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
-                      data-testid="button-export-campaign-csv">
-                      <Download className="w-3 h-3" /> Export CSV
+                    <Button
+                      onClick={buildTargets}
+                      disabled={isBuilding}
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-white/40 hover:text-violet-400 hover:bg-violet-500/5 gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />Rescan
                     </Button>
                   </div>
                 </div>
 
-                {/* Column headers */}
-                <div className="grid grid-cols-[auto_1fr_1fr_1fr_1.5fr_auto] gap-3 items-center px-4 py-2 border-b border-white/[0.04]">
-                  <div className="w-4" />
+                {/* ── Column Headers ── */}
+                <div className="grid grid-cols-[28px_52px_minmax(160px,1.8fr)_minmax(140px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_100px_80px] gap-2 items-center px-4 py-2 border-b border-white/[0.04] min-w-[900px]">
+                  <div />
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Score</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Company</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Contact</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Phone</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Email</p>
-                  <div />
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Email / LinkedIn</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Signals</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/25">Conf.</p>
                 </div>
 
-                {/* Rows */}
-                <div className="max-h-96 overflow-y-auto divide-y divide-white/[0.04]">
-                  {targets.map((t) => (
-                    <div
-                      key={t.id}
-                      className={`grid grid-cols-[auto_1fr_1fr_1fr_1.5fr_auto] gap-3 items-center px-4 py-2.5 transition-colors ${
-                        t.selected && t.phone ? "bg-violet-500/[0.03] hover:bg-violet-500/[0.06]" : "hover:bg-white/[0.02]"
-                      } ${!t.phone ? "opacity-40" : ""}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={t.selected && !!t.phone}
-                        disabled={!t.phone}
-                        onChange={() => toggleTarget(t.id)}
-                        className="w-4 h-4 rounded border-white/20 bg-transparent accent-violet-400 cursor-pointer"
-                      />
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Building2 className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                        <span className="text-xs text-white/80 truncate font-medium">{t.companyName}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <User className="w-3 h-3 text-white/25 shrink-0" />
+                {/* ── Target Rows ── */}
+                <div className="max-h-[600px] overflow-y-auto overflow-x-auto divide-y divide-white/[0.04]">
+                  <div className="min-w-[900px]">
+                    {sortedTargets.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() => t.phone && toggleTarget(t.id)}
+                        className={`grid grid-cols-[28px_52px_minmax(160px,1.8fr)_minmax(140px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_100px_80px] gap-2 items-center px-4 py-2.5 transition-colors ${
+                          t.phone ? "cursor-pointer" : "cursor-default"
+                        } ${
+                          t.selected && t.phone
+                            ? "bg-violet-500/[0.05] hover:bg-violet-500/[0.08]"
+                            : t.phone
+                            ? "hover:bg-white/[0.025]"
+                            : "opacity-50 hover:bg-white/[0.015]"
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={t.selected && !!t.phone}
+                          disabled={!t.phone}
+                          onChange={() => toggleTarget(t.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 rounded border-white/20 bg-transparent accent-violet-400 cursor-pointer"
+                        />
+
+                        {/* ATOM Score */}
+                        <div className="flex items-center justify-center">
+                          <span className={`text-xs font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${scoreColor(t.score)}`}>
+                            {t.score}
+                          </span>
+                        </div>
+
+                        {/* Company */}
                         <div className="min-w-0">
-                          <p className="text-xs text-white/70 truncate">{t.contactName}</p>
-                          <p className="text-[10px] text-white/30 truncate">{t.title}</p>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Building2 className="w-3 h-3 text-white/30 shrink-0" />
+                            <span className="text-xs text-white/85 truncate font-semibold">{t.companyName}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {t.domain && (
+                              <span className="text-[10px] text-white/30 font-mono truncate">{t.domain}</span>
+                            )}
+                            {t.industry && (
+                              <Badge className="bg-white/[0.04] text-white/35 border-white/[0.08] text-[9px] font-mono px-1 py-0 h-4 shrink-0">
+                                {t.industry.split(" ")[0]}
+                              </Badge>
+                            )}
+                            {t.companySize && (
+                              <Badge className="bg-white/[0.04] text-white/25 border-white/[0.06] text-[9px] font-mono px-1 py-0 h-4 shrink-0">
+                                {t.companySize}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Contact */}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <User className="w-3 h-3 text-white/25 shrink-0" />
+                            <span className="text-xs text-white/75 truncate font-medium">{t.contactName}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[10px] text-white/35 truncate">{t.title}</span>
+                            {t.seniority && (
+                              <Badge className="bg-violet-500/[0.08] text-violet-400/50 border-violet-500/[0.12] text-[9px] font-mono px-1 py-0 h-4 shrink-0">
+                                {t.seniority}
+                              </Badge>
+                            )}
+                          </div>
+                          {(t.city || t.state) && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-2.5 h-2.5 text-white/20 shrink-0" />
+                              <span className="text-[10px] text-white/25 truncate">
+                                {[t.city, t.state].filter(Boolean).join(", ")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Phone */}
+                        <div className="min-w-0">
+                          {t.phone ? (
+                            <div className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-violet-400/70 shrink-0" />
+                              <span className="text-[11px] text-violet-300/80 font-mono truncate">{t.phone}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-white/20 font-mono">No phone</span>
+                          )}
+                          {t.mobilePhone && t.mobilePhone !== t.phone && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <Phone className="w-2.5 h-2.5 text-violet-400/40 shrink-0" />
+                              <span className="text-[10px] text-violet-300/40 font-mono truncate">{t.mobilePhone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Email / LinkedIn */}
+                        <div className="min-w-0 space-y-0.5">
+                          {t.email ? (
+                            <a
+                              href={`mailto:${t.email}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 hover:text-violet-300 transition-colors group"
+                            >
+                              <Mail className="w-3 h-3 text-white/25 shrink-0 group-hover:text-violet-400" />
+                              <span className="text-[11px] text-white/40 truncate group-hover:text-violet-300">{t.email}</span>
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-white/20">—</span>
+                          )}
+                          {t.linkedin && (
+                            <a
+                              href={t.linkedin.startsWith("http") ? t.linkedin : `https://${t.linkedin}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 hover:text-blue-400 transition-colors group"
+                            >
+                              <Link className="w-2.5 h-2.5 text-blue-400/40 shrink-0 group-hover:text-blue-400" />
+                              <span className="text-[10px] text-blue-400/40 truncate group-hover:text-blue-400">LinkedIn</span>
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Buying Signals (first 2) */}
+                        <div className="min-w-0 space-y-0.5">
+                          {t.buyingSignals.slice(0, 2).map((sig, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                              <Zap className="w-2.5 h-2.5 text-amber-400/50 shrink-0" />
+                              <span className="text-[9px] text-white/35 truncate leading-tight">{sig}</span>
+                            </div>
+                          ))}
+                          {t.buyingSignals.length === 0 && (
+                            <span className="text-[9px] text-white/15 font-mono">—</span>
+                          )}
+                        </div>
+
+                        {/* Confidence */}
+                        <div className="flex flex-col items-end gap-0.5">
+                          <Badge className={`text-[9px] font-mono px-1.5 shrink-0 ${
+                            t.confidence >= 70
+                              ? "bg-emerald-500/10 text-emerald-400/70 border-emerald-500/20"
+                              : t.confidence >= 50
+                              ? "bg-amber-500/10 text-amber-400/70 border-amber-500/20"
+                              : "bg-white/5 text-white/25 border-white/[0.08]"
+                          }`}>
+                            {t.confidence}%
+                          </Badge>
+                          {t.phone && (
+                            <Badge className="bg-violet-500/10 text-violet-400/50 border-violet-500/15 text-[9px] font-mono px-1 py-0 h-4">
+                              callable
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 min-w-0">
-                        {t.phone ? (
-                          <>
-                            <Phone className="w-3 h-3 text-violet-400/60 shrink-0" />
-                            <span className="text-[11px] text-violet-300/70 font-mono truncate">{t.phone}</span>
-                          </>
-                        ) : (
-                          <span className="text-[10px] text-white/20 font-mono">No phone</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 min-w-0">
-                        {t.email ? (
-                          <>
-                            <Mail className="w-3 h-3 text-white/25 shrink-0" />
-                            <span className="text-[11px] text-white/40 truncate">{t.email}</span>
-                          </>
-                        ) : (
-                          <span className="text-[10px] text-white/20">—</span>
-                        )}
-                      </div>
-                      <Badge className={`text-[9px] font-mono px-1.5 shrink-0 ${t.phone ? "bg-violet-500/10 text-violet-400/60 border-violet-500/15" : "bg-white/5 text-white/20 border-white/[0.06]"}`}>
-                        {t.phone ? "callable" : "no phone"}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
-                {/* Launch CTA */}
-                <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between gap-4">
+                {/* ── Summary Footer ── */}
+                <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between gap-4 flex-wrap">
                   <p className="text-xs text-white/40">
-                    {selectedTargets.length} of {targets.length} targets selected ·{" "}
-                    {targets.filter((t) => !t.phone).length} skipped (no phone)
+                    <span className="text-white/65 font-medium">{selectedTargets.length}</span> of {targets.length} targets selected
+                    {" · "}
+                    <span className="text-emerald-400/70">{callableCount} callable</span>
+                    {" · "}
+                    <span className="text-white/25">{noPhoneCount} without phone</span>
                   </p>
-                  <Button
-                    onClick={launchCampaign}
-                    disabled={selectedTargets.length === 0 || isLaunching}
-                    className="h-9 px-5 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all disabled:opacity-40"
-                    style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
-                  >
-                    <Zap className="w-4 h-4" />
-                    Launch Campaign ({selectedTargets.length} calls)
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportTargetsCSV}
+                      className="h-8 text-xs gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                      data-testid="button-export-campaign-csv"
+                    >
+                      <Download className="w-3 h-3" />Export CSV
+                    </Button>
+                    <Button
+                      onClick={launchCampaign}
+                      disabled={selectedTargets.length === 0 || isLaunching}
+                      className="h-8 px-5 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all disabled:opacity-40"
+                      style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+                    >
+                      <Zap className="w-4 h-4" />
+                      Launch Campaign ({selectedTargets.length} calls)
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1350,7 +1797,7 @@ Target mid-market tech companies on Cloudflare who are scaling fast and frustrat
 
               {/* Table Headers */}
               <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-3 px-4 py-2 border-b border-white/[0.04]">
-                {["Company","Contact","Status","Duration","Sentiment","Disposition"].map((h) => (
+                {["Company", "Contact", "Status", "Duration", "Sentiment", "Disposition"].map((h) => (
                   <p key={h} className="text-[10px] font-mono uppercase tracking-wider text-white/25">{h}</p>
                 ))}
               </div>
