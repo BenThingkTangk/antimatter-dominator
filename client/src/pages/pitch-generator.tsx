@@ -675,23 +675,35 @@ export default function PitchGenerator() {
                   </div>
                 </div>
 
-                {/* Alternative Approaches */}
+                {/* Alternative Approaches — CLICKABLE to regenerate */}
                 {activeResult.alternatives?.length > 0 && (
                   <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
-                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Alternative Approaches</p>
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Alternative Approaches <span className="text-violet-400/50">· click to generate full pitch</span></p>
                     <div className="space-y-2">
                       {activeResult.alternatives.map((alt, i) => (
-                        <div key={i} className="group rounded-lg bg-white/[0.02] border border-white/[0.05] p-3 hover:bg-white/[0.04] hover:border-violet-500/20 transition-all">
+                        <div key={i}
+                          className="group rounded-lg bg-white/[0.02] border border-white/[0.05] p-3 hover:bg-violet-500/[0.06] hover:border-violet-500/25 transition-all cursor-pointer"
+                          onClick={() => {
+                            // Set the alternative as custom context and regenerate
+                            setCustomContext(`Use this approach: ${alt.type} — ${alt.text}`);
+                            setTimeout(() => generatePitch.mutate(), 100);
+                          }}
+                        >
                           <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider">{alt.type}</span>
-                            <Button variant="ghost" size="sm"
-                              className="h-6 text-[10px] text-white/20 hover:text-white/60 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => copyToClipboard(alt.text, `alt-${i}`)}>
-                              {copiedSection === `alt-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
-                              Copy
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm"
+                                className="h-6 text-[10px] text-white/20 hover:text-white/60 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => { e.stopPropagation(); copyToClipboard(alt.text, `alt-${i}`); }}>
+                                {copiedSection === `alt-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                                Copy
+                              </Button>
+                              <span className="text-[10px] text-violet-400/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                <Sparkles className="w-2.5 h-2.5" />Generate
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-sm text-white/60 leading-relaxed">{alt.text}</p>
+                          <p className="text-sm text-white/60 leading-relaxed group-hover:text-white/80 transition-colors">{alt.text}</p>
                         </div>
                       ))}
                     </div>
@@ -703,21 +715,33 @@ export default function PitchGenerator() {
                   {activeResult.suggestedFollowUp && (
                     <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4">
                       <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
-                        <MessageCircle className="w-3 h-3" />Suggested Follow-Up
+                        <MessageCircle className="w-3 h-3" />Suggested Follow-Ups
                       </p>
-                      <p className="text-xs text-white/60 leading-relaxed italic">"{activeResult.suggestedFollowUp}"</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-white/60 leading-relaxed italic">"{activeResult.suggestedFollowUp}"</p>
+                        <div className="border-t border-white/[0.05] pt-2 space-y-1.5">
+                          <p className="text-xs text-white/50 leading-relaxed">"Would it help if I sent over a quick case study from a similar company in your space?"</p>
+                          <p className="text-xs text-white/50 leading-relaxed">"I can put together a 2-page brief on how this would work specifically for {companyName || 'your team'} — want me to send that over?"</p>
+                          <p className="text-xs text-white/50 leading-relaxed">"Would a 15-minute screen share next week make sense? I can walk through exactly what the first 30 days look like."</p>
+                          <p className="text-xs text-white/50 leading-relaxed">"Happy to loop in our CTO for a technical deep-dive if that'd be useful for your team."</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                   {activeResult.detectedObjections?.length > 0 && (
                     <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4">
                       <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
-                        <AlertCircle className="w-3 h-3" />Likely Objections
+                        <AlertCircle className="w-3 h-3" />Likely Objections <span className="text-amber-400/40">· click to handle</span>
                       </p>
                       <div className="space-y-1">
                         {activeResult.detectedObjections.map((obj, i) => (
-                          <div key={i} className="flex items-start gap-1.5">
-                            <span className="text-amber-400/60 text-[10px] mt-0.5">▸</span>
-                            <p className="text-xs text-white/50">{obj}</p>
+                          <div key={i}
+                            className="flex items-start gap-1.5 cursor-pointer group rounded px-1.5 py-1 -mx-1.5 hover:bg-amber-500/[0.06] transition-colors"
+                            onClick={() => navigate(`/objections?objection=${encodeURIComponent(obj)}&product=${encodeURIComponent(selectedProduct)}&persona=${encodeURIComponent(persona)}`)}
+                          >
+                            <span className="text-amber-400/60 text-[10px] mt-0.5 group-hover:text-amber-400">▸</span>
+                            <p className="text-xs text-white/50 group-hover:text-amber-300 transition-colors">{obj}</p>
+                            <ArrowRight className="w-3 h-3 text-amber-400/0 group-hover:text-amber-400/60 transition-all ml-auto shrink-0 mt-0.5" />
                           </div>
                         ))}
                       </div>
