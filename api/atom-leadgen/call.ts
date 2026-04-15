@@ -93,9 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         to: cleanNumber,
-        contactName: contactName || "there",
+        firstName: (contactName || "there").split(" ")[0],
         companyName: companyName || "your company",
-        productSlug: productSlug || "antimatter-ai",
+        product: productSlug || "antimatter-ai",
       }),
     });
 
