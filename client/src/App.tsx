@@ -12,6 +12,7 @@ import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
 import AtomCampaign from "./pages/atom-campaign";
 import CompanyIntelligence from "./pages/company-intelligence";
+import CallPerformance from "./pages/call-performance";
 import NotFound from "./pages/not-found";
 
 function AppRouter() {
@@ -26,6 +27,7 @@ function AppRouter() {
         <Route path="/atom-leadgen" component={AtomLeadGen} />
         <Route path="/atom-campaign" component={AtomCampaign} />
         <Route path="/company-intelligence" component={CompanyIntelligence} />
+        <Route path="/call-performance" component={CallPerformance} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
