@@ -15,8 +15,8 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const HUME_API_KEY = process.env.HUME_API_KEY;
 
-// ATOM Sales Agent config — updated with Steve Jobs voice + ADAM prompt
-const HUME_CONFIG_ID = "42271e30-8773-43bd-81e5-c411e6aa990a";
+// ADAM Closer config — aggressive sales, shorter prompt, no artificial delays
+const HUME_CONFIG_ID = "011d1677-525f-4608-8e97-44e3d469cfae";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
