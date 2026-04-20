@@ -1230,7 +1230,7 @@ function TabText() {
     setIsAnalyzing(true);
     try {
       // Call the real Aletheia API
-      const res = await fetch("/api/aletheia/analyze-text", {
+      const res = await fetch("https://45-79-202-76.sslip.io/aletheia/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, channel: "text" }),
