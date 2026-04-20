@@ -277,22 +277,22 @@ async function revealApolloContact(person: any): Promise<EnrichedContact | null>
       source: "apollo",
     };
   } catch (err) {
-    // Fall back to raw search data
-    if (!person.first_name && !person.last_name) return null;
+    // Fall back to raw search data — extract everything Apollo gave us
+    if (!person.first_name && !person.last_name && !person.name) return null;
     return {
-      email: person.email || "",
-      firstName: person.first_name || "",
-      lastName: person.last_name || "",
-      position: person.title || "",
+      email: person.email || person.personal_emails?.[0] || "",
+      firstName: person.first_name || (person.name || "").split(" ")[0] || "",
+      lastName: person.last_name || (person.name || "").split(" ").slice(1).join(" ") || "",
+      position: person.title || person.headline || "",
       seniority: person.seniority || "",
-      department: "",
-      linkedin: null,
-      phone: null,
-      mobilePhone: null,
-      city: null,
-      state: null,
-      confidence: 40,
-      verification: "unverified",
+      department: person.departments?.[0] || "",
+      linkedin: person.linkedin_url || null,
+      phone: person.sanitized_phone || person.phone_numbers?.[0]?.sanitized_number || person.organization?.phone || null,
+      mobilePhone: person.mobile_phone || person.phone_numbers?.[0]?.raw_number || null,
+      city: person.city || person.organization?.city || null,
+      state: person.state || person.organization?.state || null,
+      confidence: person.email ? 70 : 40,
+      verification: person.email_status || "unverified",
       source: "apollo",
     };
   }
