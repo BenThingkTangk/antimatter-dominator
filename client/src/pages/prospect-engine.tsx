@@ -297,8 +297,8 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
     return (
       <div className="flex items-center justify-between gap-2 py-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <User className="w-3 h-3 text-violet-300" />
+          <div className="w-6 h-6 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+            <User className="w-3 h-3 text-teal-300" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-medium truncate text-white/90">{contact.firstName} {contact.lastName}</p>
@@ -306,7 +306,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
           </div>
         </div>
         <Button size="sm" onClick={handleCallAtom}
-          className="h-6 text-[10px] px-2 gap-1 bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/20 shrink-0">
+          className="h-6 text-[10px] px-2 gap-1 bg-teal-600/15 hover:bg-teal-600/25 text-teal-300 border border-teal-500/20 shrink-0">
           <PhoneCall className="w-2.5 h-2.5" />Call
         </Button>
       </div>
@@ -322,11 +322,11 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
   const confidence = contact.confidence || 95;
 
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3.5 space-y-2.5 hover:border-violet-500/15 transition-colors">
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3.5 space-y-2.5 hover:border-teal-500/15 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-violet-400">
+          <div className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-teal-400">
               {(contact.firstName || "?").charAt(0).toUpperCase()}
             </span>
           </div>
@@ -339,20 +339,20 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
           </div>
         </div>
         <Button size="sm" onClick={handleCallAtom}
-          className="h-8 text-xs px-3 gap-1.5 bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/20 shrink-0">
+          className="h-8 text-xs px-3 gap-1.5 bg-teal-600/15 hover:bg-teal-600/25 text-teal-300 border border-teal-500/20 shrink-0">
           <PhoneCall className="w-3 h-3" />Call with ATOM
         </Button>
       </div>
       {/* Contact details */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-[52px]">
         {contact.email && (
-          <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-violet-400 transition-colors">
+          <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-teal-400 transition-colors">
             <Mail className="w-3.5 h-3.5" />{contact.email}
             {contact.emailStatus && <VerificationBadge status={contact.emailStatus} />}
           </a>
         )}
         {callablePhone ? (
-          <a href={`tel:${callablePhone}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-violet-400 transition-colors">
+          <a href={`tel:${callablePhone}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-teal-400 transition-colors">
             <Phone className="w-3.5 h-3.5" />{callablePhone}
             {!contact.phone && (prospect as any).companyPhone && (
               <span className="text-[9px] text-white/25 ml-1">(main line)</span>
@@ -379,7 +379,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
         <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{seniorityLabel}</span>
         {contact.department && <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{contact.department}</span>}
         <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{confidence}% confidence</span>
-        <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">ATOM Verified</span>
+        <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">ATOM Verified</span>
       </div>
     </div>
   );
@@ -411,7 +411,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
 
   const urgencyColor = prospect.urgency === "hot" ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
     : prospect.urgency === "warm" ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
-    : "text-violet-400 border-violet-500/30 bg-violet-500/10";
+    : "text-teal-400 border-teal-500/30 bg-teal-500/10";
 
   // Company size label
   const sizeLabel = (() => {
@@ -425,24 +425,24 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
     : "bg-white/5 text-white/40 border-white/10";
 
   return (
-    <Card className="bg-[#111113] border-white/[0.08] hover:border-violet-500/20 transition-all duration-200">
+    <Card className="bg-[#111113] border-white/[0.08] hover:border-teal-500/20 transition-all duration-200">
       <CardContent className="p-0">
         {/* ── COMPANY HEADER ── */}
         <div className="p-4 pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4 text-violet-400" />
+              <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+                <Building2 className="w-4 h-4 text-teal-400" />
               </div>
               <div className="min-w-0 flex-1">
                 {/* Company name + domain */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-bold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                  <h3 className="text-sm font-bold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                     {prospect.companyName}
                   </h3>
                   {prospect.domain && (
                     <a href={`https://${prospect.domain}`} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-white/30 hover:text-violet-400 transition-colors font-mono">
+                      className="flex items-center gap-1 text-[10px] text-white/30 hover:text-teal-400 transition-colors font-mono">
                       <Globe className="w-2.5 h-2.5" />{prospect.domain}
                     </a>
                   )}
@@ -472,7 +472,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
                     {prospect.urgency}
                   </span>
                   {contacts.length > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0 h-5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                    <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0 h-5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">
                       <Users className="w-2.5 h-2.5" />{contacts.length} contacts
                     </span>
                   )}
@@ -512,7 +512,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
                 <div className="space-y-1">
                   {signals.map((sig: any, i: number) => (
                     <div key={i} className="flex items-start gap-2">
-                      <TrendingUp className="w-3 h-3 text-violet-400/60 shrink-0 mt-0.5" />
+                      <TrendingUp className="w-3 h-3 text-teal-400/60 shrink-0 mt-0.5" />
                       <span className="text-xs text-[#8a8a96]">{typeof sig === "string" ? sig : sig.signal || sig.text || JSON.stringify(sig)}</span>
                     </div>
                   ))}
@@ -525,7 +525,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-wider text-[#4a4a55] mb-1.5">Buying Signals</p>
                 <div className="flex items-start gap-2">
-                  <TrendingUp className="w-3 h-3 text-violet-400/60 shrink-0 mt-0.5" />
+                  <TrendingUp className="w-3 h-3 text-teal-400/60 shrink-0 mt-0.5" />
                   <span className="text-xs text-[#8a8a96]">{prospect.reason}</span>
                 </div>
               </div>
@@ -584,7 +584,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="font-mono text-[9px] uppercase tracking-wider text-[#4a4a55]">Decision Makers</p>
-                <button className="flex items-center gap-1 text-[9px] font-mono text-white/25 hover:text-violet-400 transition-colors">
+                <button className="flex items-center gap-1 text-[9px] font-mono text-white/25 hover:text-teal-400 transition-colors">
                   <RefreshCw className="w-2.5 h-2.5" />Refresh
                 </button>
               </div>
@@ -620,7 +620,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
               </div>
               <button
                 onClick={() => setExpanded(true)}
-                className="text-[10px] text-violet-400/60 hover:text-violet-400 transition-colors font-mono"
+                className="text-[10px] text-teal-400/60 hover:text-teal-400 transition-colors font-mono"
               >
                 View full details →
               </button>
@@ -694,12 +694,12 @@ function HistoryDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-violet-400" />
-            <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+            <History className="w-4 h-4 text-teal-400" />
+            <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
               Search History
             </span>
             {history.length > 0 && (
-              <Badge className="bg-violet-500/15 text-violet-400 border-violet-500/20 text-[10px] font-mono">{history.length}</Badge>
+              <Badge className="bg-teal-500/15 text-teal-400 border-teal-500/20 text-[10px] font-mono">{history.length}</Badge>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -727,13 +727,13 @@ function HistoryDrawer({
           ) : (
             history.map((entry) => (
               <div key={entry.id}
-                className="rounded-xl border border-white/[0.08] bg-[#161618] p-3 hover:border-violet-500/20 transition-all group">
+                className="rounded-xl border border-white/[0.08] bg-[#161618] p-3 hover:border-teal-500/20 transition-all group">
                 <div className="flex items-start justify-between gap-2">
                   <button className="flex-1 text-left" onClick={() => { onRestore(entry); onClose(); }}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <Clock className="w-3 h-3 text-white/30" />
                       <span className="text-[10px] text-white/30 font-mono">{formatTimestamp(entry.timestamp)}</span>
-                      <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono ml-auto">
+                      <Badge className="bg-teal-500/10 text-teal-400/70 border-teal-500/15 text-[10px] font-mono ml-auto">
                         {entry.prospects.length} results
                       </Badge>
                     </div>
@@ -745,7 +745,7 @@ function HistoryDrawer({
                   </Button>
                 </div>
                 <button
-                  className="mt-2 w-full text-[10px] text-violet-400/60 hover:text-violet-400 transition-colors text-left flex items-center gap-1"
+                  className="mt-2 w-full text-[10px] text-teal-400/60 hover:text-teal-400 transition-colors text-left flex items-center gap-1"
                   onClick={() => { onRestore(entry); onClose(); }}
                 >
                   <ArrowLeft className="w-3 h-3 rotate-180" />
@@ -786,11 +786,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             <Briefcase className="w-3 h-3" />Industry
           </label>
           <Select value={filters.industry} onValueChange={(v) => set("industry", v)}>
-            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-violet-500/30">
+            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-teal-500/30">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.08] text-white/80 max-h-64">
-              {INDUSTRIES.map((i) => <SelectItem key={i} value={i} className="text-xs hover:bg-violet-500/10">{i}</SelectItem>)}
+              {INDUSTRIES.map((i) => <SelectItem key={i} value={i} className="text-xs hover:bg-teal-500/10">{i}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -800,11 +800,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             <MapPin className="w-3 h-3" />Geography
           </label>
           <Select value={filters.geo} onValueChange={(v) => set("geo", v)}>
-            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-violet-500/30">
+            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-teal-500/30">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.08] text-white/80 max-h-64">
-              {GEOGRAPHIES.map((g) => <SelectItem key={g.value} value={g.value} className="text-xs hover:bg-violet-500/10">{g.label}</SelectItem>)}
+              {GEOGRAPHIES.map((g) => <SelectItem key={g.value} value={g.value} className="text-xs hover:bg-teal-500/10">{g.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -814,11 +814,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             <Users className="w-3 h-3" />Company Size
           </label>
           <Select value={filters.employeeSize} onValueChange={(v) => set("employeeSize", v)}>
-            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-violet-500/30">
+            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-teal-500/30">
               <SelectValue placeholder="Any Size" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.08] text-white/80">
-              {EMPLOYEE_SIZES.map((s) => <SelectItem key={s.value} value={s.value || "_any"} className="text-xs hover:bg-violet-500/10">{s.label}</SelectItem>)}
+              {EMPLOYEE_SIZES.map((s) => <SelectItem key={s.value} value={s.value || "_any"} className="text-xs hover:bg-teal-500/10">{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -828,11 +828,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             <DollarSign className="w-3 h-3" />Revenue
           </label>
           <Select value={filters.revenueRange} onValueChange={(v) => set("revenueRange", v)}>
-            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-violet-500/30">
+            <SelectTrigger className="h-9 text-xs bg-[#161618] border-white/[0.08] text-white/70 hover:border-teal-500/30">
               <SelectValue placeholder="Any Revenue" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.08] text-white/80">
-              {REVENUE_RANGES.map((r) => <SelectItem key={r.value} value={r.value || "_any"} className="text-xs hover:bg-violet-500/10">{r.label}</SelectItem>)}
+              {REVENUE_RANGES.map((r) => <SelectItem key={r.value} value={r.value || "_any"} className="text-xs hover:bg-teal-500/10">{r.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -849,7 +849,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.productFocus}
             onChange={(e) => set("productFocus", e.target.value)}
             placeholder='e.g. "Cloudflare CDN" or "Akamai"'
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-teal-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
@@ -861,7 +861,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.techStack}
             onChange={(e) => set("techStack", e.target.value)}
             placeholder="e.g. Salesforce, AWS, HubSpot"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-teal-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
@@ -873,7 +873,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.keywords}
             onChange={(e) => set("keywords", e.target.value)}
             placeholder="e.g. digital transformation, cloud"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-teal-500/40 transition-colors"
           />
         </div>
       </div>
@@ -892,7 +892,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
                 onClick={() => toggleTitle(t)}
                 className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
                   active
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                    ? "bg-teal-500/20 text-teal-300 border-teal-500/40"
                     : "bg-white/[0.03] text-white/40 border-white/[0.08] hover:border-white/20 hover:text-white/60"
                 }`}
               >
@@ -907,8 +907,8 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       <Button
         onClick={onScan}
         disabled={isScanning}
-        className="w-full h-11 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all"
-        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+        className="w-full h-11 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white gap-2 transition-all"
+        style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}
       >
         {isScanning ? (
           <><Loader2 className="w-4 h-4 animate-spin" />Scanning ATOM Intelligence...</>
@@ -1027,17 +1027,17 @@ export default function ProspectEngine() {
   }, 0);
 
   return (
-    <div className="space-y-6 min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+    <div className="space-y-6 min-h-screen" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Radar className="w-5 h-5 text-violet-400" />
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <Radar className="w-5 h-5 text-teal-400" />
             </div>
             <h1
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
-              style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
+              style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
               ATOM Prospect
             </h1>
@@ -1056,7 +1056,7 @@ export default function ProspectEngine() {
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={handleNewSearch}
-                className="h-8 text-xs gap-1.5 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 bg-transparent">
+                className="h-8 text-xs gap-1.5 border-teal-500/30 text-teal-400 hover:bg-teal-500/10 bg-transparent">
                 <Plus className="w-3.5 h-3.5" />New Search
               </Button>
             </>
@@ -1073,11 +1073,11 @@ export default function ProspectEngine() {
         <Card className="bg-[#111113] border-white/[0.08]">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-5">
-              <SlidersHorizontal className="w-4 h-4 text-violet-400" />
-              <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+              <SlidersHorizontal className="w-4 h-4 text-teal-400" />
+              <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                 Scan Filters
               </span>
-              <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono ml-auto">
+              <Badge className="bg-teal-500/10 text-teal-400/70 border-teal-500/15 text-[10px] font-mono ml-auto">
                 ATOM Intelligence · 275M+ verified contacts
               </Badge>
             </div>
@@ -1095,8 +1095,8 @@ export default function ProspectEngine() {
       {scanMutation.isPending && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
-            <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
-            <span className="text-sm text-violet-400/70">ATOM Intelligence scanning...</span>
+            <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />
+            <span className="text-sm text-teal-400/70">ATOM Intelligence scanning...</span>
           </div>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -1114,12 +1114,12 @@ export default function ProspectEngine() {
                 </Badge>
               )}
               <div className="flex items-center gap-2">
-                <Signal className="w-4 h-4 text-violet-400" />
-                <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                <Signal className="w-4 h-4 text-teal-400" />
+                <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                   {displayedProspects.length} companies · {totalContacts} contacts
                 </span>
                 {displayedProspects.length > 0 && (
-                  <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono">
+                  <Badge className="bg-teal-500/10 text-teal-400/70 border-teal-500/15 text-[10px] font-mono">
                     {filterSummary(view === "history-view" && historyEntry ? historyEntry.filters : currentFilters)}
                   </Badge>
                 )}
@@ -1147,7 +1147,7 @@ export default function ProspectEngine() {
                 <Radar className="w-12 h-12 text-white/10" />
                 <p className="text-sm text-white/30">No prospects found for these filters</p>
                 <Button variant="outline" size="sm" onClick={handleNewSearch}
-                  className="mt-2 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 bg-transparent">
+                  className="mt-2 border-teal-500/30 text-teal-400 hover:bg-teal-500/10 bg-transparent">
                   Adjust Filters
                 </Button>
               </CardContent>

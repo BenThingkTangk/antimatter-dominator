@@ -3,68 +3,121 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ATOM SALES DOMINATOR — Antimatter AI Design System
-   ATOM · Nirmata Holdings
-   Dark-first purple brand palette
+   ATOM SALES DOMINATOR — Design System v1.0
+   ATOM · Nirmata Holdings · April 2026
+   Dark-first teal brand palette
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── ATOM / Antimatter AI Design Tokens ─────────────────────────────────── */
+/* ─── ATOM / Nirmata Holdings Design Tokens v1.0 ─────────────────────────── */
 :root {
-  /* ── Color Primitives (Antimatter AI Brand) ── */
-  --atom-accent:      #696aac;
-  --atom-accent-dim:  #4c4dac;
-  --atom-accent-glow: rgba(105, 106, 172, 0.15);
-  --atom-accent-faint:rgba(105, 106, 172, 0.06);
-  --atom-primary:     #3e3f7e;
-  --atom-secondary:   #a2a3e9;
-  --atom-tertiary:    #c7c8f2;
-  --atom-lightaccent: #e3e3f8;
+  /* ── Typography ── */
+  --font-display: 'Cabinet Grotesk', 'Satoshi', sans-serif;
+  --font-body:    'Satoshi', 'Inter', sans-serif;
+  --font-sans:    'Satoshi', 'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
 
-  --atom-bg-base:     #020202;
-  --atom-surface-1:   #0a0a0e;
-  --atom-surface-2:   #111115;
-  --atom-surface-3:   #18181d;
-  --atom-surface-4:   #1f1f26;
+  /* ── Fluid Type Scale ── */
+  --text-xs:   clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm:   clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg:   clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl:   clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl:  clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --text-3xl:  clamp(2.5rem, 1rem + 4vw, 5rem);
 
+  /* ── Spacing ── */
+  --spacing: 0.25rem;
+  --space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;
+  --space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;
+  --space-12:3rem;--space-16:4rem;--space-20:5rem;--space-24:6rem;
+
+  /* ── Border Radius ── */
+  --radius-sm:  0.375rem;
+  --radius:     0.75rem;
+  --radius-md:  0.5rem;
+  --radius-lg:  0.75rem;
+  --radius-xl:  1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ── Content Width ── */
+  --content-default: 1100px;
+  --content-wide: 1380px;
+
+  /* ── Transition ── */
+  --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── DARK MODE COLORS (default) ── */
+  --color-bg:        #0b0b0c;
+  --color-surface:   #111113;
+  --color-surface-2: #161618;
+  --color-surface-3: #1c1c1f;
+  --color-surface-4: #222226;
+  --color-border:        rgba(255,255,255,0.08);
+  --color-border-bright: rgba(255,255,255,0.14);
+  --color-divider:       rgba(255,255,255,0.05);
+  --color-text:         #e8e8ea;
+  --color-text-muted:   #8a8a96;
+  --color-text-faint:   #4a4a55;
+  --color-text-inverse: #0b0b0c;
+
+  /* ATOM Teal — Primary Accent */
+  --color-primary:              #00c8c8;
+  --color-primary-dim:          #00989c;
+  --color-primary-glow:         rgba(0, 200, 200, 0.15);
+  --color-primary-glow-strong:  rgba(0, 200, 200, 0.25);
+
+  /* Claude Purple — AI / Intelligence */
+  --color-claude:      #c084fc;
+  --color-claude-dim:  #9333ea;
+  --color-claude-glow: rgba(192, 132, 252, 0.12);
+
+  /* Hume Coral — Voice / Emotion */
+  --color-hume:      #ff7b6b;
+  --color-hume-dim:  #e05a4a;
+  --color-hume-glow: rgba(255, 123, 107, 0.12);
+
+  /* Samba Gold — Infrastructure / Power */
+  --color-samba:      #f5c842;
+  --color-samba-dim:  #d4a51e;
+  --color-samba-glow: rgba(245, 200, 66, 0.12);
+
+  /* GPT Blue — Tool / Utility */
+  --color-gpt:      #74c0fc;
+  --color-gpt-dim:  #4a9fd9;
+  --color-gpt-glow: rgba(116, 192, 252, 0.12);
+
+  /* Legacy compatibility aliases */
+  --atom-accent:      #00c8c8;
+  --atom-accent-dim:  #00989c;
+  --atom-accent-glow: rgba(0, 200, 200, 0.15);
+  --atom-accent-faint:rgba(0, 200, 200, 0.06);
+  --atom-primary:     #00c8c8;
+  --atom-secondary:   #4dd9d9;
+  --atom-tertiary:    #99e8e8;
+  --atom-lightaccent: #ccf4f4;
+  --atom-bg-base:     #0b0b0c;
+  --atom-surface-1:   #111113;
+  --atom-surface-2:   #161618;
+  --atom-surface-3:   #1c1c1f;
+  --atom-surface-4:   #222226;
   --atom-border:      rgba(255, 255, 255, 0.08);
   --atom-border-mid:  rgba(255, 255, 255, 0.12);
   --atom-border-hi:   rgba(255, 255, 255, 0.18);
-
-  --atom-text-primary: #f6f6fd;
+  --atom-text-primary: #e8e8ea;
   --atom-text-muted:   #8a8a96;
   --atom-text-faint:   #4a4a55;
-
-  /* ── AI Agent Colors ── */
   --atom-claude:  #c084fc;
   --atom-hume:    #ff7b6b;
   --atom-samba:   #f5c842;
   --atom-gpt:     #74c0fc;
 
-  /* ── Typography (Plus Jakarta Sans) ── */
-  --font-display: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-  --font-sans:    'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-  --font-serif:   Georgia, serif;
-  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
-
-  /* ── Spacing Scale ── */
-  --spacing: 0.25rem;
-
-  /* ── Border Radius ── */
-  --radius-sm:  0.375rem;
-  --radius:     0.75rem;
-  --radius-lg:  1rem;
-  --radius-xl:  1.25rem;
-
   /* ── Shadows ── */
-  --shadow-2xs: 0px 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-xs:  0px 1px 3px rgba(0, 0, 0, 0.5);
-  --shadow-sm:  0px 2px 4px rgba(0, 0, 0, 0.5), 0px 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow:     0px 4px 8px rgba(0, 0, 0, 0.5), 0px 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md:  0px 6px 16px rgba(0, 0, 0, 0.55), 0px 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-lg:  0px 12px 24px rgba(0, 0, 0, 0.6), 0px 4px 8px rgba(0, 0, 0, 0.3);
-  --shadow-xl:  0px 20px 40px rgba(0, 0, 0, 0.7), 0px 8px 16px rgba(0, 0, 0, 0.3);
-  --shadow-2xl: 0px 32px 64px rgba(0, 0, 0, 0.8);
-  --shadow-accent: 0 0 20px rgba(105, 106, 172, 0.2), 0 0 40px rgba(105, 106, 172, 0.08);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.6);
+  --shadow-xl:  0 24px 64px rgba(0,0,0,0.7);
+  --shadow-accent: 0 0 20px rgba(0, 200, 200, 0.2), 0 0 40px rgba(0, 200, 200, 0.08);
 
   /* ── Elevation overlays ── */
   --button-outline: rgba(255, 255, 255, 0.10);

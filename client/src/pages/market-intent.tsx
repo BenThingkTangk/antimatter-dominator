@@ -146,7 +146,7 @@ const EFFORT_COLORS: Record<string, string> = {
 };
 
 const OWNER_COLORS: Record<string, string> = {
-  "AE":         "bg-violet-500/15 text-violet-300 border-violet-500/25",
+  "AE":         "bg-teal-500/15 text-teal-300 border-teal-500/25",
   "SDR":        "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   "CSM":        "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   "Leadership": "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -800,8 +800,8 @@ export default function MarketIntent() {
                 {activeTab === "actions" && (
                   <div className="space-y-2">
                     {activeResult.actionItems?.length > 0 ? activeResult.actionItems.map((item, i) => (
-                      <div key={i} className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4 flex items-start gap-3 hover:border-violet-500/15 transition-all group">
-                        <div className="w-6 h-6 rounded-full bg-violet-500/15 border border-violet-500/20 flex items-center justify-center shrink-0 text-[10px] font-bold text-violet-300">
+                      <div key={i} className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4 flex items-start gap-3 hover:border-teal-500/15 transition-all group">
+                        <div className="w-6 h-6 rounded-full bg-teal-500/15 border border-teal-500/20 flex items-center justify-center shrink-0 text-[10px] font-bold text-teal-300">
                           {item.priority}
                         </div>
                         <div className="flex-1 min-w-0">

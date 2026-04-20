@@ -155,7 +155,7 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: string; type: "sentiment" | "intent"; idSuffix?: string }) {
   const pct = Math.max(0, Math.min(100, score));
   const offset = ARC_LENGTH - (ARC_LENGTH * pct) / 100;
-  const color = type === "sentiment" ? sentimentColor(score) : score > 75 ? "#a78bfa" : "#696aac";
+  const color = type === "sentiment" ? sentimentColor(score) : score > 75 ? "#a78bfa" : "#00c8c8";
   const gradId = `gauge-grad-${type}${idSuffix}`;
   const glowId = `glow-${type}${idSuffix}`;
 
@@ -215,7 +215,7 @@ function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: st
 // ─── Emotion Bar ──────────────────────────────────────────────────────────────
 
 const EMOTION_COLORS: Record<string, string> = {
-  confidence: "#696aac",
+  confidence: "#00c8c8",
   interest: "#34d399",
   skepticism: "#fbbf24",
   excitement: "#a78bfa",
@@ -225,7 +225,7 @@ const EMOTION_COLORS: Record<string, string> = {
 
 function EmotionBar({ name, value }: { name: string; value: number }) {
   const pct = Math.round(Math.max(0, Math.min(100, (value || 0) * 100)));
-  const color = EMOTION_COLORS[name] ?? "#696aac";
+  const color = EMOTION_COLORS[name] ?? "#00c8c8";
   return (
     <div className="flex items-center gap-3">
       <span className="w-24 text-xs capitalize" style={{ color: "rgba(246,246,253,0.6)" }}>
@@ -270,9 +270,9 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
                 className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-500"
                 style={{
                   background: isActive
-                    ? "linear-gradient(135deg, #8587e3, #4c4dac)"
+                    ? "linear-gradient(135deg, #00e0e0, #009a9e)"
                     : isPast
-                    ? "rgba(105,106,172,0.4)"
+                    ? "rgba(0,200,200,0.4)"
                     : "rgba(246,246,253,0.06)",
                   color: isActive || isPast ? "white" : "rgba(246,246,253,0.3)",
                   boxShadow: isActive ? "0 0 12px rgba(133,135,227,0.6)" : "none",
@@ -284,7 +284,7 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
                 className="text-[10px] mt-1 text-center truncate w-full"
                 style={{
                   color: isActive
-                    ? "#a2a3e9"
+                    ? "#33d6d6"
                     : isPast
                     ? "rgba(246,246,253,0.5)"
                     : "rgba(246,246,253,0.25)",
@@ -297,7 +297,7 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
               <div
                 className="h-px flex-1 mb-4 transition-all duration-500"
                 style={{
-                  background: i < idx ? "rgba(105,106,172,0.5)" : "rgba(246,246,253,0.08)",
+                  background: i < idx ? "rgba(0,200,200,0.5)" : "rgba(246,246,253,0.08)",
                 }}
               />
             )}
@@ -343,12 +343,12 @@ function SentimentSparkline({ points, idSuffix = "" }: { points: Array<{ ts: num
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#696aac" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#696aac" stopOpacity="0" />
+          <stop offset="0%" stopColor="#00c8c8" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={areaPath} fill={`url(#${gradId})`} />
-      <path d={linePath} stroke="#8587e3" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
+      <path d={linePath} stroke="#00e0e0" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -364,8 +364,8 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
         style={
           isAtom
             ? {
-                background: "rgba(105,106,172,0.1)",
-                borderLeft: "2px solid #696aac",
+                background: "rgba(0,200,200,0.1)",
+                borderLeft: "2px solid #00c8c8",
                 color: "rgba(246,246,253,0.85)",
               }
             : {
@@ -376,7 +376,7 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
       >
         <div
           className="text-[10px] mb-1 font-medium uppercase tracking-wider"
-          style={{ color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)" }}
+          style={{ color: isAtom ? "#33d6d6" : "rgba(246,246,253,0.4)" }}
         >
           {isAtom ? "ATOM" : "Prospect"} · {formatTime(entry.ts)}
         </div>
@@ -479,9 +479,9 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
                 key={i}
                 className="px-3 py-1 rounded-full text-xs font-medium"
                 style={{
-                  background: "rgba(105,106,172,0.2)",
+                  background: "rgba(0,200,200,0.2)",
                   border: "1px solid rgba(133,135,227,0.3)",
-                  color: "#a2a3e9",
+                  color: "#33d6d6",
                 }}
               >
                 {sig}
@@ -523,9 +523,9 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
       className="rounded-xl p-4 cursor-pointer transition-all duration-200"
       style={{
         background: "rgba(246,246,253,0.03)",
-        border: `1px solid ${isExpanded ? "#696aac" : "rgba(246,246,253,0.08)"}`,
+        border: `1px solid ${isExpanded ? "#00c8c8" : "rgba(246,246,253,0.08)"}`,
         borderLeft: `3px solid ${borderColor}`,
-        boxShadow: isExpanded ? "0 0 16px rgba(105,106,172,0.15)" : "none",
+        boxShadow: isExpanded ? "0 0 16px rgba(0,200,200,0.15)" : "none",
       }}
       onClick={onToggle}
     >
@@ -586,7 +586,7 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
             <div className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(246,246,253,0.35)" }}>
               Intent
             </div>
-            <div className="text-lg font-light" style={{ color: "#a2a3e9" }}>
+            <div className="text-lg font-light" style={{ color: "#33d6d6" }}>
               {Math.round(entry.finalIntent)}
             </div>
           </div>
@@ -938,7 +938,7 @@ export default function ATOMLeadGen() {
   return (
     <div
       className="min-h-screen px-4 py-8 md:px-8"
-      style={{ background: "#020202", color: "rgba(246,246,253,0.9)", fontFamily: "inherit" }}
+      style={{ background: "#0b0b0c", color: "rgba(246,246,253,0.9)", fontFamily: "inherit" }}
     >
       <div className="max-w-4xl mx-auto space-y-6">
 
@@ -958,13 +958,13 @@ export default function ATOMLeadGen() {
             onClick={() => setViewMode((v) => (v === "live" ? "history" : "live"))}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium flex-shrink-0 transition-all"
             style={{
-              background: viewMode === "history" ? "rgba(105,106,172,0.2)" : "transparent",
+              background: viewMode === "history" ? "rgba(0,200,200,0.2)" : "transparent",
               border: viewMode === "history"
-                ? "1px solid #696aac"
+                ? "1px solid #00c8c8"
                 : "1px solid rgba(246,246,253,0.15)",
-              color: viewMode === "history" ? "#a2a3e9" : "rgba(246,246,253,0.6)",
+              color: viewMode === "history" ? "#33d6d6" : "rgba(246,246,253,0.6)",
               cursor: "pointer",
-              boxShadow: viewMode === "history" ? "0 0 12px rgba(105,106,172,0.2)" : "none",
+              boxShadow: viewMode === "history" ? "0 0 12px rgba(0,200,200,0.2)" : "none",
             }}
           >
             <Clock size={14} />
@@ -973,8 +973,8 @@ export default function ATOMLeadGen() {
               <span
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                 style={{
-                  background: "rgba(105,106,172,0.35)",
-                  color: "#a2a3e9",
+                  background: "rgba(0,200,200,0.35)",
+                  color: "#33d6d6",
                 }}
               >
                 {callHistory.length}
@@ -1161,7 +1161,7 @@ export default function ATOMLeadGen() {
                   disabled={callStatus === "dialing"}
                   className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm transition-all"
                   style={{
-                    background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
+                    background: "linear-gradient(135deg, #00e0e0, #009a9e, #00c8c8)",
                     color: "white",
                     boxShadow: "0 0 20px rgba(133,135,227,0.35)",
                     opacity: callStatus === "dialing" ? 0.7 : 1,
@@ -1214,7 +1214,7 @@ export default function ATOMLeadGen() {
                     onClick={handleNewCall}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium"
                     style={{
-                      background: "linear-gradient(135deg, #8587e3, #4c4dac, #696aac)",
+                      background: "linear-gradient(135deg, #00e0e0, #009a9e, #00c8c8)",
                       color: "white",
                       boxShadow: "0 0 16px rgba(133,135,227,0.3)",
                       cursor: "pointer",
@@ -1334,9 +1334,9 @@ export default function ATOMLeadGen() {
                           key={i}
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{
-                            background: "rgba(105,106,172,0.2)",
+                            background: "rgba(0,200,200,0.2)",
                             border: "1px solid rgba(133,135,227,0.3)",
-                            color: "#a2a3e9",
+                            color: "#33d6d6",
                             animation: "slideIn 0.3s ease",
                           }}
                         >
@@ -1352,7 +1352,7 @@ export default function ATOMLeadGen() {
                   <div
                     className="rounded-xl p-4"
                     style={{
-                      background: "rgba(105,106,172,0.08)",
+                      background: "rgba(0,200,200,0.08)",
                       border: "1px solid rgba(133,135,227,0.2)",
                     }}
                   >
@@ -1377,7 +1377,7 @@ export default function ATOMLeadGen() {
                       </div>
                       <div>
                         <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Intent</div>
-                        <div className="text-sm font-medium" style={{ color: "#a2a3e9" }}>
+                        <div className="text-sm font-medium" style={{ color: "#33d6d6" }}>
                           {intentLabel(summary.finalIntent)} ({Math.round(summary.finalIntent)})
                         </div>
                       </div>

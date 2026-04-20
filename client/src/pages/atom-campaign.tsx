@@ -227,7 +227,7 @@ function statusColor(status: CallStatus): string {
   switch (status) {
     case "queued": return "text-white/50 border-white/10 bg-white/5";
     case "calling": return "text-amber-400 border-amber-500/30 bg-amber-500/10";
-    case "connected": return "text-violet-400 border-violet-500/30 bg-violet-500/10";
+    case "connected": return "text-teal-400 border-teal-500/30 bg-teal-500/10";
     case "completed": return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
     case "failed": return "text-rose-400 border-rose-500/30 bg-rose-500/10";
     case "skipped": return "text-white/35 border-white/[0.10] bg-white/[0.03]";
@@ -298,18 +298,18 @@ function StepIndicator({ current }: { current: Step }) {
         return (
           <div key={step.id} className="flex items-center">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-              active ? "bg-violet-500/15 border border-violet-500/30" :
+              active ? "bg-teal-500/15 border border-teal-500/30" :
               done ? "opacity-60" : "opacity-30"
             }`}>
               <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono border ${
-                active ? "bg-violet-500 border-violet-400 text-black" :
+                active ? "bg-teal-500 border-teal-400 text-black" :
                 done ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" :
                 "bg-white/5 border-white/10 text-white/50"
               }`}>
                 {done ? <CheckCheck className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
               </div>
-              <span className={`text-xs font-medium ${active ? "text-violet-300" : done ? "text-white/50" : "text-white/40"}`}
-                style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+              <span className={`text-xs font-medium ${active ? "text-teal-300" : done ? "text-white/50" : "text-white/40"}`}
+                style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                 {step.label}
               </span>
             </div>
@@ -352,11 +352,11 @@ function AdvancedTargetingPanel({
             <Briefcase className="w-3 h-3" />Industry
           </label>
           <Select value={filters.industry} onValueChange={(v) => set("industry", v)}>
-            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-violet-500/30">
+            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-teal-500/30">
               <SelectValue placeholder="Any industry" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.12] text-white/80 max-h-64">
-              {INDUSTRIES.map((i) => <SelectItem key={i} value={i} className="text-xs hover:bg-violet-500/10">{i}</SelectItem>)}
+              {INDUSTRIES.map((i) => <SelectItem key={i} value={i} className="text-xs hover:bg-teal-500/10">{i}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -366,12 +366,12 @@ function AdvancedTargetingPanel({
             <MapPin className="w-3 h-3" />Geography
           </label>
           <Select value={filters.geography} onValueChange={(v) => set("geography", v)}>
-            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-violet-500/30">
+            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-teal-500/30">
               <SelectValue placeholder="Any geo" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.12] text-white/80 max-h-64">
               {GEO_OPTIONS.map((g) => (
-                <SelectItem key={g} value={GEO_VALUES[g] || g} className="text-xs hover:bg-violet-500/10">{g}</SelectItem>
+                <SelectItem key={g} value={GEO_VALUES[g] || g} className="text-xs hover:bg-teal-500/10">{g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -382,11 +382,11 @@ function AdvancedTargetingPanel({
             <Users className="w-3 h-3" />Company Size
           </label>
           <Select value={filters.companySize} onValueChange={(v) => set("companySize", v)}>
-            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-violet-500/30">
+            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-teal-500/30">
               <SelectValue placeholder="Any size" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.12] text-white/80">
-              {EMPLOYEE_SIZES.map((s) => <SelectItem key={s.value} value={s.value || "_any"} className="text-xs hover:bg-violet-500/10">{s.label}</SelectItem>)}
+              {EMPLOYEE_SIZES.map((s) => <SelectItem key={s.value} value={s.value || "_any"} className="text-xs hover:bg-teal-500/10">{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -396,11 +396,11 @@ function AdvancedTargetingPanel({
             <DollarSign className="w-3 h-3" />Revenue
           </label>
           <Select value={filters.revenueRange} onValueChange={(v) => set("revenueRange", v)}>
-            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-violet-500/30">
+            <SelectTrigger className="h-8 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-teal-500/30">
               <SelectValue placeholder="Any revenue" />
             </SelectTrigger>
             <SelectContent className="bg-[#1c1c1f] border-white/[0.12] text-white/80">
-              {REVENUE_RANGES.map((r) => <SelectItem key={r.value} value={r.value || "_any"} className="text-xs hover:bg-violet-500/10">{r.label}</SelectItem>)}
+              {REVENUE_RANGES.map((r) => <SelectItem key={r.value} value={r.value || "_any"} className="text-xs hover:bg-teal-500/10">{r.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -417,7 +417,7 @@ function AdvancedTargetingPanel({
             value={filters.techStack}
             onChange={(e) => set("techStack", e.target.value)}
             placeholder="e.g. Salesforce, AWS, HubSpot"
-            className="w-full h-8 px-3 text-xs rounded-md border border-white/[0.12] bg-[#161618] text-white/60 placeholder:text-white/35 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-8 px-3 text-xs rounded-md border border-white/[0.12] bg-[#161618] text-white/60 placeholder:text-white/35 focus:outline-none focus:border-teal-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
@@ -429,7 +429,7 @@ function AdvancedTargetingPanel({
             value={filters.keywords}
             onChange={(e) => set("keywords", e.target.value)}
             placeholder="e.g. digital transformation, cloud migration"
-            className="w-full h-8 px-3 text-xs rounded-md border border-white/[0.12] bg-[#161618] text-white/60 placeholder:text-white/35 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-8 px-3 text-xs rounded-md border border-white/[0.12] bg-[#161618] text-white/60 placeholder:text-white/35 focus:outline-none focus:border-teal-500/40 transition-colors"
           />
         </div>
       </div>
@@ -448,7 +448,7 @@ function AdvancedTargetingPanel({
                 onClick={() => toggleTitle(t)}
                 className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
                   active
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                    ? "bg-teal-500/20 text-teal-300 border-teal-500/40"
                     : "bg-white/[0.03] text-white/55 border-white/[0.12] hover:border-white/20 hover:text-white/55"
                 }`}
               >
@@ -992,7 +992,7 @@ export default function AtomCampaign() {
 
   function SortIcon({ field }: { field: SortField }) {
     if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return sortDir === "desc" ? <ArrowDown className="w-3 h-3 text-violet-400" /> : <ArrowUp className="w-3 h-3 text-violet-400" />;
+    return sortDir === "desc" ? <ArrowDown className="w-3 h-3 text-teal-400" /> : <ArrowUp className="w-3 h-3 text-teal-400" />;
   }
 
   // ─── Export targets to CSV ──────────────────────────────────────────────────
@@ -1218,17 +1218,17 @@ export default function AtomCampaign() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+    <div className="space-y-6 min-h-screen" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Megaphone className="w-5 h-5 text-violet-400" />
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <Megaphone className="w-5 h-5 text-teal-400" />
             </div>
             <h1
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
-              style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
+              style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
               ATOM Campaign
             </h1>
@@ -1255,8 +1255,8 @@ export default function AtomCampaign() {
         <Card className="bg-[#111113] border-white/[0.12]">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-violet-400" />
-              <span className="text-base font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+              <Sparkles className="w-4 h-4 text-teal-400" />
+              <span className="text-base font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                 Campaign Brief
               </span>
             </div>
@@ -1272,14 +1272,14 @@ export default function AtomCampaign() {
                 onChange={(e) => setBrief(e.target.value)}
                 placeholder={`Cloudflare CDN takeout for Akamai. Akamai will match and beat Cloudflare pricing and eat up to 6 months of remaining contract to switch to Akamai.\n\nTarget mid-market tech companies on Cloudflare who are scaling fast and frustrated with costs. CTOs and VP Engineering at 50-500 person SaaS companies.`}
                 rows={8}
-                className="w-full px-4 py-3 text-sm rounded-xl border border-white/[0.12] bg-[#161618] text-[#e8e8ea] placeholder:text-white/35 focus:outline-none focus:border-violet-500/40 transition-colors resize-none leading-relaxed"
-                style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+                className="w-full px-4 py-3 text-sm rounded-xl border border-white/[0.12] bg-[#161618] text-[#e8e8ea] placeholder:text-white/35 focus:outline-none focus:border-teal-500/40 transition-colors resize-none leading-relaxed"
+                style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}
               />
 
               {/* Advanced Targeting toggle */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-xs text-white/55 hover:text-violet-400 transition-colors"
+                className="flex items-center gap-2 text-xs text-white/55 hover:text-teal-400 transition-colors"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 Advanced Targeting
@@ -1290,7 +1290,7 @@ export default function AtomCampaign() {
                   advancedFilters.jobTitles.length > 0 ||
                   advancedFilters.techStack ||
                   advancedFilters.keywords) && (
-                  <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/15 text-[9px] font-mono">
+                  <Badge className="bg-teal-500/10 text-teal-400 border-teal-500/15 text-[9px] font-mono">
                     filters set
                   </Badge>
                 )}
@@ -1310,8 +1310,8 @@ export default function AtomCampaign() {
                 <Button
                   onClick={buildTargets}
                   disabled={!brief.trim() || isBuilding}
-                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all"
-                  style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+                  className="h-10 px-6 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white gap-2 transition-all"
+                  style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}
                 >
                   {isBuilding ? (
                     <><Loader2 className="w-4 h-4 animate-spin" />Building...</>
@@ -1332,7 +1332,7 @@ export default function AtomCampaign() {
                   "Salesforce CPQ replacement pitch for companies overpaying. VP Sales and RevOps leaders.",
                 ].map((ex) => (
                   <button key={ex} onClick={() => setBrief(ex)}
-                    className="text-left text-xs text-white/50 hover:text-violet-400 transition-colors px-3 py-2 rounded-lg border border-white/[0.10] hover:border-violet-500/20 hover:bg-violet-500/5">
+                    className="text-left text-xs text-white/50 hover:text-teal-400 transition-colors px-3 py-2 rounded-lg border border-white/[0.10] hover:border-teal-500/20 hover:bg-teal-500/5">
                     "{ex}"
                   </button>
                 ))}
@@ -1347,16 +1347,16 @@ export default function AtomCampaign() {
         <div className="space-y-4">
           {/* Build Progress */}
           {isBuilding && (
-            <Card className="bg-[#111113] border-violet-500/20">
+            <Card className="bg-[#111113] border-teal-500/20">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
-                  <span className="text-sm font-medium text-violet-300">Building your campaign targets...</span>
+                  <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />
+                  <span className="text-sm font-medium text-teal-300">Building your campaign targets...</span>
                 </div>
                 <div className="space-y-1.5">
                   {buildProgress.map((msg, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
-                      <CheckCircle2 className="w-3 h-3 text-violet-400 shrink-0" />
+                      <CheckCircle2 className="w-3 h-3 text-teal-400 shrink-0" />
                       <span className="text-white/60">{msg}</span>
                     </div>
                   ))}
@@ -1375,16 +1375,16 @@ export default function AtomCampaign() {
           {/* Campaign Brief Preview + Max Targets selector */}
           {!isBuilding && (
             <div className="flex items-start gap-3 flex-wrap">
-              <div className="flex-1 min-w-0 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+              <div className="flex-1 min-w-0 rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
                 <div className="flex items-start gap-2">
-                  <Megaphone className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+                  <Megaphone className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-violet-300 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>Campaign Brief</p>
+                    <p className="text-xs font-semibold text-teal-300 mb-1" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>Campaign Brief</p>
                     <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{brief}</p>
                   </div>
                   {targetStats && (
                     <div className="shrink-0 text-right">
-                      <p className="text-xs font-semibold text-violet-300" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                      <p className="text-xs font-semibold text-teal-300" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                         {targetStats.companies} companies
                       </p>
                       <p className="text-[10px] text-white/50 font-mono">{targetStats.contacts} contacts</p>
@@ -1399,12 +1399,12 @@ export default function AtomCampaign() {
                   <ListFilter className="w-3 h-3" />Max Targets
                 </label>
                 <Select value={String(maxTargets)} onValueChange={(v) => setMaxTargets(Number(v))}>
-                  <SelectTrigger className="h-9 w-40 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-violet-500/30">
+                  <SelectTrigger className="h-9 w-40 text-xs bg-[#161618] border-white/[0.12] text-white/60 hover:border-teal-500/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1c1c1f] border-white/[0.12] text-white/80">
                     {MAX_TARGET_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)} className="text-xs hover:bg-violet-500/10">
+                      <SelectItem key={o.value} value={String(o.value)} className="text-xs hover:bg-teal-500/10">
                         {o.label}
                       </SelectItem>
                     ))}
@@ -1415,7 +1415,7 @@ export default function AtomCampaign() {
                     onClick={buildTargets}
                     disabled={isBuilding}
                     size="sm"
-                    className="h-9 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-1.5"
+                    className="h-9 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white gap-1.5"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />Rebuild
                   </Button>
@@ -1457,7 +1457,7 @@ export default function AtomCampaign() {
                       label: "Companies Scanned",
                       value: targetStats?.companies ?? 0,
                       icon: Building2,
-                      color: "text-violet-400",
+                      color: "text-teal-400",
                       bg: "",
                     },
                   ].map((stat, idx) => {
@@ -1472,7 +1472,7 @@ export default function AtomCampaign() {
                         </div>
                         <div>
                           <p className={`text-lg font-bold tabular-nums leading-none ${stat.color}`}
-                            style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                            style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                             {stat.value}
                           </p>
                           <p className="text-[10px] text-white/50 font-mono mt-0.5">{stat.label}</p>
@@ -1485,11 +1485,11 @@ export default function AtomCampaign() {
                 {/* ── Table Controls ── */}
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.10] gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-violet-400" />
-                    <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                    <Target className="w-4 h-4 text-teal-400" />
+                    <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                       Campaign Targets
                     </span>
-                    <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/15 text-[10px] font-mono">
+                    <Badge className="bg-teal-500/10 text-teal-400 border-teal-500/15 text-[10px] font-mono">
                       {selectedTargets.length} selected
                     </Badge>
                   </div>
@@ -1507,7 +1507,7 @@ export default function AtomCampaign() {
                         onClick={() => toggleSort(field)}
                         className={`flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border transition-all ${
                           sortField === field
-                            ? "bg-violet-500/15 text-violet-300 border-violet-500/30"
+                            ? "bg-teal-500/15 text-teal-300 border-teal-500/30"
                             : "bg-white/[0.03] text-white/50 border-white/[0.10] hover:border-white/15 hover:text-white/50"
                         }`}
                       >
@@ -1531,7 +1531,7 @@ export default function AtomCampaign() {
                       disabled={isBuilding}
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs text-white/40 hover:text-violet-400 hover:bg-violet-500/5 gap-1"
+                      className="h-7 text-xs text-white/40 hover:text-teal-400 hover:bg-teal-500/5 gap-1"
                     >
                       <RefreshCw className="w-3 h-3" />Rescan
                     </Button>
@@ -1561,7 +1561,7 @@ export default function AtomCampaign() {
                           t.phone ? "cursor-pointer" : "cursor-default"
                         } ${
                           t.selected && t.phone
-                            ? "bg-violet-500/[0.10] hover:bg-violet-500/[0.10]"
+                            ? "bg-teal-500/[0.10] hover:bg-teal-500/[0.10]"
                             : t.phone
                             ? "hover:bg-white/[0.025]"
                             : "opacity-70 hover:bg-white/[0.015]"
@@ -1574,7 +1574,7 @@ export default function AtomCampaign() {
                           
                           onChange={() => toggleTarget(t.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-3.5 h-3.5 rounded border-white/20 bg-transparent accent-violet-400 cursor-pointer"
+                          className="w-3.5 h-3.5 rounded border-white/20 bg-transparent accent-teal-400 cursor-pointer"
                         />
 
                         {/* ATOM Score */}
@@ -1616,7 +1616,7 @@ export default function AtomCampaign() {
                           <div className="flex items-center gap-1 mt-0.5">
                             <span className="text-[10px] text-white/55 truncate">{t.title}</span>
                             {t.seniority && (
-                              <Badge className="bg-violet-500/[0.10] text-violet-400/80 border-violet-500/[0.12] text-[9px] font-mono px-1 py-0 h-4 shrink-0">
+                              <Badge className="bg-teal-500/[0.10] text-teal-400/80 border-teal-500/[0.12] text-[9px] font-mono px-1 py-0 h-4 shrink-0">
                                 {t.seniority}
                               </Badge>
                             )}
@@ -1635,16 +1635,16 @@ export default function AtomCampaign() {
                         <div className="min-w-0">
                           {t.phone ? (
                             <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-violet-400 shrink-0" />
-                              <span className="text-[11px] text-violet-300 font-mono truncate">{t.phone}</span>
+                              <Phone className="w-3 h-3 text-teal-400 shrink-0" />
+                              <span className="text-[11px] text-teal-300 font-mono truncate">{t.phone}</span>
                             </div>
                           ) : (
                             <span className="text-[10px] text-white/35 font-mono">No phone</span>
                           )}
                           {t.mobilePhone && t.mobilePhone !== t.phone && (
                             <div className="flex items-center gap-1 mt-0.5">
-                              <Phone className="w-2.5 h-2.5 text-violet-400/70 shrink-0" />
-                              <span className="text-[10px] text-violet-300/70 font-mono truncate">{t.mobilePhone}</span>
+                              <Phone className="w-2.5 h-2.5 text-teal-400/70 shrink-0" />
+                              <span className="text-[10px] text-teal-300/70 font-mono truncate">{t.mobilePhone}</span>
                             </div>
                           )}
                         </div>
@@ -1655,10 +1655,10 @@ export default function AtomCampaign() {
                             <a
                               href={`mailto:${t.email}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1 hover:text-violet-300 transition-colors group"
+                              className="flex items-center gap-1 hover:text-teal-300 transition-colors group"
                             >
-                              <Mail className="w-3 h-3 text-white/40 shrink-0 group-hover:text-violet-400" />
-                              <span className="text-[11px] text-white/60 truncate group-hover:text-violet-300">{t.email}</span>
+                              <Mail className="w-3 h-3 text-white/40 shrink-0 group-hover:text-teal-400" />
+                              <span className="text-[11px] text-white/60 truncate group-hover:text-teal-300">{t.email}</span>
                             </a>
                           ) : (
                             <span className="text-[10px] text-white/35">—</span>
@@ -1698,7 +1698,7 @@ export default function AtomCampaign() {
                               variant="outline"
                               onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
                               disabled={emailingTarget === t.id}
-                              className="h-6 text-[10px] px-2 gap-1 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                              className="h-6 text-[10px] px-2 gap-1 border-teal-500/20 text-teal-400 hover:bg-teal-500/10 bg-transparent"
                             >
                               {emailingTarget === t.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
                               Email
@@ -1733,7 +1733,7 @@ export default function AtomCampaign() {
                       variant="outline"
                       size="sm"
                       onClick={exportTargetsCSV}
-                      className="h-8 text-xs gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                      className="h-8 text-xs gap-1.5 border-teal-500/20 text-teal-400 hover:bg-teal-500/10 bg-transparent"
                       data-testid="button-export-campaign-csv"
                     >
                       <Download className="w-3 h-3" />Export CSV
@@ -1754,15 +1754,15 @@ export default function AtomCampaign() {
                           setTimeout(() => sendEmailOutreach(t), i * 2000);
                         });
                       }}
-                      className="h-8 text-xs gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                      className="h-8 text-xs gap-1.5 border-teal-500/20 text-teal-400 hover:bg-teal-500/10 bg-transparent"
                     >
                       <Mail className="w-3 h-3" />Email Selected ({selectedTargets.filter((t) => t.email).length})
                     </Button>
                     <Button
                       onClick={launchCampaign}
                       disabled={selectedTargets.length === 0 || isLaunching}
-                      className="h-8 px-5 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all disabled:opacity-40"
-                      style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+                      className="h-8 px-5 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white gap-2 transition-all disabled:opacity-40"
+                      style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}
                     >
                       <Zap className="w-4 h-4" />
                       Launch Campaign ({callableSelected.length} calls)
@@ -1782,7 +1782,7 @@ export default function AtomCampaign() {
                   Try broadening your brief or use the Advanced Targeting section to adjust filters.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setStep("brief")}
-                  className="mt-2 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 bg-transparent">
+                  className="mt-2 border-teal-500/30 text-teal-400 hover:bg-teal-500/10 bg-transparent">
                   Edit Brief
                 </Button>
               </CardContent>
@@ -1795,8 +1795,8 @@ export default function AtomCampaign() {
       {step === "launch" && (
         <div className="space-y-4">
           {/* Campaign Brief recap */}
-          <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 px-4 py-2.5 flex items-center gap-3">
-            <Megaphone className="w-4 h-4 text-violet-400 shrink-0" />
+          <div className="rounded-xl border border-teal-500/15 bg-teal-500/5 px-4 py-2.5 flex items-center gap-3">
+            <Megaphone className="w-4 h-4 text-teal-400 shrink-0" />
             <p className="text-xs text-white/50 leading-relaxed line-clamp-1 flex-1">{brief}</p>
             <Badge className={`text-[10px] font-mono shrink-0 ${isLaunching ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"}`}>
               {isLaunching ? "LIVE" : "COMPLETE"}
@@ -1808,7 +1808,7 @@ export default function AtomCampaign() {
             {[
               { label: "Total Calls", value: stats.total, icon: Phone, color: "text-white/85" },
               { label: "Completed", value: stats.completed, icon: CheckCircle2, color: "text-emerald-400" },
-              { label: "Connected", value: stats.connected, icon: PhoneCall, color: "text-violet-400" },
+              { label: "Connected", value: stats.connected, icon: PhoneCall, color: "text-teal-400" },
               { label: "Failed", value: stats.failed, icon: AlertCircle, color: "text-rose-400" },
               { label: "Meetings", value: stats.meetings, icon: TrendingUp, color: "text-amber-400" },
               { label: "Avg Sentiment", value: stats.avgSentiment ? `${stats.avgSentiment}%` : "—", icon: Activity, color: "text-purple-400" },
@@ -1822,7 +1822,7 @@ export default function AtomCampaign() {
                       <span className="text-[10px] font-mono text-white/50">{stat.label}</span>
                     </div>
                     <p className={`text-xl font-bold tabular-nums ${stat.color}`}
-                      style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                      style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                       {stat.value}
                     </p>
                   </CardContent>
@@ -1836,8 +1836,8 @@ export default function AtomCampaign() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-violet-400" />
-                  <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                  <BarChart3 className="w-4 h-4 text-teal-400" />
+                  <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                     Campaign Progress
                   </span>
                   <span className="text-xs text-white/50 font-mono">{completedCount}/{calls.size}</span>
@@ -1849,21 +1849,21 @@ export default function AtomCampaign() {
                       onClick={() => setIsPaused((p) => !p)}
                       className={`h-7 text-xs gap-1.5 border transition-all ${
                         isPaused
-                          ? "border-violet-500/40 text-violet-400 hover:bg-violet-500/10"
+                          ? "border-teal-500/40 text-teal-400 hover:bg-teal-500/10"
                           : "border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
                       } bg-transparent`}
                     >
                       {isPaused ? <><Play className="w-3 h-3" />Resume</> : <><Pause className="w-3 h-3" />Pause</>}
                     </Button>
                   )}
-                  <Badge className={`text-[10px] font-mono ${progress === 100 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : isPaused ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-violet-500/15 text-violet-400 border-violet-500/25"}`}>
+                  <Badge className={`text-[10px] font-mono ${progress === 100 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : isPaused ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-teal-500/15 text-teal-400 border-teal-500/25"}`}>
                     {progress === 100 ? "Done" : isPaused ? "Paused" : "Running"}
                   </Badge>
                 </div>
               </div>
               <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                  className="h-full rounded-full bg-teal-500 transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -1875,8 +1875,8 @@ export default function AtomCampaign() {
           <Card className="bg-[#111113] border-white/[0.12]">
             <CardContent className="p-0">
               <div className="px-4 py-3 border-b border-white/[0.10] flex items-center gap-2">
-                <Signal className="w-4 h-4 text-violet-400" />
-                <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+                <Signal className="w-4 h-4 text-teal-400" />
+                <span className="text-sm font-semibold text-[#e8e8ea]" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
                   Live Call Feed
                 </span>
               </div>

@@ -176,7 +176,7 @@ function StatCard({
               {suffix && <span className="text-base font-semibold ml-0.5">{suffix}</span>}
             </p>
           </div>
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-500/15 text-violet-400 shrink-0 ml-3">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-teal-500/15 text-teal-400 shrink-0 ml-3">
             <Icon className="w-4 h-4" />
           </div>
         </div>
@@ -255,8 +255,8 @@ export default function CallPerformance() {
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-500/15">
-            <Activity className="w-5 h-5 text-violet-400" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-teal-500/15">
+            <Activity className="w-5 h-5 text-teal-400" />
           </div>
           <div>
             <h1 className="text-xl font-bold">ATOM Call Performance</h1>
@@ -264,7 +264,7 @@ export default function CallPerformance() {
           </div>
           {bridge && (
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="bg-violet-500/15 text-violet-400 border-violet-500/30 font-mono text-xs">
+              <Badge variant="secondary" className="bg-teal-500/15 text-teal-400 border-teal-500/30 font-mono text-xs">
                 v{bridge.version}
               </Badge>
               <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-xs">
@@ -291,7 +291,7 @@ export default function CallPerformance() {
           size="sm"
           onClick={() => refetch()}
           disabled={isFetching}
-          className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10"
+          className="border-teal-500/30 text-teal-400 hover:bg-teal-500/10"
         >
           {isFetching ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -377,7 +377,7 @@ export default function CallPerformance() {
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Timer className="w-4 h-4 text-violet-400" />
+                <Timer className="w-4 h-4 text-teal-400" />
                 EVI Response Latency
               </CardTitle>
             </CardHeader>
@@ -406,7 +406,7 @@ export default function CallPerformance() {
                     label="P50"
                     value={agg.eviTurnLatency.p50}
                     max={eviMax}
-                    colorClass="text-violet-400"
+                    colorClass="text-teal-400"
                   />
                   <LatencyBar
                     label="P95"
@@ -523,10 +523,10 @@ export default function CallPerformance() {
                 {/* Connect Time */}
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Connect Time</p>
-                  <p className="text-2xl font-bold text-violet-400">{fmtMs(agg.humePrewarmConnect.avg)}</p>
+                  <p className="text-2xl font-bold text-teal-400">{fmtMs(agg.humePrewarmConnect.avg)}</p>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-violet-400 transition-all duration-500"
+                      className="h-full rounded-full bg-teal-400 transition-all duration-500"
                       style={{
                         width: agg.humePrewarmConnect.avg
                           ? `${Math.min(100, (agg.humePrewarmConnect.avg / 2000) * 100)}%`
@@ -567,10 +567,10 @@ export default function CallPerformance() {
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-violet-400" />
+            <TrendingUp className="w-4 h-4 text-teal-400" />
             Call History
             {calls.length > 0 && (
-              <Badge variant="secondary" className="bg-violet-500/15 text-violet-400 border-violet-500/30 ml-1">
+              <Badge variant="secondary" className="bg-teal-500/15 text-teal-400 border-teal-500/30 ml-1">
                 {calls.length}
               </Badge>
             )}

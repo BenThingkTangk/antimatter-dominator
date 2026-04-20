@@ -147,7 +147,7 @@ function WaveformAnimation() {
       {heights.map((h, i) => (
         <div
           key={i}
-          className="w-[3px] rounded-full bg-violet-400/70"
+          className="w-[3px] rounded-full bg-teal-400/70"
           style={{
             height: `${h}%`,
             animation: `sonarWave 1.2s ease-in-out infinite`,
@@ -217,7 +217,7 @@ function CompetitorBar({ name, winRate }: { name: string; winRate: number }) {
       <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-1000"
-          style={{ width: `${winRate}%`, background: "#696aac" }}
+          style={{ width: `${winRate}%`, background: "#00c8c8" }}
         />
       </div>
       <div className="text-[11px] text-white/40 w-8 text-right shrink-0">{winRate}%</div>
@@ -246,8 +246,8 @@ function ArchitectureFlow() {
       icon: Brain,
       title: "AI SYNTHESIZES",
       body: "Pain points, purchase triggers, buying signals, org structure, objection map",
-      color: "text-violet-400",
-      border: "border-violet-500/20",
+      color: "text-teal-400",
+      border: "border-teal-500/20",
     },
     {
       icon: Mic,
@@ -424,9 +424,9 @@ export default function AtomSonar() {
   return (
     <div
       style={{
-        background: "#020202",
+        background: "#0b0b0c",
         minHeight: "100vh",
-        fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
+        fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif",
         color: "#f6f6fd",
       }}
     >
@@ -797,7 +797,7 @@ export default function AtomSonar() {
                     className="flex items-center justify-center w-7 h-7 rounded-full"
                     style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}
                   >
-                    <Radio size={12} className="text-violet-400" />
+                    <Radio size={12} className="text-teal-400" />
                   </div>
                   <WaveformAnimation />
                   <span className="text-[10px] text-white/25 font-mono uppercase tracking-wider">ATOM Voice Active</span>
@@ -824,7 +824,7 @@ export default function AtomSonar() {
                     <ul className="space-y-1.5">
                       {["What does your current infrastructure look like?", "What's your biggest operational challenge?", "Who else is evaluating this decision?"].map((q, i) => (
                         <li key={i} className="flex items-start gap-2 text-[12px] text-white/35">
-                          <ChevronRight size={12} className="text-violet-400/40 mt-0.5 shrink-0" />
+                          <ChevronRight size={12} className="text-teal-400/40 mt-0.5 shrink-0" />
                           {q}
                         </li>
                       ))}
@@ -859,7 +859,7 @@ export default function AtomSonar() {
                         <ul className="mt-2 space-y-1.5">
                           {voiceBrief.discoveryQs.map((q, i) => (
                             <li key={i} className="flex items-start gap-2 text-[12px] text-white/55">
-                              <ChevronRight size={12} className="text-violet-400/60 mt-0.5 shrink-0" />
+                              <ChevronRight size={12} className="text-teal-400/60 mt-0.5 shrink-0" />
                               {q}
                             </li>
                           ))}
@@ -874,7 +874,7 @@ export default function AtomSonar() {
                         <ul className="mt-2 space-y-1.5">
                           {voiceBrief.objections.map((obj, i) => (
                             <li key={i} className="flex items-start gap-2 text-[12px] text-white/45">
-                              <Shield size={11} className="text-violet-400/50 mt-0.5 shrink-0" />
+                              <Shield size={11} className="text-teal-400/50 mt-0.5 shrink-0" />
                               {obj}
                             </li>
                           ))}
@@ -965,7 +965,7 @@ export default function AtomSonar() {
                         <div
                           className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
                           style={{
-                            background: sig.intentScore && sig.intentScore >= 7 ? "#22d3ee" : "#696aac",
+                            background: sig.intentScore && sig.intentScore >= 7 ? "#22d3ee" : "#00c8c8",
                           }}
                         />
                         <div className="space-y-0.5">
