@@ -2,57 +2,29 @@ import { Link, useLocation } from "wouter";
 import { 
   Shield, MessageSquareWarning, TrendingUp, 
   Radar, ChevronLeft, ChevronRight, Moon, Sun, PhoneCall, Megaphone, Brain,
-  Menu, X, Radio, Eye, BarChart3, Settings, Search, Headphones, Zap, Activity
+  Menu, X
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface NavGroup {
-  label: string;
+interface NavItem {
+  href: string;
   icon: any;
-  items: { href: string; icon: any; label: string; }[];
+  label: string;
 }
 
-const navGroups: NavGroup[] = [
-  {
-    label: "Prospect & Intel",
-    icon: Search,
-    items: [
-      { href: "/prospects", icon: Radar, label: "Find Accounts" },
-      { href: "/company-intelligence", icon: Brain, label: "Company Intel" },
-      { href: "/market", icon: Shield, label: "Market Intel" },
-      { href: "/atom-sonar", icon: Radio, label: "Deep Research" },
-    ],
-  },
-  {
-    label: "Live Call Copilot",
-    icon: Headphones,
-    items: [
-      { href: "/pitch", icon: TrendingUp, label: "Build Pitch" },
-      { href: "/objections", icon: MessageSquareWarning, label: "Handle Objections" },
-      { href: "/atom-aletheia", icon: Eye, label: "Truth & Intent" },
-    ],
-  },
-  {
-    label: "Voice Campaigns",
-    icon: Zap,
-    items: [
-      { href: "/atom-leadgen", icon: PhoneCall, label: "Dial with ATOM" },
-      { href: "/atom-campaign", icon: Megaphone, label: "Launch Campaign" },
-    ],
-  },
-  {
-    label: "Insights & Admin",
-    icon: Activity,
-    items: [
-      { href: "/call-performance", icon: BarChart3, label: "Performance" },
-      { href: "/admin", icon: Settings, label: "Command Center" },
-    ],
-  },
+const navItems: NavItem[] = [
+  { href: "/pitch", icon: TrendingUp, label: "ATOM Pitch" },
+  { href: "/objections", icon: MessageSquareWarning, label: "ATOM Objection Handler" },
+  { href: "/market", icon: Shield, label: "ATOM Market Intent" },
+  { href: "/prospects", icon: Radar, label: "ATOM Prospect" },
+  { href: "/atom-leadgen", icon: PhoneCall, label: "ATOM Lead Gen" },
+  { href: "/atom-campaign", icon: Megaphone, label: "ATOM Campaign" },
+  { href: "/company-intelligence", icon: Brain, label: "ATOM WarBook" },
 ];
 
-// ATOM Logo SVG — atomic orbital mark (Antimatter AI purple brand)
+// ATOM Logo SVG — atomic orbital mark
 function AtomLogo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 36 36" fill="none" aria-label="ATOM logo">
@@ -78,12 +50,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
 
-  // Close mobile sidebar on location change
   useEffect(() => {
     setMobileOpen(false);
   }, [location]);
 
-  // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -101,12 +71,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         {!isMobile && collapsed ? (
-          /* Collapsed: show ATOM mark only */
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(0,200,200,0.08)", border: "1px solid rgba(0,200,200,0.18)" }}>
             <AtomLogo size={22} />
           </div>
         ) : (
-          /* Expanded: ATOM logo + wordmark */
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="shrink-0">
               <AtomLogo size={32} />
@@ -136,60 +104,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
-      {/* Nav — 4 workflow groups */}
-      <nav className="flex-1 py-3 px-2 overflow-y-auto" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
-        {navGroups.map((group) => {
-          const GroupIcon = group.icon;
-          const groupActive = group.items.some(i => location === i.href);
-          return (
-            <div key={group.label} className="mb-3">
-              {/* Group header */}
-              {(!collapsed || isMobile) && (
-                <div className="flex items-center gap-2 px-3 py-1.5 mb-0.5">
-                  <GroupIcon className="w-3.5 h-3.5" style={{ color: groupActive ? "#00c8c8" : "rgba(255,255,255,0.2)" }} />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: groupActive ? "#00c8c8" : "rgba(255,255,255,0.25)" }}>
-                    {group.label}
-                  </span>
-                </div>
-              )}
-              {/* Group items */}
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const isActive = location === item.href;
-                  const Icon = item.icon;
-                  const linkContent = (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`relative flex items-center gap-2.5 px-3 py-2 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : "pl-[22px]"} ${
-                        isActive ? "border-l-2 border-l-[#00c8c8]" : ""
-                      }`}
-                      style={isActive ? {
-                        background: "rgba(0,200,200,0.08)",
-                        color: "#00c8c8",
-                        boxShadow: "inset 0 0 12px rgba(0,200,200,0.06)"
-                      } : {
-                        color: "rgba(255,255,255,0.45)"
-                      }}
-                      data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
-                    >
-                      <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: isActive ? "#00c8c8" : "rgba(255,255,255,0.3)" }} />
-                      {(!collapsed || isMobile) && <span className="truncate min-w-0">{item.label}</span>}
-                    </Link>
-                  );
-                  if (collapsed && !isMobile) {
-                    return (
-                      <Tooltip key={item.href}>
-                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                        <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
-                      </Tooltip>
-                    );
-                  }
-                  return linkContent;
-                })}
-              </div>
-            </div>
+      {/* Flat nav — 7 modules */}
+      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-0.5" style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
+        {navItems.map((item) => {
+          const isActive = location === item.href;
+          const Icon = item.icon;
+          const linkContent = (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : ""}`}
+              style={isActive ? {
+                background: "rgba(0,200,200,0.08)",
+                color: "#00c8c8",
+                boxShadow: "inset 0 0 12px rgba(0,200,200,0.06)"
+              } : {
+                color: "rgba(255,255,255,0.45)"
+              }}
+              data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
+            >
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: "#00c8c8" }} />}
+              <Icon className="w-4 h-4 shrink-0" style={{ color: isActive ? "#00c8c8" : "rgba(255,255,255,0.3)" }} />
+              {(!collapsed || isMobile) && <span className="truncate min-w-0 font-medium">{item.label}</span>}
+            </Link>
           );
+          if (collapsed && !isMobile) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          }
+          return <div key={item.href}>{linkContent}</div>;
         })}
       </nav>
 
@@ -239,7 +186,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <div className="flex h-screen overflow-hidden bg-background">
-        {/* Desktop Sidebar — hidden on mobile */}
+        {/* Desktop Sidebar */}
         <aside
           className={`relative hidden md:flex flex-col border-r text-sidebar-foreground transition-all duration-300 overflow-hidden ${
             collapsed ? "w-16" : "w-64"
@@ -252,13 +199,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile Sidebar Overlay */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setMobileOpen(false)}
               aria-hidden="true"
             />
-            {/* Drawer */}
             <aside
               className="absolute left-0 top-0 bottom-0 w-72 flex flex-col border-r text-sidebar-foreground overflow-hidden z-10"
               style={{ background: "#0b0b0c", borderColor: "rgba(255,255,255,0.08)" }}
@@ -270,7 +215,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile top bar — visible only on mobile */}
+          {/* Mobile top bar */}
           <header
             className="flex md:hidden items-center gap-3 h-14 px-4 border-b shrink-0"
             style={{ background: "#0b0b0c", borderColor: "rgba(255,255,255,0.08)" }}
@@ -295,7 +240,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </span>
               </div>
             </div>
-            {/* Spacer to balance hamburger */}
             <div className="w-10" />
           </header>
 
