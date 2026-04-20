@@ -3028,6 +3028,52 @@ function TabHistory() {
 
 export default function AtomAletheia() {
   const [activeTab, setActiveTab] = useState<TabId>("live");
+  const [activeChannel, setActiveChannel] = useState<string>("VIDEO");
+  const [isRecording, setIsRecording] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+
+  // Start camera for video channel
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: true,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraActive(true);
+      toast({ title: "Aletheia Camera Active", description: "Video + audio capture started for truth analysis." });
+    } catch {
+      toast({ title: "Camera access denied", description: "Allow camera and microphone access for live video analysis.", variant: "destructive" });
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  // Channel switch handler
+  const switchChannel = (ch: string) => {
+    setActiveChannel(ch);
+    if (ch === "VIDEO" && !cameraActive) {
+      startCamera();
+    } else if (ch !== "VIDEO" && cameraActive) {
+      stopCamera();
+    }
+    if (ch === "TEXT/SMS" || ch === "EMAIL") {
+      setActiveTab("text");
+    } else {
+      setActiveTab("live");
+    }
+    toast({ title: `Channel: ${ch}`, description: `Aletheia now analyzing ${ch.toLowerCase()} signals.` });
+  };
   const [sessionSec, setSessionSec] = useState(872);
 
   useEffect(() => {
@@ -3189,26 +3235,28 @@ export default function AtomAletheia() {
             marginLeft: 4,
           }}
         >
-          Multimodal Deception Intelligence · Powered by Hume AI
+          Truth & Intent Engine · Powered by Aletheia
         </div>
 
         <div style={{ flex: 1 }} />
 
         {/* Channel pills */}
         <div style={{ display: "flex", gap: 4 }}>
-          {["VIDEO", "VOICE", "TEXT/SMS", "EMAIL"].map((ch, i) => (
+          {["VIDEO", "VOICE", "TEXT/SMS", "EMAIL"].map((ch) => (
             <button
               key={ch}
+              onClick={() => switchChannel(ch)}
               style={{
                 fontFamily: "monospace",
                 fontSize: 9,
                 padding: "4px 8px",
                 borderRadius: 999,
-                border: `1px solid ${i === 0 ? ACCENT : "rgba(255,255,255,0.1)"}`,
-                background: i === 0 ? `${ACCENT}15` : "transparent",
-                color: i === 0 ? ACCENT : TEXT_MUTED,
+                border: `1px solid ${activeChannel === ch ? ACCENT : "rgba(255,255,255,0.1)"}`,
+                background: activeChannel === ch ? `${ACCENT}15` : "transparent",
+                color: activeChannel === ch ? ACCENT : TEXT_MUTED,
                 cursor: "pointer",
                 letterSpacing: "0.06em",
+                transition: "all 180ms",
               }}
             >
               {ch}
@@ -3218,6 +3266,10 @@ export default function AtomAletheia() {
 
         {/* Rec button */}
         <button
+          onClick={() => {
+            setIsRecording(!isRecording);
+            toast({ title: isRecording ? "Recording Stopped" : "Recording Started", description: isRecording ? "Session recording saved." : "Aletheia is recording this session for analysis." });
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -3226,10 +3278,11 @@ export default function AtomAletheia() {
             fontSize: 10,
             padding: "5px 12px",
             borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "transparent",
-            color: TEXT_MUTED,
+            border: `1px solid ${isRecording ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.1)"}`,
+            background: isRecording ? "rgba(248,113,113,0.12)" : "transparent",
+            color: isRecording ? DANGER : TEXT_MUTED,
             cursor: "pointer",
+            transition: "all 180ms",
           }}
         >
           <div
@@ -3238,9 +3291,10 @@ export default function AtomAletheia() {
               height: 6,
               borderRadius: "50%",
               background: DANGER,
+              animation: isRecording ? "pulse 1.5s ease-in-out infinite" : "none",
             }}
           />
-          REC
+          {isRecording ? "● REC" : "REC"}
         </button>
 
         {/* Live session button */}
@@ -3509,6 +3563,35 @@ export default function AtomAletheia() {
           background: "#020202",
         }}
       >
+        {/* Video preview when camera active */}
+        {cameraActive && activeChannel === "VIDEO" && (
+          <div style={{ padding: "16px 24px 0", display: "flex", gap: 16 }}>
+            <div style={{
+              flex: "0 0 320px", borderRadius: 12, overflow: "hidden",
+              border: `1px solid ${ACCENT}40`, position: "relative",
+            }}>
+              <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", borderRadius: 12 }} />
+              <div style={{
+                position: "absolute", top: 8, left: 8, display: "flex", gap: 6, alignItems: "center",
+                background: "rgba(2,2,2,0.7)", padding: "3px 8px", borderRadius: 999,
+                fontFamily: "monospace", fontSize: 9, color: SONAR, letterSpacing: "0.06em",
+              }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: SONAR, animation: "aletheiaPulse 1.5s ease-in-out infinite" }} />
+                LIVE · ALETHEIA ANALYZING
+              </div>
+            </div>
+            <div style={{ flex: 1, fontSize: 11, color: TEXT_MUTED, fontFamily: "monospace" }}>
+              <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 8 }}>ALETHEIA VIDEO ANALYSIS</div>
+              <div>Camera + microphone captured. Expression analysis active.</div>
+              <div style={{ marginTop: 8, color: "rgba(255,255,255,0.35)" }}>Analyzing: facial micro-expressions, vocal prosody, gaze patterns, emotional valence</div>
+              <button onClick={stopCamera} style={{
+                marginTop: 12, padding: "4px 12px", borderRadius: 999, fontSize: 10,
+                border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.1)",
+                color: DANGER, cursor: "pointer", fontFamily: "monospace",
+              }}>Stop Camera</button>
+            </div>
+          </div>
+        )}
         {activeTab === "live" && <TabLive />}
         {activeTab === "text" && <TabText />}
         {activeTab === "pipeline" && <TabPipeline />}
