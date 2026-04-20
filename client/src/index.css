@@ -160,35 +160,35 @@
 :root:not(.dark) [style*="background: #0a0a0e"],
 :root:not(.dark) [style*="background: #0b0b0c"] { background: #ededf2 !important; }
 
-/* Card surfaces */
-:root:not(.dark) [class*="bg-\\[#111113\\]"],
-:root:not(.dark) [class*="bg-\\[#111114\\]"] { background: #ffffff !important; }
-:root:not(.dark) [class*="bg-\\[#161618\\]"],
-:root:not(.dark) [class*="bg-\\[#18181d\\]"] { background: #f0f0f5 !important; }
+/* Card surfaces — scoped to main */
+:root:not(.dark) main [class*="bg-\\[#111113\\]"],
+:root:not(.dark) main [class*="bg-\\[#111114\\]"] { background: #ffffff !important; }
+:root:not(.dark) main [class*="bg-\\[#161618\\]"],
+:root:not(.dark) main [class*="bg-\\[#18181d\\]"] { background: #f0f0f5 !important; }
 
-/* Text overrides */
-:root:not(.dark) [class*="text-\\[#e8e8ea\\]"],
-:root:not(.dark) [class*="text-\\[#f6f6fd\\]"] { color: #1a1a2e !important; }
-:root:not(.dark) [class*="text-white\\/"] { color: rgba(26,26,46,0.7) !important; }
+/* Text overrides — scoped to main content only (sidebar stays dark) */
+:root:not(.dark) main [class*="text-\\[#e8e8ea\\]"],
+:root:not(.dark) main [class*="text-\\[#f6f6fd\\]"] { color: #1a1a2e !important; }
+:root:not(.dark) main [class*="text-white\\/"] { color: rgba(26,26,46,0.7) !important; }
 
-/* Border overrides */
-:root:not(.dark) [class*="border-white\\/"] { border-color: rgba(0,0,0,0.10) !important; }
-:root:not(.dark) [style*="border-color: rgba(255,255,255"] { border-color: rgba(0,0,0,0.10) !important; }
+/* Border overrides — scoped to main */
+:root:not(.dark) main [class*="border-white\\/"] { border-color: rgba(0,0,0,0.10) !important; }
+:root:not(.dark) main [style*="border-color: rgba(255,255,255"] { border-color: rgba(0,0,0,0.10) !important; }
 
-/* Form elements */
-:root:not(.dark) select, :root:not(.dark) input, :root:not(.dark) textarea {
+/* Form elements — scoped to main */
+:root:not(.dark) main select, :root:not(.dark) main input, :root:not(.dark) main textarea {
   background: #ffffff !important; color: #1a1a2e !important;
   border-color: rgba(0,0,0,0.12) !important;
 }
-:root:not(.dark) select option { background: #ffffff !important; color: #1a1a2e !important; }
+:root:not(.dark) main select option { background: #ffffff !important; color: #1a1a2e !important; }
 
-/* Translucent bg → light */
-:root:not(.dark) [class*="bg-white\\/"] { background-color: rgba(0,0,0,0.04) !important; }
-:root:not(.dark) [style*="background: rgba(255,255,255,0.0"] { background: rgba(0,0,0,0.03) !important; }
+/* Translucent bg → light — scoped to main */
+:root:not(.dark) main [class*="bg-white\\/"] { background-color: rgba(0,0,0,0.04) !important; }
+:root:not(.dark) main [style*="background: rgba(255,255,255,0.0"] { background: rgba(0,0,0,0.03) !important; }
 
-/* Gradient panels */
-:root:not(.dark) [class*="bg-gradient"] { background: #ffffff !important; }
-:root:not(.dark) [style*="linear-gradient"] { background: #f7f7fb !important; }
+/* Gradient panels — scoped to main */
+:root:not(.dark) main [class*="bg-gradient"] { background: #ffffff !important; }
+:root:not(.dark) main [style*="linear-gradient"] { background: #f7f7fb !important; }
 
 /* Inline white text → dark on light backgrounds (main content only) */
 :root:not(.dark) main [style*="color: rgba(255,255,255"] { color: rgba(26,26,46,0.7) !important; }

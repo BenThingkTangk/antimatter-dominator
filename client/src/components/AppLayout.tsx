@@ -102,12 +102,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 color: "#a2a3e9",
                 boxShadow: "inset 0 0 12px rgba(105,106,172,0.08)"
               } : {
-                color: "rgba(255,255,255,0.45)"
+                color: "rgba(255,255,255,0.6)"
               }}
               data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
             >
               {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: "#696aac" }} />}
-              <Icon className="w-4 h-4 shrink-0" style={{ color: isActive ? "#a2a3e9" : "rgba(255,255,255,0.3)" }} />
+              <Icon className="w-4 h-4 shrink-0" style={{ color: isActive ? "#a2a3e9" : "rgba(255,255,255,0.5)" }} />
               {(!collapsed || isMobile) && <span className="truncate min-w-0 font-medium">{item.label}</span>}
             </Link>
           );
@@ -127,7 +127,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="relative border-t p-2 space-y-1 shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
-            <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+            <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
               ATOM · Nirmata Holdings · © 2026
             </p>
           </div>
@@ -135,7 +135,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <Button
           variant="ghost" size="sm"
           className="w-full justify-start hover:bg-white/[0.03]"
-          style={{ color: "rgba(255,255,255,0.3)" }}
+          style={{ color: "rgba(255,255,255,0.55)" }}
           onClick={() => setIsDark(!isDark)}
           data-testid="button-theme-toggle"
         >
@@ -146,7 +146,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost" size="sm"
             className="w-full justify-start hover:bg-white/[0.03]"
-            style={{ color: "rgba(255,255,255,0.3)" }}
+            style={{ color: "rgba(255,255,255,0.55)" }}
             onClick={() => setCollapsed(!collapsed)}
             data-testid="button-collapse-sidebar"
           >
@@ -162,7 +162,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden bg-background">
         <aside
           className={`relative hidden md:flex flex-col border-r text-sidebar-foreground transition-all duration-300 overflow-hidden ${collapsed ? "w-16" : "w-64"}`}
-          style={{ background: "#020202", borderColor: "rgba(255,255,255,0.08)" }}
+          style={{ background: "#08080c", borderColor: "rgba(255,255,255,0.08)" }}
         >
           <SidebarContent isMobile={false} />
         </aside>
@@ -170,14 +170,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {mobileOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-            <aside className="absolute left-0 top-0 bottom-0 w-72 flex flex-col border-r text-sidebar-foreground overflow-hidden z-10" style={{ background: "#020202", borderColor: "rgba(255,255,255,0.08)" }}>
+            <aside className="absolute left-0 top-0 bottom-0 w-72 flex flex-col border-r text-sidebar-foreground overflow-hidden z-10" style={{ background: "#08080c", borderColor: "rgba(255,255,255,0.08)" }}>
               <SidebarContent isMobile={true} />
             </aside>
           </div>
         )}
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="flex md:hidden items-center gap-3 h-14 px-4 border-b shrink-0" style={{ background: "#020202", borderColor: "rgba(255,255,255,0.08)" }}>
+          <header className="flex md:hidden items-center gap-3 h-14 px-4 border-b shrink-0" style={{ background: "#08080c", borderColor: "rgba(255,255,255,0.08)" }}>
             <button onClick={() => setMobileOpen(true)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5" style={{ color: "rgba(255,255,255,0.6)" }} aria-label="Open menu" data-testid="button-mobile-menu">
               <Menu className="w-5 h-5" />
             </button>
