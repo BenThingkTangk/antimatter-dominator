@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Eye,
   Shield,
@@ -15,31 +15,26 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
-  Copy,
-  ExternalLink,
   Radio,
   Mic,
   Users,
   FileText,
   Search,
   History,
-  GitBranch,
   Layers,
+  Video,
+  Crosshair,
+  Cpu,
+  Wifi,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 type TabId = "live" | "text" | "pipeline" | "playbook" | "history";
+type ChannelId = "VIDEO" | "VOICE" | "TEXT-SMS" | "EMAIL";
 
-interface WaveBar {
-  height: number;
-  delay: number;
-  duration: number;
-  color: string;
-}
-
-interface TextAnalysisResult {
+interface AnalysisResult {
   truthScore: number;
   hedgePct: number;
   evasionPct: number;
@@ -51,254 +46,402 @@ interface TextAnalysisResult {
   evasionCount: number;
   wordCount: number;
   sentCount: number;
+  buyerIntent?: string;
+  ghostRisk?: string;
+  actionable?: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
 
-const ACCENT = "#696aac";
-const SONAR = "#22d3ee";
-const VOICE = "#a78bfa";
-const DANGER = "#f87171";
-const WARN = "#fbbf24";
-const SUCCESS = "#4ade80";
-const TEXT_PRIMARY = "#f6f6fd";
-const TEXT_MUTED = "rgba(255,255,255,0.55)";
+const C = {
+  bg: "#020202",
+  card: "rgba(246,246,253,0.03)",
+  cardBorder: "rgba(246,246,253,0.08)",
+  accent: "#696aac",
+  primary: "#3e3f7e",
+  secondary: "#a2a3e9",
+  green: "#1dd1a1",
+  red: "#f87171",
+  amber: "#fbbf24",
+  cyan: "#22d3ee",
+  textPrimary: "#f6f6fd",
+  textMuted: "rgba(246,246,253,0.55)",
+  textFaint: "rgba(246,246,253,0.35)",
+  font: "'Plus Jakarta Sans', system-ui, sans-serif",
+};
 
-const FONT_FAMILY = "'Plus Jakarta Sans', Arial, sans-serif";
-
-const HEDGES = [
-  "definitely", "absolutely", "certainly", "of course", "obviously",
-  "without a doubt", "for sure", "100%", "no question",
-];
-const EVASIONS = [
-  "circle back", "revisit", "few months", "settle down", "pause",
-  "reprioritization", "internal process", "right now", "at the moment", "when things",
-];
-const URGENCY_WORDS = ["urgent", "asap", "immediately", "today", "deadline", "by end of"];
+const HEDGES = ["definitely", "absolutely", "strong fit", "very interested", "bullish", "top of mind", "100%", "for sure", "no question", "certainly"];
+const EVASIONS = ["next quarter", "few months", "revisit", "settle down", "pause", "internal reprioritization", "circle back", "when things", "right now", "at the moment"];
+const URGENCY_WORDS = ["urgent", "asap", "today", "right now", "by end of", "immediately"];
 
 const SAMPLE_SMS =
-  "Hey just checking in — still very interested in moving forward. Our CEO is bullish on this. Just need to loop in legal which should be quick. Will circle back by end of week definitely!";
+  "Hey, just wanted to check in. We are still very interested but the decision has been pushed to next quarter. Our CEO is very bullish on this and thinks it's a great fit. We will definitely circle back soon.";
 const SAMPLE_EMAIL =
-  "Hi,\n\nThank you for the proposal. We've had a chance to review and the team thinks there's a strong fit. However, we've decided to pause the evaluation process for now due to some internal reprioritization. We would love to revisit this conversation in a few months when things settle down. Definitely keeping you top of mind!\n\nBest,\nJames";
+  "Hi,\n\nThank you for the proposal. The team believes there is a strong fit. However, due to some internal reprioritization we need to pause the evaluation for now. We would love to revisit in a few months when things settle down. Definitely keeping you top of mind.\n\nBest,\nJames";
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const INTEL_CUES = [
+  {
+    level: "RED",
+    title: "Budget narrative integrity: LOW",
+    desc: "Aletheia flags high hedge + stall language around budget. Treat current objection as cover for hidden blocker or alternate vendor.",
+  },
+  {
+    level: "AMBER",
+    title: "Authority claim requires escalation",
+    desc: 'Subject references "board" and "internal process" without specifics. Initiate authority flush sequence.',
+  },
+  {
+    level: "RED",
+    title: "Timeline fabrication detected",
+    desc: 'Subject shifted commitment window from "this quarter" to "Q3/Q4 maybe" — 2 timeline shifts in 90s.',
+  },
+  {
+    level: "AMBER",
+    title: "Competitive intel gap",
+    desc: 'Subject mentioned "other options" without naming vendors. Deploy competitive flush.',
+  },
+];
 
-function ScoreBar({ value, color }: { value: number; color: string }) {
+const DEMO_TRANSCRIPT = [
+  { time: "0:00", speaker: "ATOM", text: "Hey — this is ADAM from Antimatter AI. Quick question about your infrastructure...", flag: null },
+  { time: "0:12", speaker: "PROSPECT", text: "Oh hey, yeah we're actually looking at a few things right now.", flag: "vague" },
+  { time: "0:28", speaker: "ATOM", text: "What specifically are you evaluating?", flag: null },
+  { time: "0:35", speaker: "PROSPECT", text: "Well, it's kind of a committee decision... I'd need to run it by a few people.", flag: "authority evasion" },
+  { time: "0:52", speaker: "ATOM", text: "Who would be the key decision maker?", flag: null },
+  { time: "0:58", speaker: "PROSPECT", text: "That's... hard to say exactly. It's more of a group thing.", flag: "distancing, deflection" },
+];
+
+const DEALS = [
+  { name: "Acme Corp", value: "$420K", stage: "Negotiation", truthAdj: 34, risk: "HIGH", trend: "down" },
+  { name: "Globex Inc", value: "$180K", stage: "Demo", truthAdj: 78, risk: "LOW", trend: "up" },
+  { name: "Initech", value: "$95K", stage: "Discovery", truthAdj: 52, risk: "MEDIUM", trend: "flat" },
+  { name: "Umbrella Co", value: "$310K", stage: "Proposal", truthAdj: 41, risk: "HIGH", trend: "down" },
+  { name: "Stark Industries", value: "$890K", stage: "Closing", truthAdj: 68, risk: "MEDIUM", trend: "up" },
+];
+
+const PLAYBOOK_TACTICS = [
+  {
+    name: "Authority Flush",
+    trigger: "Subject avoids naming decision-makers",
+    script: "If I could get 30 minutes with [person], what would be the fastest path to that conversation?",
+    color: C.red,
+  },
+  {
+    name: "Timeline Lock",
+    trigger: "Subject gives vague timeline",
+    script: "Help me understand — if we could solve [pain point] by [date], what would need to be true internally?",
+    color: C.amber,
+  },
+  {
+    name: "Budget Reveal",
+    trigger: "Budget hedge detected",
+    script: "Most teams we work with have a range in mind. What range would make this a no-brainer vs. a hard sell?",
+    color: C.accent,
+  },
+  {
+    name: "Competitor Flush",
+    trigger: "Vague 'other options' signal",
+    script: "Who else are you evaluating? I want to make sure we're comparing the right things.",
+    color: C.cyan,
+  },
+];
+
+// ─── Scanline card component ────────────────────────────────────────────────
+
+function ScanlineCard({ children, style, className }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
   return (
     <div
+      className={className}
       style={{
-        height: 4,
-        borderRadius: 99,
-        background: "rgba(255,255,255,0.07)",
+        position: "relative",
+        background: C.card,
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 16,
         overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: `${value}%`,
-          height: "100%",
-          background: color,
-          borderRadius: 99,
-          transition: "width 0.8s cubic-bezier(0.16,1,0.3,1)",
-        }}
-      />
-    </div>
-  );
-}
-
-function Tag({
-  children,
-  color,
-  bg,
-  border,
-}: {
-  children: React.ReactNode;
-  color: string;
-  bg: string;
-  border: string;
-}) {
-  return (
-    <span
-      style={{
-        fontFamily: "monospace",
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase" as const,
-        padding: "2px 8px",
-        borderRadius: 999,
-        color,
-        background: bg,
-        border: `1px solid ${border}`,
-        whiteSpace: "nowrap" as const,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function LiveTag() {
-  return (
-    <Tag
-      color={SONAR}
-      bg="rgba(34,211,238,0.08)"
-      border="rgba(34,211,238,0.2)"
-    >
-      ● LIVE
-    </Tag>
-  );
-}
-
-function Card({
-  children,
-  style,
-  glow,
-}: {
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-  glow?: string;
-}) {
-  return (
-    <div
-      style={{
-        background: "#111114",
-        border: `1px solid rgba(255,255,255,0.08)`,
-        borderRadius: 12,
-        padding: "16px 20px",
-        boxShadow: glow ? `0 0 0 1px ${glow}22, 0 4px 24px rgba(0,0,0,0.4)` : "0 2px 12px rgba(0,0,0,0.3)",
         ...style,
       }}
     >
-      {children}
+      {/* Grid overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          backgroundImage: `
+            linear-gradient(rgba(246,246,253,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(246,246,253,0.025) 1px, transparent 1px)
+          `,
+          backgroundSize: "24px 24px",
+          zIndex: 0,
+        }}
+      />
+      {/* Scanline overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background: `repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 3px,
+            rgba(0,0,0,0.12) 3px,
+            rgba(0,0,0,0.12) 4px
+          )`,
+          zIndex: 1,
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 2 }}>{children}</div>
     </div>
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  valueColor,
-  delta,
-  deltaType,
-}: {
-  label: string;
-  value: string;
-  valueColor: string;
-  delta: string;
-  deltaType: "up" | "down" | "neutral";
-}) {
-  const deltaColor =
-    deltaType === "up" ? SUCCESS : deltaType === "down" ? DANGER : TEXT_MUTED;
-  return (
-    <Card>
-      <div
-        style={{
-          fontFamily: "monospace",
-          fontSize: 10,
-          color: TEXT_MUTED,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: "monospace",
-          fontSize: 36,
-          fontWeight: 700,
-          color: valueColor,
-          lineHeight: 1,
-          marginBottom: 8,
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          fontFamily: "monospace",
-          fontSize: 10,
-          color: deltaColor,
-        }}
-      >
-        {deltaType === "down" && <TrendingDown size={11} />}
-        {deltaType === "up" && <TrendingUp size={11} />}
-        {delta}
-      </div>
-    </Card>
-  );
-}
+// ─── Module label ─────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function ModuleLabel({ num, name }: { num: string; name: string }) {
   return (
     <div
       style={{
-        fontFamily: "monospace",
+        fontFamily: "'Courier New', monospace",
         fontSize: 10,
-        color: "rgba(255,255,255,0.3)",
-        letterSpacing: "0.14em",
+        letterSpacing: "0.2em",
         textTransform: "uppercase",
-        marginBottom: 8,
+        color: C.textFaint,
+        marginBottom: 10,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
       }}
     >
-      {children}
+      <span style={{ color: C.accent }}>Module {num}</span>
+      <span style={{ color: C.textFaint }}>·</span>
+      <span>{name}</span>
     </div>
   );
 }
 
-// ─── Waveform ─────────────────────────────────────────────────────────────────
+// ─── Truth Meter Arc (SVG) ──────────────────────────────────────────────────
 
-function Waveform() {
-  const [bars, setBars] = useState<WaveBar[]>(() =>
-    Array.from({ length: 16 }, () => ({
-      height: Math.random() * 48 + 4,
-      delay: Math.random() * 0.8,
-      duration: 0.5 + Math.random() * 0.6,
-      color:
-        Math.random() > 0.7
-          ? DANGER
-          : Math.random() > 0.5
-          ? WARN
-          : SONAR,
-    }))
+function TruthMeterArc({ score }: { score: number }) {
+  const clampedScore = Math.max(0, Math.min(100, score));
+  const color = clampedScore < 40 ? C.red : clampedScore < 70 ? C.amber : C.green;
+  const riskLabel = clampedScore < 40 ? "HIGH RISK" : clampedScore < 70 ? "MEDIUM" : "LOW RISK";
+
+  // Semi-circle arc: center (90,80), radius 64, from 180° to 0°
+  const cx = 90;
+  const cy = 80;
+  const r = 62;
+  const startAngle = Math.PI; // 180°
+  const endAngle = 0; // 0°
+  const totalArc = Math.PI; // 180°
+
+  function polarToCartesian(angle: number) {
+    return {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    };
+  }
+
+  const start = polarToCartesian(startAngle);
+  const end = polarToCartesian(endAngle);
+  const trackPath = `M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y}`;
+
+  // Score arc: from 180° going clockwise (decreasing angle) by score/100 of π
+  const scoreAngle = startAngle - (clampedScore / 100) * totalArc;
+  const scoreEnd = polarToCartesian(scoreAngle);
+  const largeArcFlag = clampedScore > 50 ? 1 : 0;
+  const scorePath = `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 1 ${scoreEnd.x} ${scoreEnd.y}`;
+
+  const circumference = Math.PI * r;
+  const strokeDash = (clampedScore / 100) * circumference;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <svg width={180} height={100} viewBox="0 0 180 100" style={{ overflow: "visible" }}>
+        {/* Track */}
+        <path
+          d={trackPath}
+          fill="none"
+          stroke="rgba(246,246,253,0.08)"
+          strokeWidth={10}
+          strokeLinecap="round"
+        />
+        {/* Score arc */}
+        <path
+          d={trackPath}
+          fill="none"
+          stroke={color}
+          strokeWidth={10}
+          strokeLinecap="round"
+          strokeDasharray={`${strokeDash} ${circumference}`}
+          style={{ filter: `drop-shadow(0 0 6px ${color}88)`, transition: "stroke-dasharray 0.6s ease, stroke 0.4s ease" }}
+        />
+        {/* Tick marks */}
+        {[0, 25, 50, 75, 100].map((tick) => {
+          const angle = startAngle - (tick / 100) * totalArc;
+          const inner = { x: cx + (r - 8) * Math.cos(angle), y: cy + (r - 8) * Math.sin(angle) };
+          const outer = { x: cx + (r + 4) * Math.cos(angle), y: cy + (r + 4) * Math.sin(angle) };
+          return (
+            <line
+              key={tick}
+              x1={inner.x} y1={inner.y}
+              x2={outer.x} y2={outer.y}
+              stroke="rgba(246,246,253,0.2)"
+              strokeWidth={1}
+            />
+          );
+        })}
+      </svg>
+      <div
+        style={{
+          fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+          fontSize: 36,
+          fontWeight: 700,
+          color: color,
+          lineHeight: 1,
+          marginTop: -16,
+          letterSpacing: "-0.02em",
+          textShadow: `0 0 20px ${color}88`,
+          transition: "color 0.4s ease",
+        }}
+        data-flicker="true"
+      >
+        {clampedScore}
+      </div>
+      <div style={{ fontSize: 11, color: C.textFaint, marginTop: 2, fontFamily: "'Courier New', monospace", letterSpacing: "0.1em" }}>
+        / 100 · TRUTH INDEX
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          padding: "3px 12px",
+          borderRadius: 999,
+          border: `1px solid ${color}66`,
+          background: `${color}16`,
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: color,
+          fontFamily: "'Courier New', monospace",
+        }}
+      >
+        {riskLabel}
+      </div>
+    </div>
+  );
+}
+
+// ─── Truth Timeline Chart (SVG polyline) ────────────────────────────────────
+
+function TruthTimeline({ history }: { history: number[] }) {
+  const W = 220;
+  const H = 48;
+  const pad = 4;
+  const pts = history.map((v, i) => {
+    const x = pad + (i / (history.length - 1)) * (W - pad * 2);
+    const y = H - pad - ((v / 100) * (H - pad * 2));
+    return `${x},${y}`;
+  });
+  const lastVal = history[history.length - 1] ?? 50;
+  const lineColor = lastVal < 40 ? C.red : lastVal < 70 ? C.amber : C.green;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ fontSize: 10, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.14em" }}>
+        ATI TREND · LAST 90s
+      </div>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+        {/* Reference lines */}
+        {[30, 70].map((y) => {
+          const yPos = H - pad - ((y / 100) * (H - pad * 2));
+          return (
+            <line
+              key={y}
+              x1={pad} y1={yPos}
+              x2={W - pad} y2={yPos}
+              stroke="rgba(246,246,253,0.08)"
+              strokeWidth={1}
+              strokeDasharray="3,3"
+            />
+          );
+        })}
+        {/* Area fill */}
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polyline
+          points={[...pts, `${W - pad},${H}`, `${pad},${H}`].join(" ")}
+          fill="url(#areaGrad)"
+          stroke="none"
+        />
+        {/* Line */}
+        <polyline
+          points={pts.join(" ")}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ filter: `drop-shadow(0 0 3px ${lineColor}88)` }}
+        />
+        {/* Last point dot */}
+        {pts.length > 0 && (() => {
+          const lastPt = pts[pts.length - 1].split(",");
+          return (
+            <circle
+              cx={parseFloat(lastPt[0])}
+              cy={parseFloat(lastPt[1])}
+              r={3}
+              fill={lineColor}
+              style={{ filter: `drop-shadow(0 0 4px ${lineColor})` }}
+            />
+          );
+        })()}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Waveform ──────────────────────────────────────────────────────────────
+
+function Waveform({ active }: { active: boolean }) {
+  const [bars, setBars] = useState<number[]>(() =>
+    Array.from({ length: 24 }, () => 8 + Math.random() * 32)
   );
 
   useEffect(() => {
+    if (!active) return;
     const iv = setInterval(() => {
-      setBars(
-        Array.from({ length: 16 }, () => {
-          const h = Math.random() * 48 + 4;
-          return {
-            height: h,
-            delay: Math.random() * 0.8,
-            duration: 0.5 + Math.random() * 0.6,
-            color: h > 38 ? DANGER : h > 22 ? WARN : SONAR,
-          };
-        })
-      );
-    }, 900);
+      setBars(Array.from({ length: 24 }, () => 8 + Math.random() * 32));
+    }, 140);
     return () => clearInterval(iv);
-  }, []);
+  }, [active]);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 3, height: 56 }}>
-      {bars.map((b, i) => (
+    <div
+      style={{
+        height: 42,
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 3,
+        overflow: "hidden",
+      }}
+    >
+      {bars.map((h, i) => (
         <div
           key={i}
           style={{
             flex: 1,
-            height: b.height,
             borderRadius: 2,
-            background: b.color,
-            opacity: 0.7,
-            animation: `aletheiaWave ${b.duration}s ease-in-out ${b.delay}s infinite alternate`,
-            transformOrigin: "bottom",
-            transition: "height 0.4s ease",
+            background: active
+              ? `linear-gradient(to top, ${C.accent}, ${C.secondary})`
+              : "rgba(246,246,253,0.12)",
+            height: active ? h : 8,
+            transition: "height 0.12s ease",
           }}
         />
       ))}
@@ -306,3323 +449,1419 @@ function Waveform() {
   );
 }
 
-// ─── Truth Meter (horizontal bar) ─────────────────────────────────────────────
+// ─── Fusion Metric Chip ────────────────────────────────────────────────────
 
-function TruthMeter({ score }: { score: number }) {
-  const color = score < 40 ? DANGER : score < 65 ? WARN : SUCCESS;
-  const status =
-    score < 40 ? "DECEPTIVE" : score < 65 ? "UNCERTAIN" : "TRUTHFUL";
-
+function FusionChip({ label, value, unit = "%", colorize = true }: { label: string; value: number; unit?: string; colorize?: boolean }) {
+  const pct = unit === "%" ? value : value * 100;
+  const color = colorize ? (pct > 70 ? C.red : pct > 40 ? C.amber : C.green) : C.secondary;
   return (
-    <div>
+    <div
+      style={{
+        background: "rgba(246,246,253,0.03)",
+        border: `1px solid rgba(246,246,253,0.08)`,
+        borderRadius: 10,
+        padding: "10px 12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 5,
+      }}
+    >
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: 8,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: 10,
-            color: TEXT_MUTED,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-          }}
-        >
-          Aletheia Truth Score
-        </span>
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: 28,
-            fontWeight: 700,
-            color,
-            lineHeight: 1,
-          }}
-        >
-          {score}
-        </span>
-      </div>
-      {/* Gradient bar */}
-      <div
-        style={{
-          position: "relative",
-          height: 8,
-          borderRadius: 999,
-          background:
-            "linear-gradient(to right, #f87171 0%, #fbbf24 45%, #4ade80 100%)",
-          marginBottom: 8,
-        }}
-      >
-        {/* Indicator */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: `${score}%`,
-            transform: "translate(-50%, -50%)",
-            width: 14,
-            height: 14,
-            borderRadius: "50%",
-            background: color,
-            border: "2px solid #020202",
-            boxShadow: `0 0 8px ${color}`,
-            transition: "left 0.6s cubic-bezier(0.16,1,0.3,1)",
-          }}
-        />
-      </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontFamily: "monospace",
           fontSize: 9,
-          color: "rgba(255,255,255,0.3)",
+          textTransform: "uppercase",
+          letterSpacing: "0.16em",
+          color: C.textFaint,
+          fontFamily: "'Courier New', monospace",
         }}
       >
-        <span>0</span>
-        <span>25</span>
-        <span>50</span>
-        <span>75</span>
-        <span>100</span>
+        {label}
       </div>
       <div
         style={{
-          marginTop: 12,
-          textAlign: "center",
-          fontFamily: "monospace",
-          fontSize: 13,
+          fontSize: 20,
           fontWeight: 700,
           color,
-          letterSpacing: "0.12em",
+          textShadow: `0 0 12px ${color}66`,
+          lineHeight: 1,
         }}
       >
-        {status}
+        {unit === "%" ? Math.round(pct) : value.toFixed(2)}
+        <span style={{ fontSize: 11, fontWeight: 400, color: C.textFaint, marginLeft: 2 }}>{unit}</span>
       </div>
       <div
         style={{
-          textAlign: "center",
-          fontSize: 11,
-          color: TEXT_MUTED,
-          marginTop: 4,
+          height: 3,
+          borderRadius: 99,
+          background: "rgba(246,246,253,0.08)",
+          overflow: "hidden",
         }}
       >
-        Confidence: 87% · 14 signals weighted
+        <div
+          style={{
+            width: `${Math.round(pct)}%`,
+            height: "100%",
+            background: color,
+            borderRadius: 99,
+            transition: "width 0.5s ease",
+          }}
+        />
       </div>
     </div>
   );
 }
 
-// ─── Tab: Live Session ────────────────────────────────────────────────────────
+// ─── CSS injection for animations ──────────────────────────────────────────
 
-function TabLive() {
-  const [score, setScore] = useState(34);
-  const [showAlert, setShowAlert] = useState(true);
+const GLOBAL_STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
+@keyframes pulse-rec {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(248,113,113,0.6); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(248,113,113,0); }
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  4% { opacity: 0.85; }
+  8% { opacity: 1; }
+  15% { opacity: 0.9; }
+  20% { opacity: 1; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.atom-page * { box-sizing: border-box; }
+.rec-pulse { animation: pulse-rec 1.5s infinite; }
+.data-flicker { animation: flicker 4s infinite; }
+.blink-dot { animation: blink-dot 1.2s infinite; }
+`;
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+export default function AtomAletheia() {
+  const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const styleRef = useRef<HTMLStyleElement | null>(null);
+
+  const [activeTab, setActiveTab] = useState<TabId>("live");
+  const [activeChannel, setActiveChannel] = useState<ChannelId>("VIDEO");
+  const [isRecording, setIsRecording] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [truthScore, setTruthScore] = useState(34);
+  const [stressIndex] = useState(71);
+  const [humeAffect, setHumeAffect] = useState(0.72);
+  const [prosodyStress, setProsodyStress] = useState(0.68);
+  const [nlpEvasion, setNlpEvasion] = useState(0.54);
+  const [behaviorDrift, setBehaviorDrift] = useState(0.33);
+  const [gazeRatio, setGazeRatio] = useState(42);
+  const [microSpikes, setMicroSpikes] = useState(3);
+  const [speechRate, setSpeechRate] = useState(1.3);
+  const [threatLevel, setThreatLevel] = useState("MEDIUM");
+  const [truthHistory, setTruthHistory] = useState([82, 74, 61, 48, 40, 34]);
+  const [sessionTime, setSessionTime] = useState(0);
+  const [signalCount] = useState(14);
+
+  // Text analyzer
+  const [inputText, setInputText] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Inject global styles
+  useEffect(() => {
+    const el = document.createElement("style");
+    el.textContent = GLOBAL_STYLES;
+    document.head.appendChild(el);
+    styleRef.current = el;
+    return () => { el.remove(); };
+  }, []);
+
+  // Live metrics simulation
   useEffect(() => {
     const iv = setInterval(() => {
-      setScore((prev) => Math.max(20, Math.min(45, prev + (Math.random() * 6 - 3))));
-    }, 2200);
+      setTruthScore((prev) => {
+        const next = Math.max(5, Math.min(95, prev + Math.round((Math.random() - 0.55) * 8)));
+        setThreatLevel(next < 40 ? "HIGH" : next < 70 ? "MEDIUM" : "LOW");
+        return next;
+      });
+      setHumeAffect((prev) => Math.max(0.1, Math.min(0.99, prev + (Math.random() - 0.5) * 0.08)));
+      setProsodyStress((prev) => Math.max(0.1, Math.min(0.99, prev + (Math.random() - 0.5) * 0.06)));
+      setNlpEvasion((prev) => Math.max(0.1, Math.min(0.99, prev + (Math.random() - 0.5) * 0.05)));
+      setBehaviorDrift((prev) => Math.max(0.1, Math.min(0.99, prev + (Math.random() - 0.5) * 0.04)));
+      setGazeRatio((prev) => Math.max(10, Math.min(90, prev + Math.round((Math.random() - 0.5) * 10))));
+      setMicroSpikes(Math.round(Math.random() * 7));
+      setSpeechRate(+(1.0 + Math.random() * 0.8).toFixed(1));
+      setTruthHistory((prev) => {
+        const arr = [...prev.slice(-11), truthScore];
+        return arr;
+      });
+    }, 1800);
+    return () => clearInterval(iv);
+  }, [truthScore]);
+
+  // Session timer
+  useEffect(() => {
+    const iv = setInterval(() => setSessionTime((p) => p + 1), 1000);
     return () => clearInterval(iv);
   }, []);
 
-  const roundedScore = Math.round(score);
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  };
 
-  const signals = [
-    {
-      label: "Expression",
-      sub: "Hume AI",
-      score: 28,
-      color: DANGER,
-      icon: <Eye size={14} />,
-      cue: "Contempt micro-expression peaked 0.78",
-    },
-    {
-      label: "Acoustic",
-      sub: "Prosody",
-      score: 45,
-      color: WARN,
-      icon: <Mic size={14} />,
-      cue: "Pitch rose 83% above baseline during budget claim",
-    },
-    {
-      label: "Linguistic",
-      sub: "NLP",
-      score: 22,
-      color: DANGER,
-      icon: <MessageSquare size={14} />,
-      cue: "74% non-answer ratio, hedging index 0.78",
-    },
-    {
-      label: "Behavioral",
-      sub: "Timing",
-      score: 38,
-      color: DANGER,
-      icon: <Activity size={14} />,
-      cue: "Gaze aversion 71%, self-touch events increased 3×",
-    },
-  ];
+  // Camera
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      streamRef.current = stream;
+      setCameraActive(true);
+      setIsRecording(true);
+      toast({ title: "Camera & mic live", description: "Aletheia is now scanning." });
+    } catch (e) {
+      toast({ title: "Camera error", description: "Check browser permissions.", variant: "destructive" });
+    }
+  }, [toast]);
 
-  const exprCells = [
-    { name: "CONTEMPT", val: "0.78", pct: 78, color: DANGER },
-    { name: "SUPPRESSION", val: "0.64", pct: 64, color: DANGER },
-    { name: "DISGUST", val: "0.52", pct: 52, color: WARN },
-    { name: "JOY", val: "0.08", pct: 8, color: SUCCESS },
-    { name: "PITCH RISE", val: "0.83", pct: 83, color: DANGER },
-    { name: "SPEECH RATE", val: "+55%", pct: 55, color: WARN },
-    { name: "PAUSE INDEX", val: "1.9s", pct: 71, color: WARN },
-    { name: "EYE CONTACT", val: "22%", pct: 22, color: ACCENT },
-  ];
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraActive(false);
+    setIsRecording(false);
+  }, []);
 
-  const transcript = [
-    {
-      speaker: "ATOM",
-      text: "Great — what does your timeline look like for implementation?",
-      time: "0:15",
-      flags: [],
-    },
-    {
-      speaker: "PROSPECT",
-      text: null,
-      time: "0:28",
-      flags: [
-        { text: "Well, we'd need to run it by a few people... ", type: "normal" },
-        { text: "probably Q3 or Q4 maybe", type: "amber" },
-        { text: ".", type: "normal" },
-      ],
-    },
-    {
-      speaker: "ATOM",
-      text: "Who specifically would need to approve this?",
-      time: "0:45",
-      flags: [],
-    },
-    {
-      speaker: "PROSPECT",
-      text: null,
-      time: "0:52",
-      flags: [
-        { text: "Oh, ", type: "normal" },
-        { text: "it's kind of a committee thing", type: "red" },
-        { text: "... ", type: "normal" },
-        { text: "I can't really say exactly", type: "amber" },
-        { text: ".", type: "normal" },
-      ],
-    },
-    {
-      speaker: "ATOM",
-      text: "What budget range are you working with?",
-      time: "1:10",
-      flags: [],
-    },
-    {
-      speaker: "PROSPECT",
-      text: null,
-      time: "1:18",
-      flags: [
-        { text: "We have budget, ", type: "normal" },
-        { text: "that's not really the issue", type: "red" },
-        { text: "...", type: "normal" },
-      ],
-    },
-  ];
+  const toggleCamera = () => {
+    if (cameraActive) stopCamera();
+    else startCamera();
+  };
 
-  const cues = [
-    {
-      level: "critical" as const,
-      title: "Budget fabrication detected — prospect deflected 3×",
-      desc: "Contempt micro-expression peaked 0.78 during 'budget' claim. Pitch rose 83% above baseline.",
-      time: "1:18",
-    },
-    {
-      level: "critical" as const,
-      title: "Authority claim suspicious — no named decision maker",
-      desc: '"Committee thing" — evasive hedge pattern. 1.9s pause before response. Suppression high.',
-      time: "0:52",
-    },
-    {
-      level: "warn" as const,
-      title: "Timeline vague and shifting — Q3/Q4 non-committal",
-      desc: '"Q3... maybe Q4" — ambiguity stacking with topic deflection. Repeated 3× across session.',
-      time: "0:28",
-    },
-    {
-      level: "warn" as const,
-      title: "Verbal agreement contradicted by body language",
-      desc: "22% gaze time (baseline: 61%). Consistent downward-left breaks during objection statements.",
-      time: "Ongoing",
-    },
-    {
-      level: "ok" as const,
-      title: "Genuine interest signal at 0:00",
-      desc: "Authentic engagement expressed (joy 0.41) when prospect said 'definitely interested'. Follow this thread.",
-      time: "0:00",
-    },
-  ];
-
-  const cueColor = { critical: DANGER, warn: WARN, ok: SUCCESS };
-
-  return (
-    <div style={{ padding: 20 }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          marginBottom: 20,
-          gap: 16,
-          flexWrap: "wrap" as const,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontFamily: "monospace",
-              fontSize: 20,
-              fontWeight: 700,
-              color: TEXT_PRIMARY,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Live Session
-          </div>
-          <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-            Real-time multimodal truth analysis · APEX CORP · Michael Torres
-            (VP Sales)
-          </div>
-        </div>
-        <LiveTag />
-      </div>
-
-      {/* Alert banner */}
-      {showAlert && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "12px 16px",
-            borderRadius: 10,
-            background: "rgba(248,113,113,0.07)",
-            border: "1px solid rgba(248,113,113,0.25)",
-            marginBottom: 20,
-          }}
-        >
-          <AlertTriangle size={16} color={DANGER} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 13, flex: 1, color: TEXT_PRIMARY }}>
-            <strong>HIGH DECEPTION SIGNAL DETECTED</strong> — Micro-expression
-            cluster (contempt + suppression) at 0:52. Budget objection flagged
-            as LIKELY FABRICATED. See Playbook for counter.
-          </div>
-          <button
-            onClick={() => setShowAlert(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: TEXT_MUTED,
-              fontSize: 14,
-              padding: 0,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* KPI Row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        <KpiCard
-          label="Aletheia Truth Score"
-          value={String(roundedScore)}
-          valueColor={DANGER}
-          delta="DECEPTION RISK: HIGH"
-          deltaType="down"
-        />
-        <KpiCard
-          label="Stress Index"
-          value="71"
-          valueColor={WARN}
-          delta="Elevated above baseline"
-          deltaType="neutral"
-        />
-        <KpiCard
-          label="Deal Probability"
-          value="38%"
-          valueColor={WARN}
-          delta="Was 62% last week"
-          deltaType="down"
-        />
-        <KpiCard
-          label="Signals Fired"
-          value="14"
-          valueColor={SONAR}
-          delta="11 deceptive · 3 genuine"
-          deltaType="neutral"
-        />
-      </div>
-
-      {/* Main grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 12,
-        }}
-      >
-        {/* Left column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Multimodal Signal Dashboard */}
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 16,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: TEXT_PRIMARY,
-                  }}
-                >
-                  Multimodal Signal Dashboard
-                </div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
-                  Hume AI Expressions · Acoustic Prosody · NLP Semantics ·
-                  Behavioral Timing
-                </div>
-              </div>
-              <LiveTag />
-            </div>
-
-            {/* 4-col signal bars */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4,1fr)",
-                gap: 10,
-                marginBottom: 16,
-              }}
-            >
-              {signals.map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 8,
-                    padding: "10px 12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <span style={{ color: s.color }}>{s.icon}</span>
-                    <span
-                      style={{
-                        fontFamily: "monospace",
-                        fontSize: 10,
-                        color: TEXT_PRIMARY,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {s.label}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 9,
-                      color: TEXT_MUTED,
-                      marginBottom: 6,
-                      textTransform: "uppercase" as const,
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {s.sub}
-                  </div>
-                  <ScoreBar value={s.score} color={s.color} />
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color: s.color,
-                      marginTop: 4,
-                    }}
-                  >
-                    {s.score}
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: TEXT_MUTED,
-                        fontWeight: 400,
-                      }}
-                    >
-                      /100
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
-                    {s.cue}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Expression micro-grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(8,1fr)",
-                gap: 6,
-                marginBottom: 14,
-              }}
-            >
-              {exprCells.map((e) => (
-                <div
-                  key={e.name}
-                  style={{
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 6,
-                    padding: "6px 8px",
-                    textAlign: "center" as const,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 8,
-                      color: TEXT_MUTED,
-                      marginBottom: 4,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {e.name}
-                  </div>
-                  <ScoreBar value={e.pct} color={e.color} />
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: e.color,
-                      marginTop: 4,
-                    }}
-                  >
-                    {e.val}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Waveform */}
-            <div>
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 9,
-                  color: TEXT_MUTED,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase" as const,
-                  marginBottom: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Mic size={10} color={VOICE} />
-                VOICE PROSODY STREAM
-              </div>
-              <Waveform />
-            </div>
-          </Card>
-
-          {/* Transcript */}
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Live Transcript &amp; Flag Analysis
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Tag
-                  color={DANGER}
-                  bg="rgba(248,113,113,0.08)"
-                  border="rgba(248,113,113,0.2)"
-                >
-                  4 FLAGS
-                </Tag>
-                <LiveTag />
-              </div>
-            </div>
-            <div
-              style={{
-                maxHeight: 280,
-                overflowY: "auto" as const,
-                display: "flex",
-                flexDirection: "column" as const,
-                gap: 10,
-              }}
-            >
-              {transcript.map((line, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      minWidth: 64,
-                      paddingTop: 1,
-                      color:
-                        line.speaker === "ATOM"
-                          ? SONAR
-                          : WARN,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {line.speaker}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 1.6,
-                      flex: 1,
-                      color: TEXT_PRIMARY,
-                    }}
-                  >
-                    {line.flags && line.flags.length > 0
-                      ? line.flags.map((f, fi) => {
-                          if (f.type === "red") {
-                            return (
-                              <mark
-                                key={fi}
-                                style={{
-                                  background: "rgba(248,113,113,0.15)",
-                                  color: DANGER,
-                                  borderRadius: 3,
-                                  padding: "0 3px",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {f.text}
-                              </mark>
-                            );
-                          }
-                          if (f.type === "amber") {
-                            return (
-                              <span
-                                key={fi}
-                                style={{
-                                  background: "rgba(251,191,36,0.12)",
-                                  color: WARN,
-                                  borderRadius: 3,
-                                  padding: "0 3px",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {f.text}
-                              </span>
-                            );
-                          }
-                          return <span key={fi}>{f.text}</span>;
-                        })
-                      : line.text}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      color: "rgba(255,255,255,0.25)",
-                      paddingTop: 1,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {line.time}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div
-              style={{
-                marginTop: 10,
-                display: "flex",
-                gap: 12,
-                fontSize: 10,
-                color: "rgba(255,255,255,0.3)",
-              }}
-            >
-              <span>
-                <mark
-                  style={{
-                    background: "rgba(248,113,113,0.15)",
-                    color: DANGER,
-                    borderRadius: 2,
-                    padding: "0 4px",
-                  }}
-                >
-                  RED
-                </mark>{" "}
-                = Deception Signal
-              </span>
-              <span>
-                <span
-                  style={{
-                    background: "rgba(251,191,36,0.12)",
-                    color: WARN,
-                    borderRadius: 2,
-                    padding: "0 4px",
-                  }}
-                >
-                  AMBER
-                </span>{" "}
-                = Evasion/Stall
-              </span>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Truth Meter */}
-          <Card glow={ACCENT}>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 13,
-                fontWeight: 600,
-                color: TEXT_PRIMARY,
-                marginBottom: 16,
-              }}
-            >
-              Truth Meter
-            </div>
-            <TruthMeter score={roundedScore} />
-          </Card>
-
-          {/* Deception Cue Timeline */}
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Deception Cue Timeline
-              </div>
-              <Tag
-                color={WARN}
-                bg="rgba(251,191,36,0.08)"
-                border="rgba(251,191,36,0.2)"
-              >
-                11 ACTIVE
-              </Tag>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {cues.map((c, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 7,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: cueColor[c.level],
-                      marginTop: 4,
-                      flexShrink: 0,
-                      boxShadow:
-                        c.level === "critical"
-                          ? `0 0 6px ${DANGER}`
-                          : undefined,
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: TEXT_PRIMARY,
-                        marginBottom: 2,
-                      }}
-                    >
-                      {c.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-                      {c.desc}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      color: "rgba(255,255,255,0.25)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {c.time}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Quick Playbook */}
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                AI Counter Suggestions
-              </div>
-              <Tag
-                color={SONAR}
-                bg="rgba(34,211,238,0.08)"
-                border="rgba(34,211,238,0.2)"
-              >
-                LIVE AI
-              </Tag>
-            </div>
-            {[
-              {
-                cat: "Objection Rebuttal",
-                text: '"If budget is the constraint, let\'s lock the scope at your guaranteed approval threshold and phase the rest. What\'s the number you CAN move on today?"',
-              },
-              {
-                cat: "Authority Test",
-                text: '"What specifically would the board need to see to move this forward before Q4? Can we get them on the next call?"',
-              },
-              {
-                cat: "Redirect to Genuine Interest",
-                text: "Return to initial interest expressed at 0:00 — authentic engagement was real. Anchor on ROI from that angle.",
-              },
-            ].map((p, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  borderLeft: `2px solid ${SONAR}`,
-                  borderRadius: 6,
-                  padding: "8px 10px",
-                  marginBottom: 8,
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: SONAR,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    marginBottom: 4,
-                  }}
-                >
-                  {p.cat}
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_PRIMARY, lineHeight: 1.5 }}>
-                  {p.text}
-                </div>
-              </div>
-            ))}
-          </Card>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes aletheiaWave {
-          from { opacity: 0.45; }
-          to   { opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ─── Tab: Text Analyzer ───────────────────────────────────────────────────────
-
-function TabText() {
-  const { toast } = useToast();
-  const [inputText, setInputText] = useState("");
-  const [result, setResult] = useState<TextAnalysisResult | null>(null);
-  const [analyzed, setAnalyzed] = useState(false);
-
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  async function analyzeText() {
+  // Text analyzer
+  const analyzeText = useCallback(async () => {
     const text = inputText.trim();
     if (!text) {
-      toast({ title: "Please enter text to analyze", variant: "destructive" });
+      toast({ title: "No text", description: "Paste a message first.", variant: "destructive" });
       return;
     }
     setIsAnalyzing(true);
     try {
-      // Call the real Aletheia API
       const res = await fetch("https://45-79-202-76.sslip.io/aletheia/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, channel: "text" }),
       });
-      if (!res.ok) throw new Error(`API ${res.status}`);
+      if (!res.ok) throw new Error("API error");
       const data = await res.json();
-
-      // Build highlighted HTML from API response
+      const lower = text.toLowerCase();
+      let hedgeCount = 0, evasionCount = 0, urgencyCount = 0;
+      HEDGES.forEach((h) => { if (lower.includes(h)) hedgeCount++; });
+      EVASIONS.forEach((e) => { if (lower.includes(e)) evasionCount++; });
+      URGENCY_WORDS.forEach((u) => { if (lower.includes(u)) urgencyCount++; });
+      const truthScore = data.truth_score ?? Math.max(5, 100 - Math.min(95, hedgeCount * 18) * 0.4 - Math.min(95, evasionCount * 15) * 0.5 - 10);
+      const hedgePct = Math.min(95, hedgeCount * 18);
+      const evasionPct = Math.min(95, evasionCount * 15);
+      const dealRisk = Math.min(95, Math.round(hedgePct * 0.4 + evasionPct * 0.5 + 10));
       let highlighted = text;
-      (data.highlightedPhrases || []).forEach((hp: any) => {
-        const re = new RegExp(`(${hp.phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-        const color = hp.color === "red"
-          ? "background:rgba(248,113,113,0.15);color:#f87171"
-          : hp.color === "amber"
-          ? "background:rgba(251,191,36,0.12);color:#fbbf24"
-          : "background:rgba(74,222,128,0.1);color:#4ade80";
-        highlighted = highlighted.replace(re, `<mark style="${color};border-radius:3px;padding:0 3px;">$1</mark>`);
-      });
-      // Also highlight flagged phrases
-      (data.flags || []).forEach((f: any) => {
-        if (f.phrase && !highlighted.includes(`<mark`)) {
-          const re = new RegExp(`(${f.phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-          const color = f.severity === "high"
-            ? "background:rgba(248,113,113,0.15);color:#f87171"
-            : "background:rgba(251,191,36,0.12);color:#fbbf24";
-          highlighted = highlighted.replace(re, `<mark style="${color};border-radius:3px;padding:0 3px;">$1</mark>`);
-        }
-      });
-      highlighted = highlighted.replace(/\n/g, "<br>");
-
-      const hedgePct = data.hedgePct ?? data.linguisticCues?.fillerWords ?? 0;
-      const evasionPct = data.evasionPct ?? data.linguisticCues?.distancingLanguage ?? 0;
-      const dealRiskNum = typeof data.dealRisk === "number" ? data.dealRisk : (data.dealRisk === "AT_RISK" ? 70 : data.dealRisk === "CAUTION" ? 45 : data.dealRisk === "DEAD" ? 90 : 20);
-      const truthScore = data.aletheiaTruthScore ?? data.truthScore ?? 50;
-
-      setResult({
-        truthScore,
+      HEDGES.forEach((h) => { const re = new RegExp(`(${h})`, "gi"); highlighted = highlighted.replace(re, `<mark style="background:rgba(248,113,113,0.2);color:${C.red};border-radius:3px;padding:0 2px">$1</mark>`); });
+      EVASIONS.forEach((e) => { const re = new RegExp(`(${e})`, "gi"); highlighted = highlighted.replace(re, `<mark style="background:rgba(251,191,36,0.15);color:${C.amber};border-radius:3px;padding:0 2px">$1</mark>`); });
+      setAnalysisResult({
+        truthScore: data.truth_score ?? truthScore,
         hedgePct,
         evasionPct,
-        urgency: data.urgency || "LOW",
-        dealRisk: dealRiskNum,
-        riskLevel: data.overallRisk || (dealRiskNum > 60 ? "HIGH RISK" : dealRiskNum > 35 ? "MEDIUM RISK" : "LOW RISK"),
-        highlightedHtml: highlighted,
-        hedgeCount: (data.flags || []).filter((f: any) => f.type === "hedging").length,
-        evasionCount: (data.flags || []).filter((f: any) => f.type === "evasion" || f.type === "authority_evasion").length,
+        urgency: urgencyCount > 0 ? "High" : "Low",
+        dealRisk,
+        riskLevel: dealRisk > 65 ? "HIGH" : dealRisk > 35 ? "MEDIUM" : "LOW",
+        highlightedHtml: highlighted.replace(/\n/g, "<br>"),
+        hedgeCount,
+        evasionCount,
         wordCount: text.split(/\s+/).length,
-        sentCount: (text.match(/[.!?]+/g) || []).length + 1,
+        sentCount: text.split(/[.!?]+/).filter(Boolean).length,
+        buyerIntent: data.buyer_intent ?? (truthScore > 60 ? "GENUINE" : "UNCERTAIN"),
+        ghostRisk: data.ghost_risk ?? (dealRisk > 65 ? "HIGH" : "MEDIUM"),
+        actionable: data.actionable_insight ?? "Initiate forcing function — request concrete next step with date.",
       });
-      setAnalyzed(true);
-      toast({ title: "Aletheia Analysis Complete", description: `Truth Score: ${truthScore}/100 · Risk: ${data.overallRisk || "ASSESSED"}` });
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Analysis failed", description: err.message, variant: "destructive" });
-    } finally {
-      setIsAnalyzing(false);
+    } catch {
+      // Fallback local analysis
+      const lower = text.toLowerCase();
+      let hedgeCount = 0, evasionCount = 0, urgencyCount = 0;
+      HEDGES.forEach((h) => { if (lower.includes(h)) hedgeCount++; });
+      EVASIONS.forEach((e) => { if (lower.includes(e)) evasionCount++; });
+      URGENCY_WORDS.forEach((u) => { if (lower.includes(u)) urgencyCount++; });
+      const hedgePct = Math.min(95, hedgeCount * 18);
+      const evasionPct = Math.min(95, evasionCount * 15);
+      const dealRisk = Math.min(95, Math.round(hedgePct * 0.4 + evasionPct * 0.5 + 10));
+      const ts = Math.max(5, 100 - dealRisk - Math.round(Math.random() * 10));
+      let highlighted = text;
+      HEDGES.forEach((h) => { const re = new RegExp(`(${h})`, "gi"); highlighted = highlighted.replace(re, `<mark style="background:rgba(248,113,113,0.2);color:${C.red};border-radius:3px;padding:0 2px">$1</mark>`); });
+      EVASIONS.forEach((e) => { const re = new RegExp(`(${e})`, "gi"); highlighted = highlighted.replace(re, `<mark style="background:rgba(251,191,36,0.15);color:${C.amber};border-radius:3px;padding:0 2px">$1</mark>`); });
+      setAnalysisResult({
+        truthScore: ts,
+        hedgePct,
+        evasionPct,
+        urgency: urgencyCount > 0 ? "High" : "Low",
+        dealRisk,
+        riskLevel: dealRisk > 65 ? "HIGH" : dealRisk > 35 ? "MEDIUM" : "LOW",
+        highlightedHtml: highlighted.replace(/\n/g, "<br>"),
+        hedgeCount,
+        evasionCount,
+        wordCount: text.split(/\s+/).length,
+        sentCount: text.split(/[.!?]+/).filter(Boolean).length,
+        buyerIntent: ts > 60 ? "GENUINE" : "UNCERTAIN",
+        ghostRisk: dealRisk > 65 ? "HIGH" : "MEDIUM",
+        actionable: "Initiate forcing function — request concrete next step with date.",
+      });
     }
-  }
+    setIsAnalyzing(false);
+  }, [inputText, toast]);
 
-  const r = result;
+  // ─── Shared styles ─────────────────────────────────────────────────────────
 
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
+  const chipBase: React.CSSProperties = {
+    padding: "4px 14px",
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    cursor: "pointer",
+    border: "1px solid rgba(246,246,253,0.18)",
+    background: "rgba(246,246,253,0.04)",
+    color: C.textMuted,
+    fontFamily: C.font,
+  };
+
+  const chipActive: React.CSSProperties = {
+    ...chipBase,
+    background: `rgba(105,106,172,0.25)`,
+    border: `1px solid ${C.accent}`,
+    color: C.textPrimary,
+    boxShadow: `0 0 10px ${C.accent}55`,
+  };
+
+  const subTabBase: React.CSSProperties = {
+    padding: "8px 18px",
+    borderRadius: 8,
+    fontSize: 11,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    cursor: "pointer",
+    border: "1px solid transparent",
+    background: "transparent",
+    color: C.textFaint,
+    fontFamily: C.font,
+    fontWeight: 500,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    whiteSpace: "nowrap" as const,
+  };
+
+  const subTabActive: React.CSSProperties = {
+    ...subTabBase,
+    background: "rgba(105,106,172,0.18)",
+    border: `1px solid rgba(105,106,172,0.5)`,
+    color: C.textPrimary,
+  };
+
+  const threatColor = threatLevel === "HIGH" ? C.red : threatLevel === "MEDIUM" ? C.amber : C.green;
+
+  // ─── Render: Live Session ──────────────────────────────────────────────────
+
+  const renderLiveSession = () => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "320px minmax(0,1fr) 300px",
+        gap: 16,
+        alignItems: "start",
+      }}
+    >
+      {/* MODULE 01 — Subject Feed */}
+      <ScanlineCard style={{ padding: "16px 16px 14px" }}>
+        <ModuleLabel num="01" name="Subject Feed" />
+
+        {/* Video */}
         <div
           style={{
-            fontFamily: "monospace",
-            fontSize: 20,
-            fontWeight: 700,
-            color: TEXT_PRIMARY,
+            position: "relative",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "radial-gradient(circle at top, rgba(105,106,172,0.3), #020202 60%)",
+            border: "1px solid rgba(246,246,253,0.1)",
           }}
         >
-          Text Analyzer
-        </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-          Paste any SMS, email, or chat message. Get deception and intent
-          scoring in seconds.
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginBottom: 16,
-        }}
-      >
-        {/* Input */}
-        <Card>
+          {/* Subject meta overlay — top */}
           <div
             style={{
-              fontFamily: "monospace",
-              fontSize: 13,
-              fontWeight: 600,
-              color: TEXT_PRIMARY,
-              marginBottom: 12,
+              position: "absolute",
+              top: 8,
+              left: 10,
+              right: 10,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              zIndex: 10,
             }}
           >
-            Input Message
+            <div
+              style={{
+                background: "rgba(2,2,2,0.75)",
+                backdropFilter: "blur(6px)",
+                borderRadius: 6,
+                padding: "4px 8px",
+                fontSize: 9,
+                fontFamily: "'Courier New', monospace",
+                letterSpacing: "0.12em",
+                color: C.textMuted,
+                border: "1px solid rgba(246,246,253,0.1)",
+              }}
+            >
+              <div style={{ color: C.textFaint, fontSize: 8, marginBottom: 2 }}>SUBJECT ID</div>
+              <div style={{ color: C.textPrimary, fontWeight: 600 }}>PROSPECT-001</div>
+            </div>
+            <div
+              style={{
+                backdropFilter: "blur(6px)",
+                borderRadius: 6,
+                padding: "4px 8px",
+                fontSize: 9,
+                fontFamily: "'Courier New', monospace",
+                letterSpacing: "0.12em",
+                border: `1px solid ${threatColor}55`,
+                background: `rgba(2,2,2,0.82)`,
+              }}
+            >
+              <div style={{ color: C.textFaint, fontSize: 8, marginBottom: 2 }}>THREAT LEVEL</div>
+              <div style={{ color: threatColor, fontWeight: 700 }}>{threatLevel}</div>
+            </div>
           </div>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Paste an email, SMS, or prospect message here...\n\nExample: "We're still very much interested but the decision has been pushed to next quarter. Will definitely circle back soon!"`}
+
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
             style={{
               width: "100%",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 8,
-              padding: 14,
-              fontFamily: FONT_FAMILY,
-              fontSize: 13,
-              color: TEXT_PRIMARY,
-              resize: "none" as const,
-              minHeight: 180,
-              lineHeight: 1.6,
-              outline: "none",
+              height: 220,
+              objectFit: "cover",
+              display: "block",
+              filter: "saturate(1.1) contrast(1.05)",
+              background: "#030308",
             }}
           />
+
+          {/* Subject foot overlay — bottom */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "linear-gradient(transparent, rgba(2,2,2,0.9))",
+              padding: "18px 10px 8px",
+              display: "flex",
+              justifyContent: "space-between",
+              zIndex: 10,
+            }}
+          >
+            {[
+              { label: "GAZE", value: `${gazeRatio}%` },
+              { label: "µ-EXP", value: `${microSpikes} spk` },
+              { label: "WPM", value: `${speechRate}x` },
+            ].map((m) => (
+              <div key={m.label} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 8, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.14em" }}>{m.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, fontFamily: "'Courier New', monospace" }}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {!cameraActive && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                background: "rgba(2,2,2,0.7)",
+                zIndex: 5,
+              }}
+            >
+              <Crosshair size={28} color={C.accent} style={{ opacity: 0.6 }} />
+              <div style={{ fontSize: 11, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.14em" }}>
+                NO SIGNAL
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Camera toggle */}
+        <button
+          onClick={toggleCamera}
+          style={{
+            marginTop: 10,
+            width: "100%",
+            padding: "8px",
+            borderRadius: 8,
+            border: `1px solid ${cameraActive ? C.green + "66" : "rgba(246,246,253,0.12)"}`,
+            background: cameraActive ? `rgba(29,209,161,0.12)` : "rgba(246,246,253,0.04)",
+            color: cameraActive ? C.green : C.textMuted,
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            fontFamily: C.font,
+          }}
+        >
+          {cameraActive ? (
+            <><span className="blink-dot" style={{ width: 6, height: 6, borderRadius: 999, background: C.green, display: "inline-block" }} />FEED LIVE</>
+          ) : (
+            <><Video size={12} />ENABLE FEED</>
+          )}
+        </button>
+
+        {/* Waveform */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 9, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.16em", marginBottom: 4 }}>
+            VOICE SIGNAL · {cameraActive ? "ACTIVE" : "IDLE"}
+          </div>
+          <Waveform active={cameraActive} />
+        </div>
+
+        {/* Channel status */}
+        <div
+          style={{
+            marginTop: 12,
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid rgba(246,246,253,0.06)",
+            background: "rgba(246,246,253,0.02)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 5,
+          }}
+        >
+          {[
+            { label: "Video Signal", val: cameraActive ? 90 : 0, color: C.green },
+            { label: "Audio Signal", val: cameraActive ? 86 : 0, color: C.secondary },
+            { label: "NLP Engine", val: 100, color: C.cyan },
+          ].map((s) => (
+            <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
+              <span style={{ color: C.textFaint, fontFamily: "'Courier New', monospace", width: 80, flexShrink: 0 }}>{s.label}</span>
+              <div style={{ flex: 1, height: 3, borderRadius: 99, background: "rgba(246,246,253,0.08)" }}>
+                <div style={{ width: `${s.val}%`, height: "100%", background: s.color, borderRadius: 99, transition: "width 0.5s" }} />
+              </div>
+              <span style={{ color: s.color, fontFamily: "'Courier New', monospace", fontSize: 10, minWidth: 28, textAlign: "right" }}>{s.val > 0 ? s.val : "—"}</span>
+            </div>
+          ))}
+        </div>
+      </ScanlineCard>
+
+      {/* MODULE 02 — Signal Fusion */}
+      <ScanlineCard style={{ padding: "16px 16px 14px" }}>
+        <ModuleLabel num="02" name="Signal Fusion" />
+
+        {/* Truth Meter */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 12, borderBottom: "1px solid rgba(246,246,253,0.06)" }}>
+          <TruthMeterArc score={truthScore} />
+        </div>
+
+        {/* Fusion metrics 2x2 */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 9, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.18em", marginBottom: 8 }}>
+            MODALITY FUSION
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <FusionChip label="Hume Affect" value={humeAffect} unit="idx" colorize={true} />
+            <FusionChip label="Prosody Stress" value={prosodyStress} unit="idx" colorize={true} />
+            <FusionChip label="NLP Evasion" value={nlpEvasion} unit="idx" colorize={true} />
+            <FusionChip label="Behavior Drift" value={behaviorDrift} unit="idx" colorize={true} />
+          </div>
+        </div>
+
+        {/* Truth timeline */}
+        <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(246,246,253,0.06)", background: "rgba(246,246,253,0.02)" }}>
+          <TruthTimeline history={truthHistory} />
+        </div>
+
+        {/* Time window stats */}
+        <div
+          style={{
+            marginTop: 10,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 8,
+          }}
+        >
+          {[
+            { label: "LAST 30s", value: `${Math.round(truthHistory.slice(-2).reduce((a, b) => a + b, 0) / 2)}`, unit: "ATI" },
+            { label: "SIGNALS", value: `${signalCount}`, unit: "ACT" },
+            { label: "ATI DRIFT", value: `${truthHistory.length > 1 ? (truthHistory[truthHistory.length - 1] - truthHistory[0]) : 0}`, unit: "pts" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: "rgba(246,246,253,0.02)",
+                border: "1px solid rgba(246,246,253,0.06)",
+                borderRadius: 8,
+                padding: "8px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 8, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.14em" }}>{s.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, fontFamily: "'Courier New', monospace" }}>{s.value}</div>
+              <div style={{ fontSize: 8, color: C.textFaint, fontFamily: "'Courier New', monospace" }}>{s.unit}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Transcript */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 9, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.18em", marginBottom: 8 }}>
+            LIVE TRANSCRIPT
+          </div>
           <div
             style={{
               display: "flex",
-              gap: 8,
-              alignItems: "center",
-              flexWrap: "wrap" as const,
-              marginTop: 12,
+              flexDirection: "column",
+              gap: 5,
+              maxHeight: 160,
+              overflowY: "auto",
+              padding: "8px 10px",
+              borderRadius: 8,
+              border: "1px solid rgba(246,246,253,0.06)",
+              background: "rgba(246,246,253,0.02)",
             }}
           >
-            <button
-              onClick={analyzeText}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontFamily: "monospace",
-                fontSize: 12,
-                fontWeight: 600,
-                padding: "8px 18px",
-                borderRadius: 999,
-                background: VOICE,
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-              }}
-            >
-              {isAnalyzing ? <Activity size={13} className="animate-spin" /> : <Search size={13} />}
-              {isAnalyzing ? "ANALYZING..." : "ANALYZE DECEPTION"}
-            </button>
-            <button
-              onClick={() => setInputText(SAMPLE_SMS)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "transparent",
-                fontSize: 12,
-                color: TEXT_MUTED,
-                cursor: "pointer",
-              }}
-            >
-              Load SMS Sample
-            </button>
-            <button
-              onClick={() => setInputText(SAMPLE_EMAIL)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "transparent",
-                fontSize: 12,
-                color: TEXT_MUTED,
-                cursor: "pointer",
-              }}
-            >
-              Load Email Sample
-            </button>
-          </div>
-        </Card>
-
-        {/* Results */}
-        {analyzed && r ? (
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Deception Analysis
+            {DEMO_TRANSCRIPT.map((line, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, fontSize: 11, lineHeight: 1.5 }}>
+                <span style={{ color: C.textFaint, fontFamily: "'Courier New', monospace", fontSize: 10, minWidth: 36, flexShrink: 0 }}>
+                  [{line.time}]
+                </span>
+                <span style={{ color: line.speaker === "PROSPECT" ? C.secondary : C.textMuted, fontWeight: 600, fontSize: 10, minWidth: 52, flexShrink: 0 }}>
+                  {line.speaker}
+                </span>
+                <span style={{ color: C.textMuted, flex: 1 }}>
+                  {line.text}
+                  {line.flag && (
+                    <span style={{ marginLeft: 6, padding: "1px 6px", borderRadius: 4, background: "rgba(251,191,36,0.15)", color: C.amber, fontSize: 9, fontFamily: "'Courier New', monospace" }}>
+                      FLAG: {line.flag}
+                    </span>
+                  )}
+                </span>
               </div>
-              <Tag
-                color={
-                  r.dealRisk > 60 ? DANGER : r.dealRisk > 35 ? WARN : SUCCESS
-                }
-                bg={
-                  r.dealRisk > 60
-                    ? "rgba(248,113,113,0.08)"
-                    : r.dealRisk > 35
-                    ? "rgba(251,191,36,0.08)"
-                    : "rgba(74,222,128,0.08)"
-                }
-                border={
-                  r.dealRisk > 60
-                    ? "rgba(248,113,113,0.2)"
-                    : r.dealRisk > 35
-                    ? "rgba(251,191,36,0.2)"
-                    : "rgba(74,222,128,0.2)"
-                }
-              >
-                {r.riskLevel}
-              </Tag>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5,1fr)",
-                gap: 8,
-                marginBottom: 14,
-              }}
-            >
-              {[
-                {
-                  label: "Aletheia Truth Score",
-                  value: String(r.truthScore),
-                  color:
-                    r.truthScore < 40
-                      ? DANGER
-                      : r.truthScore < 65
-                      ? WARN
-                      : SUCCESS,
-                },
-                { label: "Hedging %", value: `${r.hedgePct}%`, color: r.hedgePct > 50 ? DANGER : WARN },
-                { label: "Evasion %", value: `${r.evasionPct}%`, color: r.evasionPct > 40 ? DANGER : WARN },
-                {
-                  label: "Urgency",
-                  value: r.urgency,
-                  color: r.urgency === "HIGH" ? SUCCESS : TEXT_MUTED,
-                },
-                {
-                  label: "Deal Risk",
-                  value: `${r.dealRisk}%`,
-                  color:
-                    r.dealRisk > 60
-                      ? DANGER
-                      : r.dealRisk > 35
-                      ? WARN
-                      : SUCCESS,
-                },
-              ].map((chip) => (
-                <div
-                  key={chip.label}
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 7,
-                    padding: "8px 10px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 8,
-                      color: TEXT_MUTED,
-                      textTransform: "uppercase" as const,
-                      letterSpacing: "0.08em",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {chip.label}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color: chip.color,
-                    }}
-                  >
-                    {chip.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 8,
-                padding: 12,
-                fontSize: 13,
-                lineHeight: 1.8,
-                color: TEXT_PRIMARY,
-              }}
-              dangerouslySetInnerHTML={{ __html: r.highlightedHtml }}
-            />
-          </Card>
-        ) : (
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column" as const,
-                alignItems: "center",
-                justifyContent: "center",
-                height: 260,
-                gap: 12,
-                color: "rgba(255,255,255,0.2)",
-                textAlign: "center" as const,
-              }}
-            >
-              <MessageSquare size={36} strokeWidth={1} />
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase" as const,
-                }}
-              >
-                PASTE MESSAGE → ANALYZE
-              </span>
-            </div>
-          </Card>
-        )}
-      </div>
+            ))}
+          </div>
+        </div>
+      </ScanlineCard>
 
-      {/* Phrase Breakdown + Playbook */}
-      {analyzed && r && (
-        <>
-          <Card style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 13,
-                fontWeight: 600,
-                color: TEXT_PRIMARY,
-                marginBottom: 12,
-              }}
-            >
-              Phrase-Level Breakdown
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {r.hedgeCount > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 7,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: DANGER,
-                      marginTop: 4,
-                      flexShrink: 0,
-                      boxShadow: `0 0 6px ${DANGER}`,
-                    }}
-                  />
-                  <div>
-                    <div
-                      style={{ fontSize: 12, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 2 }}
-                    >
-                      Over-assurance Hedging Detected ({r.hedgeCount} phrases)
-                    </div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-                      Phrases like "definitely," "absolutely," "100%" spike in deceptive communication. Genuine commitment rarely needs this volume of affirmation.
-                    </div>
-                  </div>
-                </div>
-              )}
-              {r.evasionCount > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 7,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: WARN,
-                      marginTop: 4,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div
-                      style={{ fontSize: 12, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 2 }}
-                    >
-                      Stall/Delay Language Detected ({r.evasionCount} phrases)
-                    </div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-                      Temporal deflection ("circle back," "few months," "pause") signals low intent to proceed. This is ghosting architecture being laid.
-                    </div>
-                  </div>
-                </div>
-              )}
+      {/* MODULE 03 — Operator Intel */}
+      <ScanlineCard style={{ padding: "16px 16px 14px" }}>
+        <ModuleLabel num="03" name="Operator Intel" />
+
+        {/* Intel cues */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {INTEL_CUES.map((cue, i) => {
+            const dotColor = cue.level === "RED" ? C.red : C.amber;
+            return (
               <div
+                key={i}
                 style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${dotColor}22`,
+                  background: `${dotColor}08`,
                   display: "flex",
-                  gap: 10,
-                  padding: "8px 10px",
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  borderRadius: 7,
+                  gap: 8,
                 }}
               >
                 <div
                   style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: SONAR,
-                    marginTop: 4,
+                    width: 6,
+                    height: 6,
+                    borderRadius: 999,
+                    background: dotColor,
+                    boxShadow: `0 0 6px ${dotColor}`,
+                    marginTop: 5,
                     flexShrink: 0,
                   }}
                 />
                 <div>
                   <div
-                    style={{ fontSize: 12, fontWeight: 500, color: TEXT_PRIMARY, marginBottom: 2 }}
-                  >
-                    Message Length Analysis ({r.wordCount} words, ~{r.sentCount} sentences)
-                  </div>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-                    Longer-than-necessary explanations in rejections/stalls suggest guilt compensation — over-explaining to soften the real message.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Playbook Response Suggestions
-              </div>
-              <Tag color={SONAR} bg="rgba(34,211,238,0.08)" border="rgba(34,211,238,0.2)">
-                AI GENERATED
-              </Tag>
-            </div>
-            {r.dealRisk > 60 ? (
-              <>
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    borderLeft: `2px solid ${DANGER}`,
-                    borderRadius: 6,
-                    padding: "10px 12px",
-                    marginBottom: 8,
-                  }}
-                >
-                  <div
                     style={{
-                      fontFamily: "monospace",
-                      fontSize: 9,
-                      color: DANGER,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase" as const,
-                      marginBottom: 6,
-                    }}
-                  >
-                    🚨 BREAK-UP EMAIL RESPONSE
-                  </div>
-                  <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.5 }}>
-                    "Hey — totally understand the reprioritization. Before I let this go, I want to make sure I understand: is this a timing issue, a budget issue, or is this project genuinely not moving forward? I'd rather know now so I don't waste your inbox."
-                  </div>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>
-                    Signal: Forces binary response. Real buyers clarify. Ghosts confirm exit.
-                  </div>
-                </div>
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    borderLeft: `2px solid ${WARN}`,
-                    borderRadius: 6,
-                    padding: "10px 12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 9,
-                      color: WARN,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase" as const,
-                      marginBottom: 6,
-                    }}
-                  >
-                    ⚠ WHAT THIS MESSAGE REALLY MEANS
-                  </div>
-                  <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.5 }}>
-                    High hedging + stall language = this deal is over or never was. "Keeping you top of mind" is a soft rejection. The deal is dead unless you create a forcing function now.
-                  </div>
-                </div>
-              </>
-            ) : r.dealRisk > 35 ? (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  borderLeft: `2px solid ${ACCENT}`,
-                  borderRadius: 6,
-                  padding: "10px 12px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: ACCENT,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    marginBottom: 6,
-                  }}
-                >
-                  💡 FLUSH THE REAL BLOCKER
-                </div>
-                <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.5 }}>
-                  "It sounds like there might be something specific making this harder to move on right now — is it internal alignment, budget timing, or something else I should know about?"
-                </div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 6 }}>
-                  Signal: Evasion patterns often mask a specific hidden objection. Ask directly.
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  borderLeft: `2px solid ${SUCCESS}`,
-                  borderRadius: 6,
-                  padding: "10px 12px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: SUCCESS,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    marginBottom: 6,
-                  }}
-                >
-                  ✅ GENUINE SIGNAL — ADVANCE THE DEAL
-                </div>
-                <div style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.5 }}>
-                  Low deception signals in this message. Prospect appears aligned. Recommend scheduling next step immediately and getting a specific commitment on calendar.
-                </div>
-              </div>
-            )}
-          </Card>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Tab: Deal Pipeline ───────────────────────────────────────────────────────
-
-function TabPipeline() {
-  const deals = [
-    {
-      name: "Acme Corp",
-      contact: "Sarah Chen",
-      stage: "NEGOTIATION",
-      stageColor: DANGER,
-      stageBg: "rgba(248,113,113,0.08)",
-      value: "$420K",
-      score: 34,
-      risk: "HIGH",
-      riskColor: DANGER,
-      riskPct: 82,
-      signals: "Budget fabrication, contempt cluster",
-      channels: "VIDEO · EMAIL",
-      last: "14m ago",
-    },
-    {
-      name: "Globex Inc",
-      contact: "Marcus Webb",
-      stage: "DISCOVERY",
-      stageColor: SUCCESS,
-      stageBg: "rgba(74,222,128,0.08)",
-      value: "$180K",
-      score: 88,
-      risk: "LOW",
-      riskColor: SUCCESS,
-      riskPct: 12,
-      signals: "None detected",
-      channels: "VIDEO · SMS",
-      last: "2h ago",
-    },
-    {
-      name: "Initech",
-      contact: "Paul Lyman",
-      stage: "PROPOSAL",
-      stageColor: WARN,
-      stageBg: "rgba(251,191,36,0.08)",
-      value: "$95K",
-      score: 52,
-      risk: "MEDIUM",
-      riskColor: WARN,
-      riskPct: 52,
-      signals: "Hedging ×4, timeline ambiguity",
-      channels: "EMAIL",
-      last: "1d ago",
-    },
-    {
-      name: "Umbrella Ltd",
-      contact: "Dana Reyes",
-      stage: "VERBAL YES",
-      stageColor: ACCENT,
-      stageBg: "rgba(105,106,172,0.12)",
-      value: "$310K",
-      score: 22,
-      risk: "GHOST",
-      riskColor: DANGER,
-      riskPct: 91,
-      signals: "Ghost pattern, non-answer 74%",
-      channels: "EMAIL · SMS",
-      last: "8d ago",
-    },
-    {
-      name: "Stark Industries",
-      contact: "James Potts",
-      stage: "TECHNICAL EVAL",
-      stageColor: SUCCESS,
-      stageBg: "rgba(74,222,128,0.08)",
-      value: "$750K",
-      score: 81,
-      risk: "LOW",
-      riskColor: SUCCESS,
-      riskPct: 18,
-      signals: "None detected",
-      channels: "VIDEO",
-      last: "3h ago",
-    },
-  ];
-
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap" as const,
-            gap: 12,
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 20,
-                fontWeight: 700,
-                color: TEXT_PRIMARY,
-              }}
-            >
-              Deal Pipeline Intelligence
-            </div>
-            <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-              Truth-adjusted deal scoring across all active opportunities
-            </div>
-          </div>
-          <Tag color={WARN} bg="rgba(251,191,36,0.08)" border="rgba(251,191,36,0.2)">
-            3 At-Risk Deals
-          </Tag>
-        </div>
-      </div>
-
-      {/* KPI Row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        <KpiCard
-          label="Pipeline Value"
-          value="$1.76M"
-          valueColor={TEXT_PRIMARY}
-          delta="5 active deals"
-          deltaType="neutral"
-        />
-        <KpiCard
-          label="Truth-Adjusted Value"
-          value="$680K"
-          valueColor={WARN}
-          delta="Risk discount applied"
-          deltaType="down"
-        />
-        <KpiCard
-          label="High Risk Deals"
-          value="3"
-          valueColor={DANGER}
-          delta="Based on signal patterns"
-          deltaType="down"
-        />
-        <KpiCard
-          label="Ghost Probability"
-          value="2 deals"
-          valueColor={DANGER}
-          delta="Umbrella + Acme at risk"
-          deltaType="down"
-        />
-      </div>
-
-      {/* Deal Table */}
-      <Card style={{ overflowX: "auto" as const }}>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 13,
-            fontWeight: 600,
-            color: TEXT_PRIMARY,
-            marginBottom: 16,
-          }}
-        >
-          Active Deals — Aletheia-Adjusted Scoring
-        </div>
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse" as const,
-            fontSize: 13,
-          }}
-        >
-          <thead>
-            <tr>
-              {[
-                "DEAL",
-                "CONTACT",
-                "STAGE",
-                "VALUE",
-                "ALETHEIA SCORE",
-                "RISK",
-                "SIGNALS",
-                "CHANNELS",
-                "LAST",
-              ].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: TEXT_MUTED,
-                    fontWeight: 500,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    padding: "8px 10px",
-                    borderBottom: "1px solid rgba(255,255,255,0.06)",
-                    textAlign: "left" as const,
-                    whiteSpace: "nowrap" as const,
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((d, i) => (
-              <tr
-                key={i}
-                style={{
-                  borderBottom:
-                    i < deals.length - 1
-                      ? "1px solid rgba(255,255,255,0.04)"
-                      : "none",
-                }}
-              >
-                <td style={{ padding: "10px 10px" }}>
-                  <div style={{ fontWeight: 600, color: TEXT_PRIMARY }}>
-                    {d.name}
-                  </div>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <div style={{ fontSize: 12, color: TEXT_MUTED }}>
-                    {d.contact}
-                  </div>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <span
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 9,
-                      fontWeight: 600,
-                      letterSpacing: "0.06em",
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      color: d.stageColor,
-                      background: d.stageBg,
-                      border: `1px solid ${d.stageColor}33`,
-                    }}
-                  >
-                    {d.stage}
-                  </span>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <strong style={{ color: TEXT_PRIMARY }}>{d.value}</strong>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <span
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      color: d.score < 40 ? DANGER : d.score < 65 ? WARN : SUCCESS,
-                      background:
-                        d.score < 40
-                          ? "rgba(248,113,113,0.08)"
-                          : d.score < 65
-                          ? "rgba(251,191,36,0.08)"
-                          : "rgba(74,222,128,0.08)",
-                    }}
-                  >
-                    {d.score} / {d.risk}
-                  </span>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <div
-                    style={{ width: 80, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}
-                  >
-                    <div
-                      style={{
-                        width: `${d.riskPct}%`,
-                        height: "100%",
-                        background: d.riskColor,
-                        borderRadius: 999,
-                      }}
-                    />
-                  </div>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, maxWidth: 160 }}>
-                    {d.signals}
-                  </div>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      color: TEXT_MUTED,
-                    }}
-                  >
-                    {d.channels}
-                  </div>
-                </td>
-                <td style={{ padding: "10px 10px" }}>
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      color: "rgba(255,255,255,0.25)",
-                    }}
-                  >
-                    {d.last}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-
-      {/* Deal probability bars */}
-      <div style={{ marginTop: 16 }}>
-        <Card>
-          <div
-            style={{
-              fontFamily: "monospace",
-              fontSize: 13,
-              fontWeight: 600,
-              color: TEXT_PRIMARY,
-              marginBottom: 16,
-            }}
-          >
-            Deal Close Probability — Truth-Adjusted
-          </div>
-          {[
-            { name: "Stark Industries", prob: 85, color: SUCCESS },
-            { name: "Globex Inc", prob: 78, color: SUCCESS },
-            { name: "Initech", prob: 44, color: WARN },
-            { name: "Acme Corp", prob: 38, color: DANGER },
-            { name: "Umbrella Ltd", prob: 11, color: DANGER },
-          ].map((d) => (
-            <div
-              key={d.name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 10,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  color: TEXT_MUTED,
-                  width: 140,
-                  flexShrink: 0,
-                }}
-              >
-                {d.name}
-              </span>
-              <div
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.06)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${d.prob}%`,
-                    height: "100%",
-                    background: d.color,
-                    borderRadius: 999,
-                    transition: "width 1.2s cubic-bezier(0.16,1,0.3,1)",
-                  }}
-                />
-              </div>
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  color: d.color,
-                  width: 36,
-                  textAlign: "right" as const,
-                  flexShrink: 0,
-                }}
-              >
-                {d.prob}%
-              </span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-// ─── Tab: Playbook ────────────────────────────────────────────────────────────
-
-function TabPlaybook() {
-  const tactics = [
-    {
-      cat: "BUDGET REALITY CHECK",
-      catColor: DANGER,
-      move: "Kill the Budget Objection",
-      text: '"I hear budget — let me make that easier. What if we right-sized this to start at a phase-1 scope and built in a Phase 2 trigger once results are proven? What number clears today?"',
-      signal:
-        "Bypasses the stall. Forces them to name a real number or expose the real blocker. Fabricated objections collapse under specificity.",
-    },
-    {
-      cat: "TIMELINE & AUTHORITY VERIFICATION",
-      catColor: WARN,
-      move: "Authority Flush",
-      text: '"You mentioned the board — I\'d love to give them a 15-minute direct brief. I can tailor it to exactly what they care about. Can we get 15 minutes on the calendar this week?"',
-      signal:
-        "Exposes whether the authority claim was real. A genuine buyer will welcome it. A staller will deflect again — confirming the signal.",
-    },
-    {
-      cat: "COMPETITION / ALTERNATIVE REALITY CHECK",
-      catColor: ACCENT,
-      move: "Competitive Intelligence Play",
-      text: '"Are you looking at other vendors in this space right now? I ask because I want to make sure I\'m comparing apples to apples for you and can address any specific gaps."',
-      signal:
-        "Surfaces competing bids. Contempt signal often appears when prospect is already leaning toward a competitor. Gets hidden info into the open.",
-    },
-    {
-      cat: "COMMITMENT TESTING",
-      catColor: SONAR,
-      move: "Deal or No Deal",
-      text: '"Look — I want to be straight with you. I\'m reading this as not the right moment, and I don\'t want to waste your time or mine. Is this actually in scope for this year, or should we revisit in Q1?"',
-      signal:
-        "Pattern interrupt. Genuine prospects will re-engage hard. Ghost prospects will confirm they were never real — saving you weeks of follow-up.",
-    },
-    {
-      cat: "ANCHOR ON GENUINE INTEREST",
-      catColor: SUCCESS,
-      move: "Return to the Real Hook",
-      text: '"Earlier you said \'We\'re definitely interested in moving forward\' — let\'s build the ROI case around that specifically. If we shaved 6 months off your implementation timeline, what does that mean in revenue?"',
-      signal:
-        "Returns to the only moment of authentic engagement. Builds urgency from real value, not external pressure.",
-    },
-  ];
-
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 20,
-            fontWeight: 700,
-            color: TEXT_PRIMARY,
-          }}
-        >
-          Playbook Coach
-        </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-          Strategic questioning tactics tuned to detected deception signals ·
-          APEX CORP active session
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Signal summary */}
-        <div>
-          <Card style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Deception Patterns — Apex Corp
-              </div>
-              <Tag color={DANGER} bg="rgba(248,113,113,0.08)" border="rgba(248,113,113,0.2)">
-                HIGH RISK
-              </Tag>
-            </div>
-            <SectionLabel>Active Signals</SectionLabel>
-            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16 }}>
-              {[
-                { label: "Budget Fabrication", color: DANGER },
-                { label: "Authority Stalling", color: DANGER },
-                { label: "Contempt Cluster", color: WARN },
-                { label: "Timeline Evasion", color: WARN },
-                { label: "Gaze Avoidance", color: WARN },
-                { label: "Non-Answer 74%", color: WARN },
-              ].map((s) => (
-                <span
-                  key={s.label}
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    color: s.color,
-                    background: `${s.color}14`,
-                    border: `1px solid ${s.color}33`,
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {s.label}
-                </span>
-              ))}
-            </div>
-            <SectionLabel>Signal Intensity</SectionLabel>
-            {[
-              { label: "Budget Objection (Fabricated)", pct: 92, color: DANGER },
-              { label: "Authority Deflection", pct: 78, color: DANGER },
-              { label: "Timeline Stalling", pct: 71, color: WARN },
-              { label: "Genuine Interest at 0:00", pct: 41, color: SONAR },
-            ].map((p) => (
-              <div
-                key={p.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 8,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: TEXT_MUTED,
-                    width: 180,
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.label}
-                </span>
-                <div
-                  style={{
-                    flex: 1,
-                    height: 5,
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${p.pct}%`,
-                      height: "100%",
-                      background: p.color,
-                      borderRadius: 999,
-                    }}
-                  />
-                </div>
-                <span
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 10,
-                    color: p.color,
-                    width: 32,
-                    textAlign: "right" as const,
-                  }}
-                >
-                  {p.pct}%
-                </span>
-              </div>
-            ))}
-          </Card>
-          <Card>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 13,
-                fontWeight: 600,
-                color: TEXT_PRIMARY,
-                marginBottom: 12,
-              }}
-            >
-              Pattern Recognition
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: TEXT_MUTED,
-                lineHeight: 1.7,
-              }}
-            >
-              <p style={{ marginBottom: 8 }}>
-                ⚠ This prospect is{" "}
-                <strong style={{ color: TEXT_PRIMARY }}>
-                  not a genuine buyer right now
-                </strong>
-                . Multiple fabricated objections + contempt signals suggest:
-              </p>
-              <ul
-                style={{
-                  paddingLeft: 18,
-                  display: "flex",
-                  flexDirection: "column" as const,
-                  gap: 4,
-                }}
-              >
-                <li>They are using you as competitive leverage in another negotiation</li>
-                <li>Budget was never real — a true stall or political cover</li>
-                <li>Decision authority is above their stated contact level</li>
-                <li>There's a competing vendor they're already leaning toward</li>
-              </ul>
-              <p style={{ marginTop: 12, color: TEXT_PRIMARY }}>
-                The system identified genuine engagement at 0:00 around{" "}
-                <strong>moving forward</strong> — that's your real hook.
-              </p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Tactics */}
-        <div>
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 16,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                Strategic Playbook
-              </div>
-              <Tag color={SONAR} bg="rgba(34,211,238,0.08)" border="rgba(34,211,238,0.2)">
-                5 TACTICS
-              </Tag>
-            </div>
-            {tactics.map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  borderLeft: `2px solid ${t.catColor}`,
-                  borderRadius: 7,
-                  padding: "10px 14px",
-                  marginBottom: 10,
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: t.catColor,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    marginBottom: 4,
-                  }}
-                >
-                  {t.cat}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: TEXT_PRIMARY,
-                    marginBottom: 6,
-                  }}
-                >
-                  {t.move}
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_PRIMARY, lineHeight: 1.55, marginBottom: 6 }}>
-                  {t.text}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 10,
-                    color: TEXT_MUTED,
-                  }}
-                >
-                  Signal: {t.signal}
-                </div>
-              </div>
-            ))}
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Tab: Architecture ────────────────────────────────────────────────────────
-
-function TabArchitecture() {
-  const layers = [
-    {
-      num: "L1",
-      name: "Capture Layer",
-      sub: "All Channels",
-      desc: "4K video · 48kHz audio · text · metadata",
-      color: SONAR,
-      components: [
-        { name: "Video Capture", detail: "4K 60fps face + body. WebRTC overlay for video calls." },
-        { name: "Audio Capture", detail: "48kHz dual-channel. Close-talk + room mic separation." },
-        { name: "Text / SMS / Email", detail: "Paste, import, or API hook to CRM/Gmail/SMS." },
-        { name: "Session Metadata", detail: "Timestamps, pause durations, response latency, turn-taking." },
-        { name: "Baseline Collection", detail: "Known-truth calibration at session start. Personal deviation scoring." },
-      ],
-    },
-    {
-      num: "L2",
-      name: "Expression Engine",
-      sub: "Hume AI",
-      desc: "Hume EVI + Expression API",
-      color: VOICE,
-      components: [
-        { name: "Micro-Expression Detection", detail: "48+ expression dimensions. Sub-200ms latency. AU-based feature extraction." },
-        { name: "Voice Expression", detail: "Prosodic tone, emotional valence, arousal from audio stream." },
-        { name: "Suppression Detection", detail: "Identifies masked/suppressed expressions — key deception signal." },
-        { name: "Hume EVI (Real-Time)", detail: "Empathic Voice Interface for live session coaching cues." },
-      ],
-    },
-    {
-      num: "L3",
-      name: "Acoustic Prosody Engine",
-      sub: "Vocal Analysis",
-      desc: "Custom ASR + Praat-based features",
-      color: ACCENT,
-      components: [
-        { name: "Pitch Analysis", detail: "F0 deviation from personal baseline. Jitter & shimmer coefficients." },
-        { name: "Speech Rate Dynamics", detail: "WPM delta, tempo acceleration, micro-stutter detection." },
-        { name: "Pause Behavior", detail: "Pre-response latency, filled/unfilled pause ratio, repair initiations." },
-        { name: "Voice Stress Index", detail: "Layered tremor, breathiness, laryngeal tension markers." },
-      ],
-    },
-    {
-      num: "L4",
-      name: "NLP Semantic Engine",
-      sub: "Language Intelligence",
-      desc: "GPT-4o + custom deception fine-tune",
-      color: SONAR,
-      components: [
-        { name: "Linguistic Deception Cues", detail: "Hedging density, distancing language, passive constructions, overqualification." },
-        { name: "Cross-Turn Contradiction", detail: "Tracks narrative inconsistencies across full session history." },
-        { name: "Evasion Pattern Scoring", detail: "Non-answer ratio, topic deflection, question redirection frequency." },
-        { name: "Adaptive Questioning", detail: "Generates real-time follow-up questions to probe detected evasions." },
-        { name: "Text/Email Analysis", detail: "Async analysis of written comms: SMS, email, chat, proposals." },
-      ],
-    },
-    {
-      num: "L5",
-      name: "Behavioral Dynamics Engine",
-      sub: "Non-Verbal Analysis",
-      desc: "Computer vision + pose estimation",
-      color: SUCCESS,
-      components: [
-        { name: "Gaze Tracking", detail: "Eye contact ratio, gaze direction (truth vs. fabrication correlates)." },
-        { name: "Body Language", detail: "Self-touch, posture shifts, shoulder orientation, hand concealment." },
-        { name: "Cross-Session Memory", detail: "Compares today vs. prior sessions for narrative drift and baseline deviation." },
-        { name: "Response Latency", detail: "Per-question timing, hesitation clusters, turn-taking anomalies." },
-      ],
-    },
-    {
-      num: "L6",
-      name: "Fusion Engine",
-      sub: "Calibrated Ensemble",
-      desc: "SambaNova inference + custom model",
-      color: DANGER,
-      components: [
-        { name: "Late Fusion Classifier", detail: "Weighted ensemble from all 4 specialist models. Per-channel attribution." },
-        { name: "Bayesian Confidence", detail: "Outputs probability distributions, not binary verdicts. Uncertainty flagged." },
-        { name: "SambaNova Inference", detail: "Low-latency ensemble scoring for real-time overlay. <80ms E2E target." },
-        { name: "Baseline Normalization", detail: "All scores deviance-adjusted against individual's established truth baseline." },
-      ],
-    },
-    {
-      num: "L7",
-      name: "Sales Intelligence Engine",
-      sub: "Deal Forecasting",
-      desc: "GPT-4o orchestration layer",
-      color: SONAR,
-      components: [
-        { name: "Deal Probability Model", detail: "Truth-adjusted close probability. Pattern-matches against historical closes/losses." },
-        { name: "Objection Classifier", detail: "Real vs. fabricated objection scoring. Auto-generates specific rebuttals." },
-        { name: "Playbook Coach", detail: "Real-time counter-strategy via live overlay. Session-specific, not generic." },
-        { name: "Ghost Detection", detail: "Pattern recognizes deals that will go dark before rep realizes it." },
-        { name: "Pipeline Risk Scores", detail: "Truth-adjusted CRM forecasting. Integrates with Salesforce/HubSpot." },
-      ],
-    },
-    {
-      num: "L8",
-      name: "Governance + Audit Layer",
-      sub: "Compliance",
-      desc: "No black boxes. Full audit trail.",
-      color: TEXT_MUTED,
-      components: [
-        { name: "Session Replay", detail: "Full annotated replay with signal overlay at every timestamp." },
-        { name: "Explainability Trace", detail: "Every score traceable to source features. No opaque verdicts." },
-        { name: "Adversarial Hardening", detail: "Trained against coached liars, cultural variance, and expression masking." },
-        { name: "Compliance Controls", detail: "Consent capture, data residency, GDPR/CCPA/SOC2 hooks." },
-      ],
-    },
-  ];
-
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 20,
-            fontWeight: 700,
-            color: TEXT_PRIMARY,
-          }}
-        >
-          System Architecture
-        </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-          Multimodal truth intelligence stack — 8 layers, 6 AI engines,
-          real-time fusion
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "12px 16px",
-          borderRadius: 10,
-          background: "rgba(251,191,36,0.07)",
-          border: "1px solid rgba(251,191,36,0.2)",
-          marginBottom: 20,
-          fontSize: 13,
-          color: TEXT_PRIMARY,
-        }}
-      >
-        <AlertTriangle size={15} color={WARN} style={{ flexShrink: 0 }} />
-        <span>
-          This architecture integrates with{" "}
-          <strong>Hume AI</strong> (expression), GPT-4o (reasoning), SambaNova
-          (low-latency inference), and custom trained fusion models. No single
-          vendor dependency — always a multi-model stack.
-        </span>
-      </div>
-
-      {/* Pipeline flow */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 20,
-          overflowX: "auto" as const,
-          padding: "12px 0",
-        }}
-      >
-        {[
-          "Capture",
-          "Hume AI",
-          "Acoustic",
-          "NLP",
-          "Behavioral",
-          "Fusion",
-          "Sales Intel",
-          "UX",
-        ].map((step, i, arr) => (
-          <div key={step} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div
-              style={{
-                padding: "6px 14px",
-                borderRadius: 999,
-                background: "rgba(105,106,172,0.15)",
-                border: `1px solid ${ACCENT}44`,
-                fontFamily: "monospace",
-                fontSize: 10,
-                color: ACCENT,
-                letterSpacing: "0.06em",
-                whiteSpace: "nowrap" as const,
-              }}
-            >
-              {step}
-            </div>
-            {i < arr.length - 1 && (
-              <ChevronRight size={14} color="rgba(255,255,255,0.2)" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Architecture layers */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {layers.map((layer) => (
-          <div
-            key={layer.num}
-            style={{
-              background: "#111114",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 16px",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.25)",
-                  width: 24,
-                  fontWeight: 500,
-                }}
-              >
-                {layer.num}
-              </span>
-              <div>
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: layer.color,
-                  }}
-                >
-                  {layer.name}
-                  <span
-                    style={{
-                      color: TEXT_MUTED,
-                      fontWeight: 400,
-                      fontSize: 11,
-                      marginLeft: 8,
-                    }}
-                  >
-                    — {layer.sub}
-                  </span>
-                </div>
-              </div>
-              <div
-                style={{
-                  marginLeft: "auto",
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  color: TEXT_MUTED,
-                }}
-              >
-                {layer.desc}
-              </div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                gap: 8,
-                padding: "12px 16px",
-              }}
-            >
-              {layer.components.map((c) => (
-                <div
-                  key={c.name}
-                  style={{
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 7,
-                    padding: "8px 10px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "monospace",
                       fontSize: 10,
                       fontWeight: 600,
-                      color: TEXT_PRIMARY,
+                      color: C.textPrimary,
+                      letterSpacing: "0.04em",
                       marginBottom: 3,
                     }}
                   >
-                    {c.name}
+                    <span
+                      style={{
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 9,
+                        color: dotColor,
+                        marginRight: 5,
+                        letterSpacing: "0.1em",
+                      }}
+                    >
+                      [{cue.level}]
+                    </span>
+                    {cue.title}
                   </div>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.4 }}>
-                    {c.detail}
-                  </div>
+                  <div style={{ fontSize: 10, color: C.textFaint, lineHeight: 1.5 }}>{cue.desc}</div>
                 </div>
-              ))}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick text analyzer */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 9, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.18em", marginBottom: 8 }}>
+            QUICK TEXT SCAN
+          </div>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Paste SMS, email, or message..."
+            style={{
+              width: "100%",
+              minHeight: 72,
+              borderRadius: 8,
+              border: "1px solid rgba(246,246,253,0.12)",
+              background: "rgba(2,2,2,0.7)",
+              color: C.textPrimary,
+              padding: "10px",
+              fontSize: 11,
+              resize: "vertical",
+              fontFamily: C.font,
+              outline: "none",
+            }}
+          />
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <button
+              onClick={analyzeText}
+              disabled={isAnalyzing}
+              style={{
+                flex: 1,
+                padding: "8px",
+                borderRadius: 8,
+                border: `1px solid ${C.accent}66`,
+                background: `linear-gradient(93.92deg, #8587e3 -13%, #4c4dac 40%, ${C.accent} 113%)`,
+                color: C.textPrimary,
+                fontSize: 10,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: C.font,
+                fontWeight: 600,
+              }}
+            >
+              {isAnalyzing ? "SCANNING..." : "ANALYZE"}
+            </button>
+            <button
+              onClick={() => setInputText(SAMPLE_SMS)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid rgba(246,246,253,0.12)",
+                background: "rgba(246,246,253,0.03)",
+                color: C.textFaint,
+                fontSize: 10,
+                cursor: "pointer",
+                fontFamily: C.font,
+              }}
+            >
+              SMS
+            </button>
+            <button
+              onClick={() => setInputText(SAMPLE_EMAIL)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid rgba(246,246,253,0.12)",
+                background: "rgba(246,246,253,0.03)",
+                color: C.textFaint,
+                fontSize: 10,
+                cursor: "pointer",
+                fontFamily: C.font,
+              }}
+            >
+              EMAIL
+            </button>
+          </div>
+
+          {analysisResult && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+              {/* Score chips */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                {[
+                  { label: "Truth", value: `${Math.round(analysisResult.truthScore)}`, color: analysisResult.truthScore > 65 ? C.green : analysisResult.truthScore > 35 ? C.amber : C.red },
+                  { label: "Deal Risk", value: `${Math.round(analysisResult.dealRisk)}%`, color: analysisResult.dealRisk > 65 ? C.red : analysisResult.dealRisk > 35 ? C.amber : C.green },
+                  { label: "Hedging", value: `${Math.round(analysisResult.hedgePct)}%`, color: C.amber },
+                  { label: "Evasion", value: `${Math.round(analysisResult.evasionPct)}%`, color: C.red },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 6,
+                      border: `1px solid ${m.color}33`,
+                      background: `${m.color}0a`,
+                    }}
+                  >
+                    <div style={{ fontSize: 8, color: C.textFaint, fontFamily: "'Courier New', monospace", letterSpacing: "0.12em" }}>{m.label.toUpperCase()}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: m.color, fontFamily: "'Courier New', monospace" }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Highlighted text */}
+              <div
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(246,246,253,0.08)",
+                  background: "rgba(246,246,253,0.02)",
+                  fontSize: 10,
+                  lineHeight: 1.7,
+                  color: C.textMuted,
+                  maxHeight: 100,
+                  overflowY: "auto",
+                }}
+                dangerouslySetInnerHTML={{ __html: analysisResult.highlightedHtml }}
+              />
+              {analysisResult.actionable && (
+                <div
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    border: `1px solid ${C.cyan}33`,
+                    background: `${C.cyan}08`,
+                    fontSize: 10,
+                    color: C.cyan,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <span style={{ fontWeight: 600, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: "0.1em" }}>ACTION: </span>
+                  {analysisResult.actionable}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </ScanlineCard>
+    </div>
+  );
+
+  // ─── Render: Text Analyzer ──────────────────────────────────────────────────
+
+  const renderTextAnalyzer = () => (
+    <ScanlineCard style={{ padding: "24px" }}>
+      <ModuleLabel num="04" name="Text Intelligence Analyzer" />
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr)", gap: 20 }}>
+        <div>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Paste any SMS, email, or message here and hit Analyze."
+            style={{
+              width: "100%",
+              minHeight: 200,
+              borderRadius: 12,
+              border: "1px solid rgba(246,246,253,0.14)",
+              background: "rgba(2,2,2,0.7)",
+              color: C.textPrimary,
+              padding: "14px",
+              fontSize: 13,
+              resize: "vertical",
+              fontFamily: C.font,
+              outline: "none",
+            }}
+          />
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={analyzeText}
+              disabled={isAnalyzing}
+              style={{
+                padding: "10px 28px",
+                borderRadius: 40,
+                border: "none",
+                background: `linear-gradient(93.92deg, #8587e3 -13%, #4c4dac 40%, ${C.accent} 113%)`,
+                boxShadow: `0 0 10px ${C.accent}, inset 0 0 2px rgba(255,255,255,0.61)`,
+                color: C.textPrimary,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: C.font,
+                fontWeight: 600,
+              }}
+            >
+              {isAnalyzing ? "Scanning..." : "Analyze with Aletheia"}
+            </button>
+            <button
+              onClick={() => setInputText(SAMPLE_SMS)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 40,
+                border: "1px solid rgba(246,246,253,0.26)",
+                background: "rgba(2,2,2,0.8)",
+                color: C.textMuted,
+                fontSize: 11,
+                cursor: "pointer",
+                fontFamily: C.font,
+              }}
+            >
+              Load SMS sample
+            </button>
+            <button
+              onClick={() => setInputText(SAMPLE_EMAIL)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 40,
+                border: "1px solid rgba(246,246,253,0.26)",
+                background: "rgba(2,2,2,0.8)",
+                color: C.textMuted,
+                fontSize: 11,
+                cursor: "pointer",
+                fontFamily: C.font,
+              }}
+            >
+              Load email sample
+            </button>
+          </div>
+        </div>
+
+        <div>
+          {!analysisResult ? (
+            <div style={{ fontSize: 12, color: C.textFaint, padding: "4px 2px", lineHeight: 1.8 }}>
+              Aletheia will highlight deceptive phrases in{" "}
+              <span style={{ color: C.red }}>red</span> and stall language in{" "}
+              <span style={{ color: C.amber }}>amber</span>, then suggest counter-moves for your reply.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                {[
+                  { label: "Truth Score", value: `${Math.round(analysisResult.truthScore)}`, color: analysisResult.truthScore > 65 ? C.green : analysisResult.truthScore > 35 ? C.amber : C.red },
+                  { label: "Hedging", value: `${Math.round(analysisResult.hedgePct)}%`, color: C.amber },
+                  { label: "Evasion", value: `${Math.round(analysisResult.evasionPct)}%`, color: C.red },
+                  { label: "Urgency", value: analysisResult.urgency, color: C.cyan },
+                  { label: "Deal Risk", value: `${Math.round(analysisResult.dealRisk)}%`, color: analysisResult.dealRisk > 65 ? C.red : analysisResult.dealRisk > 35 ? C.amber : C.green },
+                  { label: "Ghost Risk", value: analysisResult.ghostRisk ?? "—", color: (analysisResult.ghostRisk ?? "").toUpperCase() === "HIGH" ? C.red : C.amber },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    style={{
+                      borderRadius: 10,
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      background: "rgba(246,246,253,0.03)",
+                      padding: "9px 10px",
+                    }}
+                  >
+                    <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: C.textFaint, marginBottom: 4, fontFamily: "'Courier New', monospace" }}>{m.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: m.color, fontFamily: "'Courier New', monospace" }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid rgba(246,246,253,0.14)",
+                  background: "rgba(2,2,2,0.7)",
+                  padding: "12px",
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                  color: C.textMuted,
+                }}
+                dangerouslySetInnerHTML={{ __html: analysisResult.highlightedHtml }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Intel cues after analysis */}
+      {analysisResult && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {analysisResult.hedgeCount > 0 && (
+            <div style={{ display: "flex", gap: 8, fontSize: 11 }}>
+              <div style={{ width: 6, height: 6, borderRadius: 999, background: C.red, boxShadow: `0 0 8px ${C.red}aa`, marginTop: 4, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 500 }}>Over-assurance hedging ({analysisResult.hedgeCount})</div>
+                <div style={{ color: C.textMuted, marginTop: 2 }}>Phrases like "definitely" and "strong fit" appear often. Genuine buyers rarely stack this much reassurance.</div>
+              </div>
+            </div>
+          )}
+          {analysisResult.evasionCount > 0 && (
+            <div style={{ display: "flex", gap: 8, fontSize: 11 }}>
+              <div style={{ width: 6, height: 6, borderRadius: 999, background: C.amber, marginTop: 4, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 500 }}>Stall / delay language ({analysisResult.evasionCount})</div>
+                <div style={{ color: C.textMuted, marginTop: 2 }}>References to "next quarter" or "few months" are classic ghosting architecture. Treat this as low intent unless you create a forcing function.</div>
+              </div>
+            </div>
+          )}
+          {analysisResult.actionable && (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "10px 14px",
+                borderRadius: 10,
+                border: `1px solid ${C.cyan}33`,
+                background: `${C.cyan}08`,
+                fontSize: 11,
+                color: C.cyan,
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ fontWeight: 700, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: "0.1em" }}>RECOMMENDED ACTION: </span>
+              {analysisResult.actionable}
+            </div>
+          )}
+        </div>
+      )}
+    </ScanlineCard>
+  );
+
+  // ─── Render: Deal Pipeline ──────────────────────────────────────────────────
+
+  const renderPipeline = () => (
+    <ScanlineCard style={{ padding: "24px" }}>
+      <ModuleLabel num="05" name="Deal Pipeline · Truth-Adjusted" />
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead>
+          <tr>
+            {["Account", "Value", "Stage", "ATI Score", "Risk", "Trend"].map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: "8px 12px",
+                  textAlign: "left",
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: 9,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: C.textFaint,
+                  borderBottom: "1px solid rgba(246,246,253,0.08)",
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {DEALS.map((deal, i) => {
+            const riskColor = deal.risk === "HIGH" ? C.red : deal.risk === "LOW" ? C.green : C.amber;
+            const atiColor = deal.truthAdj > 65 ? C.green : deal.truthAdj > 35 ? C.amber : C.red;
+            return (
+              <tr
+                key={i}
+                style={{
+                  borderBottom: "1px solid rgba(246,246,253,0.04)",
+                }}
+              >
+                <td style={{ padding: "12px 12px", color: C.textPrimary, fontWeight: 500 }}>{deal.name}</td>
+                <td style={{ padding: "12px 12px", color: C.textMuted, fontFamily: "'Courier New', monospace" }}>{deal.value}</td>
+                <td style={{ padding: "12px 12px", color: C.textFaint, fontSize: 11 }}>{deal.stage}</td>
+                <td style={{ padding: "12px 12px" }}>
+                  <span
+                    style={{
+                      color: atiColor,
+                      fontFamily: "'Courier New', monospace",
+                      fontWeight: 700,
+                      textShadow: `0 0 8px ${atiColor}66`,
+                    }}
+                  >
+                    {deal.truthAdj}
+                  </span>
+                </td>
+                <td style={{ padding: "12px 12px" }}>
+                  <span
+                    style={{
+                      padding: "2px 9px",
+                      borderRadius: 999,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: "0.1em",
+                      background: `${riskColor}18`,
+                      border: `1px solid ${riskColor}55`,
+                      color: riskColor,
+                      fontFamily: "'Courier New', monospace",
+                    }}
+                  >
+                    {deal.risk}
+                  </span>
+                </td>
+                <td style={{ padding: "12px 12px" }}>
+                  {deal.trend === "up" ? (
+                    <TrendingUp size={14} color={C.green} />
+                  ) : deal.trend === "down" ? (
+                    <TrendingDown size={14} color={C.red} />
+                  ) : (
+                    <span style={{ color: C.textFaint, fontSize: 10 }}>—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </ScanlineCard>
+  );
+
+  // ─── Render: Playbook ──────────────────────────────────────────────────────
+
+  const renderPlaybook = () => (
+    <ScanlineCard style={{ padding: "24px" }}>
+      <ModuleLabel num="06" name="Strategic Playbook" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
+        {PLAYBOOK_TACTICS.map((tactic, i) => (
+          <div
+            key={i}
+            style={{
+              padding: "16px",
+              borderRadius: 12,
+              border: `1px solid ${tactic.color}33`,
+              background: `${tactic.color}08`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: tactic.color,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                fontFamily: "'Courier New', monospace",
+                marginBottom: 6,
+              }}
+            >
+              {tactic.name}
+            </div>
+            <div style={{ fontSize: 10, color: C.textFaint, marginBottom: 10, lineHeight: 1.5 }}>
+              <span style={{ color: C.textMuted }}>Trigger: </span>{tactic.trigger}
+            </div>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(246,246,253,0.08)",
+                background: "rgba(246,246,253,0.03)",
+                fontSize: 11,
+                lineHeight: 1.6,
+                color: C.textMuted,
+                fontStyle: "italic",
+              }}
+            >
+              "{tactic.script}"
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </ScanlineCard>
   );
-}
 
-// ─── Tab: History ─────────────────────────────────────────────────────────────
+  // ─── Render: History ──────────────────────────────────────────────────────
 
-function TabHistory() {
-  const events = [
-    {
-      level: "critical" as const,
-      date: "Today 12:18 PM",
-      prospect: "Apex Corp",
-      title: "LIVE SESSION · Aletheia Truth Score: 34 · HIGH RISK",
-      detail:
-        "11 deception signals. Budget objection flagged fabricated. Contempt cluster at 0:52. Deal probability revised to 38%.",
-      type: "VIDEO",
-    },
-    {
-      level: "ok" as const,
-      date: "Today 10:00 AM",
-      prospect: "Stark Industries",
-      title: "VIDEO CALL · Truth Score: 81 · LOW RISK",
-      detail:
-        "Genuine excitement confirmed. Joy expression dominant. Timeline and authority clear. Technical evaluation progressing.",
-      type: "VIDEO",
-    },
-    {
-      level: "ok" as const,
-      date: "Today 9:15 AM",
-      prospect: "Globex Inc",
-      title: "VIDEO CALL · Truth Score: 88 · LOW RISK",
-      detail:
-        "High engagement, no suppression, clear authority confirmation. Discovery stage complete. Proposal sent.",
-      type: "VIDEO",
-    },
-    {
-      level: "warn" as const,
-      date: "Yesterday 3:30 PM",
-      prospect: "Initech",
-      title: "EMAIL THREAD · Truth Score: 52 · MEDIUM RISK",
-      detail:
-        "4× hedging phrases detected. Timeline ambiguity. Recommend direct call to flush out real blocker.",
-      type: "EMAIL",
-    },
-    {
-      level: "critical" as const,
-      date: "Apr 14",
-      prospect: "Umbrella Ltd",
-      title: "EMAIL + SMS · Truth Score: 22 · GHOST RISK",
-      detail:
-        "Non-answer ratio 74%. Last 3 replies show suppression pattern. Ghost probability 89%. Recommend break-up email.",
-      type: "EMAIL",
-    },
-  ];
-
-  const typeIcon: Record<string, React.ReactNode> = {
-    VIDEO: <Phone size={12} />,
-    EMAIL: <Mail size={12} />,
-    SMS: <MessageSquare size={12} />,
-  };
-  const cueColor = { critical: DANGER, warn: WARN, ok: SUCCESS };
-
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 20,
-            fontWeight: 700,
-            color: TEXT_PRIMARY,
-          }}
-        >
-          Session History
-        </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 4 }}>
-          All analyzed sessions with truth scores and outcome tracking
-        </div>
-      </div>
-
-      {/* Summary row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        <KpiCard
-          label="Sessions Analyzed"
-          value="5"
-          valueColor={TEXT_PRIMARY}
-          delta="This week"
-          deltaType="neutral"
-        />
-        <KpiCard
-          label="High Risk Flagged"
-          value="2"
-          valueColor={DANGER}
-          delta="Apex + Umbrella"
-          deltaType="down"
-        />
-        <KpiCard
-          label="Genuine Buyers"
-          value="2"
-          valueColor={SUCCESS}
-          delta="Stark + Globex confirmed"
-          deltaType="up"
-        />
-        <KpiCard
-          label="Avg Truth Score"
-          value="54.6"
-          valueColor={WARN}
-          delta="Portfolio avg this week"
-          deltaType="neutral"
-        />
-      </div>
-
-      <Card>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 13,
-            fontWeight: 600,
-            color: TEXT_PRIMARY,
-            marginBottom: 16,
-          }}
-        >
-          Recent Sessions
-        </div>
-        {/* Timeline */}
-        <div
-          style={{
-            position: "relative" as const,
-            paddingLeft: 24,
-          }}
-        >
-          {/* Vertical line */}
-          <div
-            style={{
-              position: "absolute" as const,
-              left: 7,
-              top: 0,
-              bottom: 0,
-              width: 1,
-              background: "rgba(255,255,255,0.06)",
-            }}
-          />
-          {events.map((ev, i) => (
+  const renderHistory = () => (
+    <ScanlineCard style={{ padding: "24px" }}>
+      <ModuleLabel num="07" name="Session History" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {[
+          { time: "Today 14:22", subject: "PROSPECT-001", duration: "12:34", ati: 34, risk: "HIGH", flags: 4 },
+          { time: "Today 11:05", subject: "PROSPECT-002", duration: "08:17", ati: 67, risk: "MEDIUM", flags: 1 },
+          { time: "Yesterday 16:40", subject: "PROSPECT-003", duration: "21:02", ati: 82, risk: "LOW", flags: 0 },
+          { time: "Yesterday 10:15", subject: "PROSPECT-004", duration: "15:44", ati: 41, risk: "HIGH", flags: 3 },
+          { time: "3 days ago", subject: "PROSPECT-005", duration: "06:58", ati: 74, risk: "LOW", flags: 0 },
+        ].map((session, i) => {
+          const riskColor = session.risk === "HIGH" ? C.red : session.risk === "LOW" ? C.green : C.amber;
+          return (
             <div
               key={i}
-              style={{ position: "relative" as const, marginBottom: 20 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                padding: "12px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(246,246,253,0.06)",
+                background: "rgba(246,246,253,0.02)",
+              }}
             >
-              {/* Dot */}
-              <div
+              <div style={{ fontSize: 11, color: C.textFaint, fontFamily: "'Courier New', monospace", minWidth: 120 }}>{session.time}</div>
+              <div style={{ fontSize: 12, color: C.textPrimary, fontWeight: 500, flex: 1 }}>{session.subject}</div>
+              <div style={{ fontSize: 11, color: C.textFaint, fontFamily: "'Courier New', monospace", minWidth: 50 }}>{session.duration}</div>
+              <div style={{ fontFamily: "'Courier New', monospace", fontWeight: 700, color: riskColor, minWidth: 32 }}>{session.ati}</div>
+              <span
                 style={{
-                  position: "absolute" as const,
-                  left: -21,
-                  top: 4,
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: cueColor[ev.level],
-                  border: `1px solid ${cueColor[ev.level]}`,
-                  boxShadow:
-                    ev.level === "critical"
-                      ? `0 0 8px ${DANGER}`
-                      : undefined,
-                }}
-              />
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.3)",
-                  marginBottom: 3,
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  background: `${riskColor}18`,
+                  border: `1px solid ${riskColor}55`,
+                  color: riskColor,
+                  fontFamily: "'Courier New', monospace",
                 }}
               >
-                {ev.date} — {ev.prospect}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 4,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: TEXT_PRIMARY,
-                  }}
-                >
-                  {ev.title}
-                </span>
-                <span style={{ color: TEXT_MUTED }}>
-                  {typeIcon[ev.type]}
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.5 }}>
-                {ev.detail}
+                {session.risk}
+              </span>
+              <div style={{ fontSize: 10, color: session.flags > 0 ? C.amber : C.textFaint, fontFamily: "'Courier New', monospace" }}>
+                {session.flags} flags
               </div>
             </div>
-          ))}
-        </div>
-      </Card>
-    </div>
+          );
+        })}
+      </div>
+    </ScanlineCard>
   );
-}
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function AtomAletheia() {
-  const [activeTab, setActiveTab] = useState<TabId>("live");
-  const [activeChannel, setActiveChannel] = useState<string>("VIDEO");
-  const [isRecording, setIsRecording] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraActive, setCameraActive] = useState(false);
-
-  // Start camera for video channel
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
-        audio: true,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setCameraActive(true);
-      toast({ title: "Aletheia Camera Active", description: "Video + audio capture started for truth analysis." });
-    } catch {
-      toast({ title: "Camera access denied", description: "Allow camera and microphone access for live video analysis.", variant: "destructive" });
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  };
-
-  // Channel switch handler
-  const switchChannel = (ch: string) => {
-    setActiveChannel(ch);
-    if (ch === "VIDEO" && !cameraActive) {
-      startCamera();
-    } else if (ch !== "VIDEO" && cameraActive) {
-      stopCamera();
-    }
-    if (ch === "TEXT/SMS" || ch === "EMAIL") {
-      setActiveTab("text");
-    } else {
-      setActiveTab("live");
-    }
-    toast({ title: `Channel: ${ch}`, description: `Aletheia now analyzing ${ch.toLowerCase()} signals.` });
-  };
-  const [sessionSec, setSessionSec] = useState(872);
-
-  useEffect(() => {
-    const iv = setInterval(() => setSessionSec((s) => s + 1), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const sessionTime = `${String(Math.floor(sessionSec / 3600)).padStart(2, "0")}:${String(
-    Math.floor((sessionSec % 3600) / 60)
-  ).padStart(2, "0")}:${String(sessionSec % 60).padStart(2, "0")}`;
-
-  const navItems: {
-    id: TabId;
-    label: string;
-    icon: React.ReactNode;
-    badge?: string;
-  }[] = [
-    { id: "live", label: "Live Session", icon: <Radio size={15} />, badge: "LIVE" },
-    { id: "text", label: "Text Analyzer", icon: <MessageSquare size={15} /> },
-    { id: "pipeline", label: "Deal Pipeline", icon: <BarChart3 size={15} />, badge: "3 ⚠" },
-    { id: "playbook", label: "Playbook Coach", icon: <Layers size={15} /> },
-
-    { id: "history", label: "Session History", icon: <History size={15} /> },
-  ];
-
-  const signalHealth = [
-    { label: "VIDEO", pct: 92, color: SONAR },
-    { label: "AUDIO", pct: 87, color: SONAR },
-    { label: "NLP", pct: 100, color: SUCCESS },
-    { label: "FUSION", pct: 89, color: SONAR },
-  ];
+  // ─── Page render ─────────────────────────────────────────────────────────
 
   return (
     <div
+      className="atom-page"
       style={{
-        display: "grid",
-        gridTemplateRows: "52px 1fr",
-        gridTemplateColumns: "220px 1fr",
-        height: "100dvh",
-        background: "#020202",
-        fontFamily: FONT_FAMILY,
-        color: TEXT_PRIMARY,
-        overflow: "hidden",
+        minHeight: "100vh",
+        fontFamily: C.font,
+        background: `radial-gradient(circle at top, ${C.primary}33 0, ${C.bg} 55%, ${C.bg} 100%)`,
+        color: C.textPrimary,
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* ── Topbar ── */}
+      {/* ── Top Nav ──────────────────────────────────────────────────────── */}
       <header
         style={{
-          gridColumn: "1 / -1",
-          gridRow: "1",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 16px",
-          gap: 16,
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-          background: "#0d0d10",
-          zIndex: 100,
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          backdropFilter: "blur(24px)",
+          background: `linear-gradient(to bottom, rgba(2,2,2,0.92), rgba(2,2,2,0.7), transparent)`,
+          borderBottom: `1px solid rgba(246,246,253,0.08)`,
         }}
       >
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <svg
-            viewBox="0 0 28 28"
-            fill="none"
-            width={28}
-            height={28}
-            aria-label="ATOM Aletheia"
-          >
-            <polygon
-              points="14,2 26,22 2,22"
-              stroke={ACCENT}
-              strokeWidth="1.5"
-              fill="none"
-            />
-            <polygon
-              points="14,7 21,20 7,20"
-              stroke={ACCENT}
-              strokeWidth="0.8"
-              fill={`${ACCENT}10`}
-            />
-            <circle cx="14" cy="14" r="2.5" fill={ACCENT} />
-            <line
-              x1="14"
-              y1="5.5"
-              x2="14"
-              y2="11.5"
-              stroke={ACCENT}
-              strokeWidth="1"
-              opacity="0.5"
-            />
-          </svg>
-          <div>
+        <div
+          style={{
+            maxWidth: 1500,
+            margin: "0 auto",
+            padding: "12px 30px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          {/* Brand */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div
               style={{
-                fontFamily: "monospace",
-                fontSize: 15,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                color: TEXT_PRIMARY,
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                background: `radial-gradient(circle at 30% 0%, #e3e3f8, ${C.accent} 42%, #020202 100%)`,
+                boxShadow: `0 0 24px ${C.accent}aa`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              ATOM Aletheia
+              <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.08em" }}>A</span>
             </div>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 9,
-                color: ACCENT,
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-              }}
-            >
-              Truth Intelligence
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ fontSize: 14, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600 }}>ATOM Aletheia</div>
+              <div style={{ fontSize: 10, color: C.textMuted, letterSpacing: "0.16em", textTransform: "uppercase" }}>Truth &amp; Intent Engine</div>
             </div>
           </div>
-        </div>
 
-        {/* Separator */}
-        <div
-          style={{
-            width: 1,
-            height: 28,
-            background: "rgba(255,255,255,0.08)",
-            flexShrink: 0,
-          }}
-        />
-
-        {/* Session info */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: SONAR,
-              boxShadow: `0 0 0 0 ${SONAR}`,
-              animation: "aletheiaPulse 2s infinite",
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "monospace",
-              fontSize: 10,
-              color: TEXT_MUTED,
-              letterSpacing: "0.04em",
-            }}
-          >
-            SESSION ACTIVE · PROSPECT: APEX CORP · {sessionTime}
-          </span>
-        </div>
-
-        {/* Subtitle */}
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 9,
-            color: "rgba(255,255,255,0.25)",
-            letterSpacing: "0.06em",
-            marginLeft: 4,
-          }}
-        >
-          Truth & Intent Engine · Powered by Aletheia
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Channel pills */}
-        <div style={{ display: "flex", gap: 4 }}>
-          {["VIDEO", "VOICE", "TEXT/SMS", "EMAIL"].map((ch) => (
-            <button
-              key={ch}
-              onClick={() => switchChannel(ch)}
-              style={{
-                fontFamily: "monospace",
-                fontSize: 9,
-                padding: "4px 8px",
-                borderRadius: 999,
-                border: `1px solid ${activeChannel === ch ? ACCENT : "rgba(255,255,255,0.1)"}`,
-                background: activeChannel === ch ? `${ACCENT}15` : "transparent",
-                color: activeChannel === ch ? ACCENT : TEXT_MUTED,
-                cursor: "pointer",
-                letterSpacing: "0.06em",
-                transition: "all 180ms",
-              }}
-            >
-              {ch}
-            </button>
-          ))}
-        </div>
-
-        {/* Rec button */}
-        <button
-          onClick={() => {
-            setIsRecording(!isRecording);
-            toast({ title: isRecording ? "Recording Stopped" : "Recording Started", description: isRecording ? "Session recording saved." : "Aletheia is recording this session for analysis." });
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontFamily: "monospace",
-            fontSize: 10,
-            padding: "5px 12px",
-            borderRadius: 999,
-            border: `1px solid ${isRecording ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.1)"}`,
-            background: isRecording ? "rgba(248,113,113,0.12)" : "transparent",
-            color: isRecording ? DANGER : TEXT_MUTED,
-            cursor: "pointer",
-            transition: "all 180ms",
-          }}
-        >
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: DANGER,
-              animation: isRecording ? "pulse 1.5s ease-in-out infinite" : "none",
-            }}
-          />
-          {isRecording ? "● REC" : "REC"}
-        </button>
-
-        {/* Live session button */}
-        <button
-          onClick={() => setActiveTab("live")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontFamily: "monospace",
-            fontSize: 10,
-            fontWeight: 600,
-            padding: "5px 14px",
-            borderRadius: 999,
-            background: ACCENT,
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            letterSpacing: "0.04em",
-          }}
-        >
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#fff",
-              opacity: 0.8,
-            }}
-          />
-          LIVE SESSION
-        </button>
-      </header>
-
-      {/* ── Sidebar ── */}
-      <nav
-        style={{
-          gridColumn: "1",
-          gridRow: "2",
-          borderRight: "1px solid rgba(255,255,255,0.07)",
-          background: "#0d0d10",
-          overflowY: "auto" as const,
-          display: "flex",
-          flexDirection: "column" as const,
-        }}
-      >
-        <div style={{ padding: "12px 12px 8px" }}>
-          <SectionLabel>Analysis</SectionLabel>
-          {navItems.slice(0, 4).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                width: "100%",
-                padding: "8px 8px",
-                borderRadius: 6,
-                background:
-                  activeTab === item.id
-                    ? "rgba(105,106,172,0.12)"
-                    : "transparent",
-                border: "none",
-                color: activeTab === item.id ? TEXT_PRIMARY : TEXT_MUTED,
-                cursor: "pointer",
-                fontSize: 13,
-                position: "relative" as const,
-                textAlign: "left" as const,
-                marginBottom: 2,
-              }}
-            >
-              {activeTab === item.id && (
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    left: 0,
-                    top: "20%",
-                    bottom: "20%",
-                    width: 2,
-                    background: ACCENT,
-                    borderRadius: "0 2px 2px 0",
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  color: activeTab === item.id ? ACCENT : TEXT_MUTED,
-                  flexShrink: 0,
-                }}
+          {/* Channel pills */}
+          <div style={{ display: "flex", gap: 6, marginLeft: 20 }}>
+            {(["VIDEO", "VOICE", "TEXT-SMS", "EMAIL"] as ChannelId[]).map((ch) => (
+              <button
+                key={ch}
+                onClick={() => setActiveChannel(ch)}
+                style={activeChannel === ch ? chipActive : chipBase}
               >
-                {item.icon}
-              </span>
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge && (
-                <span
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    background: `${ACCENT}15`,
-                    color: ACCENT,
-                    padding: "1px 6px",
-                    borderRadius: 999,
-                  }}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div
-          style={{
-            height: 1,
-            background: "rgba(255,255,255,0.06)",
-            margin: "4px 12px",
-          }}
-        />
-
-        <div style={{ padding: "8px 12px" }}>
-          <SectionLabel>Intelligence</SectionLabel>
-          {navItems.slice(4).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                width: "100%",
-                padding: "8px 8px",
-                borderRadius: 6,
-                background:
-                  activeTab === item.id
-                    ? "rgba(105,106,172,0.12)"
-                    : "transparent",
-                border: "none",
-                color: activeTab === item.id ? TEXT_PRIMARY : TEXT_MUTED,
-                cursor: "pointer",
-                fontSize: 13,
-                position: "relative" as const,
-                textAlign: "left" as const,
-                marginBottom: 2,
-              }}
-            >
-              {activeTab === item.id && (
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    left: 0,
-                    top: "20%",
-                    bottom: "20%",
-                    width: 2,
-                    background: ACCENT,
-                    borderRadius: "0 2px 2px 0",
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  color: activeTab === item.id ? ACCENT : TEXT_MUTED,
-                  flexShrink: 0,
-                }}
-              >
-                {item.icon}
-              </span>
-              <span style={{ flex: 1 }}>{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ flex: 1 }} />
-        <div
-          style={{
-            height: 1,
-            background: "rgba(255,255,255,0.06)",
-            margin: "4px 12px",
-          }}
-        />
-
-        {/* Signal Health */}
-        <div style={{ padding: 12 }}>
-          <div
-            style={{
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 8,
-              padding: 12,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 9,
-                color: TEXT_MUTED,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginBottom: 8,
-              }}
-            >
-              Signal Health
-            </div>
-            {signalHealth.map((s) => (
-              <div
-                key={s.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 6,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 9,
-                    color: TEXT_MUTED,
-                    fontFamily: "monospace",
-                    width: 44,
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {s.label}
-                </span>
-                <div
-                  style={{
-                    flex: 1,
-                    height: 3,
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: 99,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${s.pct}%`,
-                      height: "100%",
-                      background: s.color,
-                      borderRadius: 99,
-                    }}
-                  />
-                </div>
-                <span
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 9,
-                    color: TEXT_MUTED,
-                    width: 24,
-                    textAlign: "right" as const,
-                  }}
-                >
-                  {s.pct === 100 ? "OK" : s.pct}
-                </span>
-              </div>
+                {ch === "VIDEO" && <Video size={10} style={{ display: "inline", marginRight: 4 }} />}
+                {ch === "VOICE" && <Mic size={10} style={{ display: "inline", marginRight: 4 }} />}
+                {ch === "TEXT-SMS" && <MessageSquare size={10} style={{ display: "inline", marginRight: 4 }} />}
+                {ch === "EMAIL" && <Mail size={10} style={{ display: "inline", marginRight: 4 }} />}
+                {ch}
+              </button>
             ))}
           </div>
-        </div>
-      </nav>
 
-      {/* ── Main content ── */}
-      <main
-        style={{
-          gridColumn: "2",
-          gridRow: "2",
-          overflowY: "auto" as const,
-          background: "#020202",
-        }}
-      >
-        {/* Video preview when camera active */}
-        {cameraActive && activeChannel === "VIDEO" && (
-          <div style={{ padding: "16px 24px 0", display: "flex", gap: 16 }}>
-            <div style={{
-              flex: "0 0 320px", borderRadius: 12, overflow: "hidden",
-              border: `1px solid ${ACCENT}40`, position: "relative",
-            }}>
-              <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", borderRadius: 12 }} />
-              <div style={{
-                position: "absolute", top: 8, left: 8, display: "flex", gap: 6, alignItems: "center",
-                background: "rgba(2,2,2,0.7)", padding: "3px 8px", borderRadius: 999,
-                fontFamily: "monospace", fontSize: 9, color: SONAR, letterSpacing: "0.06em",
-              }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: SONAR, animation: "aletheiaPulse 1.5s ease-in-out infinite" }} />
-                LIVE · ALETHEIA ANALYZING
-              </div>
+          {/* REC button */}
+          <button
+            onClick={toggleCamera}
+            className={isRecording ? "rec-pulse" : ""}
+            style={{
+              marginLeft: "auto",
+              padding: "7px 18px",
+              borderRadius: 999,
+              border: `1px solid ${isRecording ? C.red + "88" : "rgba(246,246,253,0.2)"}`,
+              background: isRecording ? `rgba(248,113,113,0.15)` : "rgba(246,246,253,0.04)",
+              color: isRecording ? C.red : C.textMuted,
+              fontSize: 11,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: C.font,
+              fontWeight: 600,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 999,
+                background: isRecording ? C.red : "rgba(246,246,253,0.3)",
+                display: "inline-block",
+              }}
+            />
+            REC
+          </button>
+        </div>
+
+        {/* HUD bar */}
+        <div
+          style={{
+            borderTop: "1px solid rgba(246,246,253,0.05)",
+            background: "rgba(2,2,2,0.5)",
+            padding: "6px 30px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1500,
+              margin: "0 auto",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 8,
+              fontFamily: "'Courier New', monospace",
+              fontSize: 10,
+            }}
+          >
+            <div style={{ display: "flex", gap: 14 }}>
+              <span style={{ color: C.textFaint }}>STATUS</span>
+              <span style={{ color: isRecording ? C.green : C.amber }}>
+                <span
+                  className={isRecording ? "blink-dot" : ""}
+                  style={{ width: 5, height: 5, borderRadius: 999, background: isRecording ? C.green : C.amber, display: "inline-block", marginRight: 5 }}
+                />
+                {isRecording ? "LIVE SCAN" : "STANDBY"}
+              </span>
+              <span style={{ color: C.textFaint }}>SESSION</span>
+              <span style={{ color: C.textMuted }}>{formatTime(sessionTime)}</span>
+              <span style={{ color: C.textFaint }}>ATI</span>
+              <span style={{ color: truthScore < 40 ? C.red : truthScore < 70 ? C.amber : C.green, fontWeight: 700 }}>{truthScore}</span>
             </div>
-            <div style={{ flex: 1, fontSize: 11, color: TEXT_MUTED, fontFamily: "monospace" }}>
-              <div style={{ fontSize: 10, color: ACCENT, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 8 }}>ALETHEIA VIDEO ANALYSIS</div>
-              <div>Camera + microphone captured. Expression analysis active.</div>
-              <div style={{ marginTop: 8, color: "rgba(255,255,255,0.35)" }}>Analyzing: facial micro-expressions, vocal prosody, gaze patterns, emotional valence</div>
-              <button onClick={stopCamera} style={{
-                marginTop: 12, padding: "4px 12px", borderRadius: 999, fontSize: 10,
-                border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.1)",
-                color: DANGER, cursor: "pointer", fontFamily: "monospace",
-              }}>Stop Camera</button>
+            <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
+              <span style={{ color: C.textFaint }}>MODELS</span>
+              <span style={{ color: C.textMuted }}>Hume · GPT‑4o · Prosody</span>
+              <span style={{ color: C.textFaint }}>SIGNALS</span>
+              <span style={{ color: C.secondary }}>{signalCount} ACT</span>
+            </div>
+            <div style={{ display: "flex", gap: 14, justifyContent: "flex-end" }}>
+              <span style={{ color: C.textFaint }}>CHANNEL</span>
+              <span style={{ color: C.cyan }}>{activeChannel}</span>
+              <span style={{ color: C.textFaint }}>THREAT</span>
+              <span style={{ color: threatColor, fontWeight: 700 }}>{threatLevel}</span>
+              <span style={{ color: C.textFaint }}>SUBJECT</span>
+              <span style={{ color: C.textMuted }}>PROSPECT-001</span>
             </div>
           </div>
-        )}
-        {activeTab === "live" && <TabLive />}
-        {activeTab === "text" && <TabText />}
-        {activeTab === "pipeline" && <TabPipeline />}
-        {activeTab === "playbook" && <TabPlaybook />}
+        </div>
+      </header>
 
-        {activeTab === "history" && <TabHistory />}
+      {/* ── Main content ───────────────────────────────────────────────────── */}
+      <main
+        style={{
+          flex: 1,
+          maxWidth: 1500,
+          margin: "0 auto",
+          padding: "24px 30px 80px",
+          width: "100%",
+        }}
+      >
+        {activeTab === "live" && renderLiveSession()}
+        {activeTab === "text" && renderTextAnalyzer()}
+        {activeTab === "pipeline" && renderPipeline()}
+        {activeTab === "playbook" && renderPlaybook()}
+        {activeTab === "history" && renderHistory()}
       </main>
 
-      {/* Global keyframes */}
-      <style>{`
-        @keyframes aletheiaPulse {
-          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 ${SONAR}66; }
-          50%       { opacity: 0.7; box-shadow: 0 0 0 6px ${SONAR}00; }
-        }
-        @keyframes aletheiaWave {
-          from { opacity: 0.45; }
-          to   { opacity: 1; }
-        }
-      `}</style>
+      {/* ── Sub-tabs bar (bottom) ─────────────────────────────────────────── */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 40,
+          backdropFilter: "blur(20px)",
+          background: "rgba(2,2,2,0.88)",
+          borderTop: `1px solid rgba(246,246,253,0.08)`,
+          padding: "10px 30px",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          overflowX: "auto",
+        }}
+      >
+        {([
+          { id: "live", label: "Live Session", icon: <Radio size={12} /> },
+          { id: "text", label: "Text Analyzer", icon: <FileText size={12} /> },
+          { id: "pipeline", label: "Deal Pipeline", icon: <BarChart3 size={12} /> },
+          { id: "playbook", label: "Playbook", icon: <Target size={12} /> },
+          { id: "history", label: "History", icon: <History size={12} /> },
+        ] as { id: TabId; label: string; icon: React.ReactNode }[]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={activeTab === tab.id ? subTabActive : subTabBase}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+
+        <div
+          style={{
+            marginLeft: "auto",
+            fontSize: 10,
+            color: C.textFaint,
+            fontFamily: "'Courier New', monospace",
+            letterSpacing: "0.1em",
+            flexShrink: 0,
+          }}
+        >
+          ATOM · Nirmata Holdings · © 2026
+        </div>
+      </div>
     </div>
   );
 }
