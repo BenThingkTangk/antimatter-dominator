@@ -985,8 +985,8 @@ export default function CompanyIntelligence() {
                     : "text-white/35 border-white/10 hover:border-white/20"
                   }`}
                   style={{
-                    background: depth === d ? "rgba(105,106,172,0.08)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${depth === d ? "rgba(105,106,172,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    background: depth === d ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${depth === d ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.1)"}`,
                   }}
                 >
                   {d === "standard" ? "Standard (3 queries · ~20s)" : "Enterprise (5 queries · ~40s)"}
@@ -1027,8 +1027,8 @@ export default function CompanyIntelligence() {
             <Button
               onClick={handleBuild}
               disabled={isLoading || !company.trim() || !website.trim()}
-              className="gap-2 px-5 py-2.5 rounded-lg font-semibold text-[13px] transition-all disabled:opacity-50"
-              style={{ background: "#696aac", color: "#020202" }}
+              className="gap-2 px-8 py-3 rounded-full font-semibold text-[14px] transition-all disabled:opacity-50 hover:scale-[1.02]"
+              style={{ background: "linear-gradient(93.92deg, #818cf8 -13.51%, #6366f1 40.91%, #4f46e5 113.69%)", color: "#fff", boxShadow: "0 0 15px rgba(99,102,241,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
               data-testid="button-build-warbook"
             >
               {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
@@ -1134,8 +1134,8 @@ export default function CompanyIntelligence() {
                     onClick={() => setActiveSection(s.key)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap ${isActive ? "text-[#696aac]" : "text-white/35 hover:text-white/55"}`}
                     style={{
-                      background: isActive ? "rgba(105,106,172,0.08)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isActive ? "rgba(105,106,172,0.25)" : "rgba(255,255,255,0.06)"}`,
+                      background: isActive ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)"}`,
                     }}
                     data-testid={`tab-${s.key}`}
                   >

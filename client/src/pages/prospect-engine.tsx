@@ -907,8 +907,8 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       <Button
         onClick={onScan}
         disabled={isScanning}
-        className="w-full h-11 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all"
-        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+        className="w-full h-12 text-sm font-semibold text-white gap-2 transition-all rounded-full hover:scale-[1.01]"
+        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", background: "linear-gradient(93.92deg, #22d3ee -13.51%, #06b6d4 40.91%, #0891b2 113.69%)", boxShadow: "0 0 20px rgba(6,182,212,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
       >
         {isScanning ? (
           <><Loader2 className="w-4 h-4 animate-spin" />Scanning ATOM Intelligence...</>
@@ -1032,8 +1032,8 @@ export default function ProspectEngine() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Radar className="w-5 h-5 text-violet-400" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.25)" }}>
+              <Radar className="w-5 h-5 text-cyan-400" />
             </div>
             <h1
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
@@ -1056,7 +1056,7 @@ export default function ProspectEngine() {
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={handleNewSearch}
-                className="h-8 text-xs gap-1.5 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 bg-transparent">
+                className="h-8 text-xs gap-1.5 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 bg-transparent">
                 <Plus className="w-3.5 h-3.5" />New Search
               </Button>
             </>
