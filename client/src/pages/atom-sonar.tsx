@@ -552,24 +552,19 @@ export default function AtomSonar() {
               </select>
             </div>
 
-            {/* Product */}
+            {/* Product — free text */}
             <div className="relative">
               <Briefcase size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-              <select
+              <input
                 value={product}
                 onChange={(e) => setProduct(e.target.value)}
-                className="pl-7 pr-7 py-2 rounded-lg text-[12px] text-white/70 outline-none appearance-none cursor-pointer"
+                placeholder="What are you pitching? (e.g. Five9, Akamai CDN, Cloudflare...)"
+                className="pl-7 pr-3 py-2 rounded-lg text-[12px] text-white/70 outline-none w-[260px]"
                 style={{
                   background: "rgba(255,255,255,0.04)",
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}
-              >
-                {PRODUCTS.map((p) => (
-                  <option key={p.value} value={p.value} style={{ background: "#111114" }}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Run Sonar button */}

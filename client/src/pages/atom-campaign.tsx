@@ -1041,7 +1041,9 @@ export default function AtomCampaign() {
     toast({ title: "Exported", description: `${targets.length} targets exported to CSV` });
   };
 
-  const selectedTargets = targets.filter((t) => t.selected && t.phone);
+  const selectedTargets = targets.filter((t) => t.selected);
+  const callableSelected = selectedTargets.filter((t) => t.phone);
+  const emailableSelected = selectedTargets.filter((t) => t.email);
 
   // ─── Step 3: Launch Campaign ───────────────────────────────────────────────
 
@@ -1143,11 +1145,14 @@ export default function AtomCampaign() {
   }, [brief, campaignId, connectWs]);
 
   const launchCampaign = async () => {
-    if (selectedTargets.length === 0) return;
+    if (callableSelected.length === 0) {
+      toast({ title: "No callable targets", description: "None of the selected targets have phone numbers. Use 'Email Selected' for email outreach.", variant: "destructive" });
+      return;
+    }
     setIsLaunching(true);
     setStep("launch");
 
-    // Init all as queued
+    // Init all callable as queued, others as skipped
     const initialMap = new Map<string, CallRecord>();
     for (const t of selectedTargets) {
       initialMap.set(t.id, {
@@ -1155,15 +1160,16 @@ export default function AtomCampaign() {
         companyName: t.companyName,
         contactName: t.contactName,
         phone: t.phone,
-        status: "queued",
+        status: t.phone ? "queued" : "failed",
+        ...(t.phone ? {} : { completedAt: Date.now() }),
       });
     }
     setCalls(initialMap);
 
-    callQueueRef.current = [...selectedTargets];
+    callQueueRef.current = [...callableSelected];
 
-    // Process sequentially with pause support
-    for (const target of selectedTargets) {
+    // Process only callable targets sequentially with pause support
+    for (const target of callableSelected) {
       while (pausedRef.current) {
         await new Promise((r) => setTimeout(r, 500));
       }
@@ -1759,7 +1765,7 @@ export default function AtomCampaign() {
                       style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
                     >
                       <Zap className="w-4 h-4" />
-                      Launch Campaign ({selectedTargets.length} calls)
+                      Launch Campaign ({callableSelected.length} calls)
                     </Button>
                   </div>
                 </div>

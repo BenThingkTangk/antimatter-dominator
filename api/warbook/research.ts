@@ -55,6 +55,7 @@ async function revealApolloContact(person: any): Promise<any | null> {
   try {
     const matchPayload: Record<string, any> = {
       reveal_personal_emails: true,
+      reveal_phone_number: true,
     };
     if (person.id) {
       matchPayload.id = person.id;

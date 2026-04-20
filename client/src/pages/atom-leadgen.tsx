@@ -610,7 +610,7 @@ export default function ATOMLeadGen() {
 
   // Form — pre-fill from cross-module navigation
   const [phone, setPhone] = useState(params.get("phone") || "");
-  const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || "");
+  const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || params.get("contact") || "");
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
 

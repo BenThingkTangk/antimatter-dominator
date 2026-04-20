@@ -212,8 +212,7 @@ async function revealApolloContact(person: any): Promise<EnrichedContact | null>
   try {
     const matchPayload: Record<string, any> = {
       reveal_personal_emails: true,
-      // NOTE: reveal_phone_number now requires webhook_url in Apollo API
-      // Phone numbers come from the person record itself (phone_numbers array)
+      reveal_phone_number: true,
     };
 
     if (person.id) {
@@ -269,8 +268,8 @@ async function revealApolloContact(person: any): Promise<EnrichedContact | null>
       seniority: p.seniority || person.seniority || "",
       department: p.departments?.[0] || "",
       linkedin: p.linkedin_url || null,
-      phone: p.sanitized_phone || null,
-      mobilePhone: p.mobile_phone || null,
+      phone: p.sanitized_phone || p.phone_numbers?.[0]?.sanitized_number || p.organization?.phone || null,
+      mobilePhone: p.mobile_phone || p.phone_numbers?.[0]?.raw_number || p.direct_phone || null,
       city: p.city || null,
       state: p.state || null,
       confidence: 95,
@@ -419,6 +418,24 @@ async function hunterDomainSearch(
   } catch { return []; }
 }
 
+// ─── Hunter.io: email-finder with phone data for specific contacts ──────────
+
+async function hunterPhoneLookup(email: string, firstName?: string, lastName?: string, domain?: string): Promise<string | null> {
+  if (!HUNTER_API_KEY || !email) return null;
+  try {
+    const params = new URLSearchParams({ api_key: HUNTER_API_KEY, email });
+    if (firstName) params.set("first_name", firstName);
+    if (lastName) params.set("last_name", lastName);
+    if (domain) params.set("domain", domain.replace(/^https?:\/\//, "").replace(/\/.*$/, ""));
+    const res = await fetch(`https://api.hunter.io/v2/email-finder?${params}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.data?.phone_number || null;
+  } catch { return null; }
+}
+
 // ─── TheirStack: find companies by actual technology used ───────────────────
 
 async function enrichTechWithTheirStack(
@@ -527,7 +544,21 @@ function deduplicateContacts(contacts: EnrichedContact[]): EnrichedContact[] {
     if (!all.has(key)) all.set(key, c);
   }
 
-  return Array.from(all.values()).sort((a, b) => b.confidence - a.confidence);
+  const dedupedContacts = Array.from(all.values()).sort((a, b) => b.confidence - a.confidence);
+
+  // Phone fallback: for contacts without phone, try Hunter.io email-finder
+  const noPhoneContacts = dedupedContacts.filter(c => !c.phone && c.email);
+  if (noPhoneContacts.length > 0 && HUNTER_API_KEY) {
+    const phoneLookups = noPhoneContacts.slice(0, 5).map(async (c) => {
+      try {
+        const phone = await hunterPhoneLookup(c.email, c.firstName, c.lastName);
+        if (phone) c.phone = phone;
+      } catch {}
+    });
+    await Promise.allSettled(phoneLookups);
+  }
+
+  return dedupedContacts;
 }
 
 // ─── Group Apollo people by organization ─────────────────────────────────────
