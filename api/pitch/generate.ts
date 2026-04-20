@@ -140,3 +140,4 @@ Return ONLY this JSON structure (no markdown):
 }
 
 // v2.0 — Gold Standard rebuild 2026-04-09T12:33:45Z
+// v3 deploy 1776649290

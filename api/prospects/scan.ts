@@ -512,7 +512,7 @@ async function enrichWithPDL(
 
 // ─── Deduplicate contacts ───────────────────────────────────────────────────
 
-function deduplicateContacts(contacts: EnrichedContact[]): EnrichedContact[] {
+async function deduplicateContacts(contacts: EnrichedContact[]): Promise<EnrichedContact[]> {
   const byEmail = new Map<string, EnrichedContact>();
   const byName = new Map<string, EnrichedContact>();
 
@@ -736,7 +736,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ]);
 
         // Merge contacts: Apollo revealed + Hunter discovered, then deduplicate
-        const mergedContacts = deduplicateContacts([...apolloContacts, ...hunterContacts]);
+        const mergedContacts = await deduplicateContacts([...apolloContacts, ...hunterContacts]);
 
         // Merge company data — Apollo primary, PDL supplement
         const finalEmployeeCount = apolloOrgData.employeeCount || pdlData.employeeCount || org.apolloOrgData?.estimated_num_employees || 0;
