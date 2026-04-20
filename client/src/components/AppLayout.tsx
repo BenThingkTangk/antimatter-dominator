@@ -2,24 +2,54 @@ import { Link, useLocation } from "wouter";
 import { 
   Shield, MessageSquareWarning, TrendingUp, 
   Radar, ChevronLeft, ChevronRight, Moon, Sun, PhoneCall, Megaphone, Brain,
-  Menu, X, Radio, Eye, BarChart3, Settings
+  Menu, X, Radio, Eye, BarChart3, Settings, Search, Headphones, Zap, Activity
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const navItems = [
-  { href: "/pitch", icon: TrendingUp, label: "ATOM Pitch", description: "AI pitch creation", beta: false },
-  { href: "/objections", icon: MessageSquareWarning, label: "ATOM Objection Handler", description: "Counter any pushback", beta: false },
-  { href: "/market", icon: Shield, label: "ATOM Market Intent", description: "Market intelligence", beta: false },
-  { href: "/prospects", icon: Radar, label: "ATOM Prospect", description: "AI prospect scanner", beta: false },
-  { href: "/atom-leadgen", icon: PhoneCall, label: "ATOM Lead Gen", description: "AI voice cold caller", beta: false },
-  { href: "/atom-campaign", icon: Megaphone, label: "ATOM Campaign", description: "Voice campaign engine", beta: false },
-  { href: "/company-intelligence", icon: Brain, label: "ATOM WarBook", description: "Company intelligence", beta: false },
-  { href: "/atom-sonar", icon: Radio, label: "ATOM Sonar", description: "Deep research + voice brief", beta: false },
-  { href: "/atom-aletheia", icon: Eye, label: "ATOM Aletheia", description: "Truth intelligence engine", beta: false },
-  { href: "/call-performance", icon: BarChart3, label: "Call Performance", description: "Voice analytics dashboard", beta: false },
-  { href: "/admin", icon: Settings, label: "Admin", description: "System overview", beta: false },
+interface NavGroup {
+  label: string;
+  icon: any;
+  items: { href: string; icon: any; label: string; }[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: "Prospect & Intel",
+    icon: Search,
+    items: [
+      { href: "/prospects", icon: Radar, label: "Find Accounts" },
+      { href: "/company-intelligence", icon: Brain, label: "Company Intel" },
+      { href: "/market", icon: Shield, label: "Market Intel" },
+      { href: "/atom-sonar", icon: Radio, label: "Deep Research" },
+    ],
+  },
+  {
+    label: "Live Call Copilot",
+    icon: Headphones,
+    items: [
+      { href: "/pitch", icon: TrendingUp, label: "Build Pitch" },
+      { href: "/objections", icon: MessageSquareWarning, label: "Handle Objections" },
+      { href: "/atom-aletheia", icon: Eye, label: "Truth & Intent" },
+    ],
+  },
+  {
+    label: "Voice Campaigns",
+    icon: Zap,
+    items: [
+      { href: "/atom-leadgen", icon: PhoneCall, label: "Dial with ATOM" },
+      { href: "/atom-campaign", icon: Megaphone, label: "Launch Campaign" },
+    ],
+  },
+  {
+    label: "Insights & Admin",
+    icon: Activity,
+    items: [
+      { href: "/call-performance", icon: BarChart3, label: "Performance" },
+      { href: "/admin", icon: Settings, label: "Command Center" },
+    ],
+  },
 ];
 
 // ATOM Logo SVG — atomic orbital mark (Antimatter AI purple brand)
@@ -106,53 +136,60 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          const Icon = item.icon;
-
-          const linkContent = (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`relative flex items-center gap-3 px-3 py-2.5 text-sm transition-all rounded-lg border-l-2 pl-[10px] ${
-                isActive
-                  ? "border-l-[#696aac]"
-                  : "border-transparent"
-              }`}
-              style={isActive ? {
-                background: "rgba(105,106,172,0.08)",
-                color: "#a2a3e9",
-                boxShadow: "inset 0 0 12px rgba(105,106,172,0.06)"
-              } : {
-                color: "rgba(255,255,255,0.45)"
-              }}
-              data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
-            >
-              <Icon
-                className="w-4 h-4 shrink-0"
-                style={{ color: isActive ? "#a2a3e9" : "rgba(255,255,255,0.35)" }}
-              />
+      {/* Nav — 4 workflow groups */}
+      <nav className="flex-1 py-3 px-2 overflow-y-auto" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+        {navGroups.map((group) => {
+          const GroupIcon = group.icon;
+          const groupActive = group.items.some(i => location === i.href);
+          return (
+            <div key={group.label} className="mb-3">
+              {/* Group header */}
               {(!collapsed || isMobile) && (
-                <span className="truncate min-w-0 font-normal">
-                  {item.label}
-                </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 mb-0.5">
+                  <GroupIcon className="w-3.5 h-3.5" style={{ color: groupActive ? "#696aac" : "rgba(255,255,255,0.2)" }} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: groupActive ? "#696aac" : "rgba(255,255,255,0.25)" }}>
+                    {group.label}
+                  </span>
+                </div>
               )}
-            </Link>
+              {/* Group items */}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = location === item.href;
+                  const Icon = item.icon;
+                  const linkContent = (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`relative flex items-center gap-2.5 px-3 py-2 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : "pl-[22px]"} ${
+                        isActive ? "border-l-2 border-l-[#696aac]" : ""
+                      }`}
+                      style={isActive ? {
+                        background: "rgba(105,106,172,0.08)",
+                        color: "#a2a3e9",
+                        boxShadow: "inset 0 0 12px rgba(105,106,172,0.06)"
+                      } : {
+                        color: "rgba(255,255,255,0.45)"
+                      }}
+                      data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: isActive ? "#a2a3e9" : "rgba(255,255,255,0.3)" }} />
+                      {(!collapsed || isMobile) && <span className="truncate min-w-0">{item.label}</span>}
+                    </Link>
+                  );
+                  if (collapsed && !isMobile) {
+                    return (
+                      <Tooltip key={item.href}>
+                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                        <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+                  return linkContent;
+                })}
+              </div>
+            </div>
           );
-
-          if (collapsed && !isMobile) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-          return linkContent;
         })}
       </nav>
 
