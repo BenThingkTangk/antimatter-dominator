@@ -272,10 +272,10 @@ export default function Dashboard() {
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   const pageStyle: React.CSSProperties = {
-    background: "#0b0b0c",
+    background: "#020202",
     minHeight: "100vh",
     padding: "28px 24px 48px",
-    fontFamily: "'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif",
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     color: "#fff",
   };
 
@@ -297,11 +297,11 @@ export default function Dashboard() {
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10,
-            background: "rgba(0,200,200,0.12)",
-            border: "1px solid rgba(0,200,200,0.2)",
+            background: "rgba(105,106,172,0.12)",
+            border: "1px solid rgba(105,106,172,0.2)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <Cpu size={20} color="#00c8c8" />
+            <Cpu size={20} color="#696aac" />
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.3px" }}>ATOM Command Center</h1>
@@ -378,7 +378,7 @@ export default function Dashboard() {
                 <circle
                   cx="21" cy="21" r="16"
                   fill="none"
-                  stroke="#00c8c8"
+                  stroke="#696aac"
                   strokeWidth="4"
                   strokeDasharray={`${(operationalModules / MODULES.length) * 100.5} 100.5`}
                   strokeLinecap="round"
@@ -436,8 +436,8 @@ export default function Dashboard() {
                   </td>
                   <td style={{ padding: "11px 16px" }}>
                     <code style={{
-                      fontSize: 10, fontFamily: "monospace", color: "#00c8c8",
-                      background: "rgba(0,200,200,0.08)", padding: "2px 7px", borderRadius: 4,
+                      fontSize: 10, fontFamily: "monospace", color: "#696aac",
+                      background: "rgba(105,106,172,0.08)", padding: "2px 7px", borderRadius: 4,
                     }}>{api.keyVar}</code>
                   </td>
                   <td style={{ padding: "11px 16px" }}>
@@ -472,36 +472,36 @@ export default function Dashboard() {
                   padding: "16px 18px",
                   cursor: "pointer",
                   transition: "border-color 0.18s, background 0.18s",
-                  borderColor: isCurrentPage ? "rgba(0,200,200,0.45)" : "rgba(255,255,255,0.08)",
+                  borderColor: isCurrentPage ? "rgba(105,106,172,0.45)" : "rgba(255,255,255,0.08)",
                   position: "relative",
                   overflow: "hidden",
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLDivElement;
-                  el.style.borderColor = "rgba(0,200,200,0.4)";
-                  el.style.background = "rgba(0,200,200,0.04)";
+                  el.style.borderColor = "rgba(105,106,172,0.4)";
+                  el.style.background = "rgba(105,106,172,0.04)";
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLDivElement;
-                  el.style.borderColor = isCurrentPage ? "rgba(0,200,200,0.45)" : "rgba(255,255,255,0.08)";
+                  el.style.borderColor = isCurrentPage ? "rgba(105,106,172,0.45)" : "rgba(255,255,255,0.08)";
                   el.style.background = "#111114";
                 }}
               >
                 {isCurrentPage && (
                   <div style={{
                     position: "absolute", top: 0, left: 0, right: 0, height: 2,
-                    background: "linear-gradient(90deg, #00c8c8, transparent)",
+                    background: "linear-gradient(90deg, #696aac, transparent)",
                   }} />
                 )}
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 8,
-                      background: "rgba(0,200,200,0.1)",
+                      background: "rgba(105,106,172,0.1)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
                     }}>
-                      <Icon size={15} color="#00c8c8" />
+                      <Icon size={15} color="#696aac" />
                     </div>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", margin: 0, lineHeight: 1.3 }}>{mod.name}</p>
@@ -517,7 +517,7 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(255,255,255,0.25)" }}>Lines</span>
-                    <code style={{ fontSize: 10, fontFamily: "monospace", color: "#00c8c8" }}>{mod.lines.toLocaleString()} loc</code>
+                    <code style={{ fontSize: 10, fontFamily: "monospace", color: "#696aac" }}>{mod.lines.toLocaleString()} loc</code>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(255,255,255,0.25)" }}>Endpoint</span>
@@ -651,19 +651,19 @@ export default function Dashboard() {
             onClick={handleExportConfig}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              background: "rgba(0,200,200,0.08)",
-              border: "1px solid rgba(0,200,200,0.25)",
+              background: "rgba(105,106,172,0.08)",
+              border: "1px solid rgba(105,106,172,0.25)",
               borderRadius: 8,
-              color: "#00c8c8",
+              color: "#696aac",
               padding: "10px 18px",
               fontSize: 13, fontWeight: 600,
               cursor: "pointer",
               transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,200,200,0.15)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,200,200,0.08)"; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(105,106,172,0.15)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(105,106,172,0.08)"; }}
           >
-            <Copy size={15} color="#00c8c8" />
+            <Copy size={15} color="#696aac" />
             Export Config
           </button>
 

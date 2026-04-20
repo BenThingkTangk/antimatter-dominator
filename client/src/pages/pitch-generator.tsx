@@ -95,11 +95,11 @@ const TONES = [
   { value: "Professional", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   { value: "Casual", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
   { value: "Aggressive", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
-  { value: "Consultative", color: "bg-teal-500/20 text-teal-300 border-teal-500/30" },
+  { value: "Consultative", color: "bg-violet-500/20 text-violet-300 border-violet-500/30" },
 ];
 
 const EMOTION_COLORS: Record<string, { bar: string; text: string }> = {
-  confidence: { bar: "bg-teal-600", text: "text-teal-300" },
+  confidence: { bar: "bg-violet-600", text: "text-violet-300" },
   urgency: { bar: "bg-rose-500", text: "text-rose-400" },
   empathy: { bar: "bg-emerald-500", text: "text-emerald-400" },
   authority: { bar: "bg-amber-500", text: "text-amber-400" },
@@ -140,7 +140,7 @@ function highlightPowerPhrases(text: string, phrases: string[]): React.ReactNode
       {parts.map((part, i) => {
         const isPhrase = phrases.some(p => p.toLowerCase() === part.toLowerCase());
         return isPhrase ? (
-          <mark key={i} className="bg-teal-500/25 text-teal-200 rounded px-0.5 not-italic font-medium">
+          <mark key={i} className="bg-violet-500/25 text-violet-200 rounded px-0.5 not-italic font-medium">
             {part}
           </mark>
         ) : (
@@ -358,8 +358,8 @@ export default function PitchGenerator() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-teal-500/15 flex items-center justify-center border border-teal-500/20">
-          <TrendingUp className="w-5 h-5 text-teal-300" />
+        <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center border border-violet-500/20">
+          <TrendingUp className="w-5 h-5 text-violet-300" />
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-white">ATOM Pitch</h1>
@@ -367,21 +367,21 @@ export default function PitchGenerator() {
         </div>
         <div className="flex items-center gap-2">
           {showHistory && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-white/10 hover:border-teal-500/40"
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-white/10 hover:border-violet-500/40"
               onClick={() => { setShowHistory(false); setActiveResult(null); }}>
               <Plus className="w-3.5 h-3.5" />New Pitch
             </Button>
           )}
           <Button
             variant="outline" size="sm"
-            className={`h-8 text-xs gap-1.5 border-white/10 transition-colors ${showHistory ? "bg-teal-500/10 border-teal-500/40 text-teal-300" : "hover:border-white/20"}`}
+            className={`h-8 text-xs gap-1.5 border-white/10 transition-colors ${showHistory ? "bg-violet-500/10 border-violet-500/40 text-violet-300" : "hover:border-white/20"}`}
             onClick={() => setShowHistory(!showHistory)}
             data-testid="button-toggle-history"
           >
             <History className="w-3.5 h-3.5" />
             History
             {localHistory.length > 0 && (
-              <span className="bg-teal-600 text-white text-[10px] rounded-full px-1.5 leading-4 py-0">{localHistory.length}</span>
+              <span className="bg-violet-600 text-white text-[10px] rounded-full px-1.5 leading-4 py-0">{localHistory.length}</span>
             )}
           </Button>
         </div>
@@ -399,7 +399,7 @@ export default function PitchGenerator() {
             <>
               {localHistory.map((entry) => (
                 <div key={entry.id}
-                  className="rounded-xl bg-black/30 border border-white/[0.07] border-l-2 border-l-teal-500 overflow-hidden backdrop-blur-sm hover:bg-black/40 transition-colors"
+                  className="rounded-xl bg-black/30 border border-white/[0.07] border-l-2 border-l-violet-500 overflow-hidden backdrop-blur-sm hover:bg-black/40 transition-colors"
                   style={{ borderLeftColor: "#0d9488" }}>
                   <button className="w-full text-left p-4"
                     onClick={() => setExpandedHistoryId(expandedHistoryId === entry.id ? null : entry.id)}>
@@ -412,7 +412,7 @@ export default function PitchGenerator() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {entry.result?.confidenceScore && (
-                          <span className="text-[10px] font-semibold text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-semibold text-violet-300 bg-violet-500/10 px-2 py-0.5 rounded-full">
                             {entry.result.confidenceScore}% conf.
                           </span>
                         )}
@@ -431,7 +431,7 @@ export default function PitchGenerator() {
                   {expandedHistoryId === entry.id && (
                     <div className="px-4 pb-4 space-y-3 border-t border-white/[0.05] pt-3">
                       <div className="flex gap-1.5 flex-wrap">
-                        <Badge className="text-[10px] bg-teal-500/20 text-teal-300 border-teal-500/30">{entry.product}</Badge>
+                        <Badge className="text-[10px] bg-violet-500/20 text-violet-300 border-violet-500/30">{entry.product}</Badge>
                         <Badge variant="outline" className="text-[10px] border-white/10 text-white/40">{entry.pitchType}</Badge>
                         <Badge variant="outline" className="text-[10px] border-white/10 text-white/40">{entry.persona}</Badge>
                       </div>
@@ -439,7 +439,7 @@ export default function PitchGenerator() {
                         {entry.result?.mainPitch}
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-xs h-7 gap-1 border-white/10 hover:border-teal-500/40"
+                        <Button size="sm" variant="outline" className="text-xs h-7 gap-1 border-white/10 hover:border-violet-500/40"
                           onClick={() => loadFromHistory(entry)}>
                           <Plus className="w-3 h-3" />Restore
                         </Button>
@@ -531,11 +531,11 @@ export default function PitchGenerator() {
                       <button key={pt.value} onClick={() => setPitchType(pt.value)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all border ${
                           isActive
-                            ? "bg-teal-500/10 border-teal-500/30 text-white"
+                            ? "bg-violet-500/10 border-violet-500/30 text-white"
                             : "border-transparent hover:bg-white/[0.03] text-white/40 hover:text-white/70"
                         }`}
                         data-testid={`button-pitch-type-${pt.value}`}>
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-teal-300" : ""}`} />
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-violet-300" : ""}`} />
                         <div>
                           <p className="text-xs font-medium">{pt.label}</p>
                           <p className="text-[10px] text-white/25">{pt.desc}</p>
@@ -575,7 +575,7 @@ export default function PitchGenerator() {
               </div>
 
               <Button
-                className="w-full bg-teal-600 hover:bg-teal-500 text-white font-medium transition-all"
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all"
                 onClick={() => generatePitch.mutate()}
                 disabled={!canGenerate}
                 data-testid="button-generate-pitch"
@@ -592,7 +592,7 @@ export default function PitchGenerator() {
             {generatePitch.isPending ? (
               <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-6">
                 <div className="flex items-center gap-2 mb-5">
-                  <Loader2 className="w-4 h-4 animate-spin text-teal-300" />
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-300" />
                   <p className="text-sm text-white/50">AI is crafting your precision pitch...</p>
                 </div>
                 <SkeletonLoader />
@@ -636,12 +636,12 @@ export default function PitchGenerator() {
                 <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-teal-600" style={{ boxShadow: "0 0 6px #0d9488" }} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-600" style={{ boxShadow: "0 0 6px #0d9488" }} />
                       <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Generated Pitch</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1.5 flex-wrap justify-end">
-                        <Badge className="text-[10px] bg-teal-500/15 text-teal-300 border-teal-500/25">
+                        <Badge className="text-[10px] bg-violet-500/15 text-violet-300 border-violet-500/25">
                           {activeResult.persona || persona}
                         </Badge>
                         <Badge variant="outline" className="text-[10px] border-white/10 text-white/40">
@@ -670,7 +670,7 @@ export default function PitchGenerator() {
                       <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Power Phrases</p>
                       <div className="flex flex-wrap gap-1.5">
                         {activeResult.powerPhrases.map((phrase, i) => (
-                          <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/20">
+                          <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/20">
                             {phrase}
                           </span>
                         ))}
@@ -681,7 +681,7 @@ export default function PitchGenerator() {
                   {/* Action buttons */}
                   <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 border-t border-white/[0.05]">
                     <Button size="sm"
-                      className="text-xs h-7 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/25 gap-1.5"
+                      className="text-xs h-7 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/25 gap-1.5"
                       onClick={() => generatePitch.mutate()}
                       disabled={!canGenerate}
                       data-testid="button-refine">
@@ -699,11 +699,11 @@ export default function PitchGenerator() {
                 {/* Alternative Approaches — CLICKABLE to regenerate */}
                 {activeResult.alternatives?.length > 0 && (
                   <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
-                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Alternative Approaches <span className="text-teal-400/50">· click to generate full pitch</span></p>
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Alternative Approaches <span className="text-violet-400/50">· click to generate full pitch</span></p>
                     <div className="space-y-2">
                       {activeResult.alternatives.map((alt, i) => (
                         <div key={i}
-                          className="group rounded-lg bg-white/[0.02] border border-white/[0.05] p-3 hover:bg-teal-500/[0.06] hover:border-teal-500/25 transition-all cursor-pointer"
+                          className="group rounded-lg bg-white/[0.02] border border-white/[0.05] p-3 hover:bg-violet-500/[0.06] hover:border-violet-500/25 transition-all cursor-pointer"
                           onClick={() => {
                             // Set the alternative as custom context and regenerate
                             setCustomContext(`Use this approach: ${alt.type} — ${alt.text}`);
@@ -711,7 +711,7 @@ export default function PitchGenerator() {
                           }}
                         >
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-semibold text-teal-300 uppercase tracking-wider">{alt.type}</span>
+                            <span className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider">{alt.type}</span>
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="sm"
                                 className="h-6 text-[10px] text-white/20 hover:text-white/60 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -719,7 +719,7 @@ export default function PitchGenerator() {
                                 {copiedSection === `alt-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
                                 Copy
                               </Button>
-                              <span className="text-[10px] text-teal-400/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                              <span className="text-[10px] text-violet-400/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                                 <Sparkles className="w-2.5 h-2.5" />Generate
                               </span>
                             </div>
@@ -772,8 +772,8 @@ export default function PitchGenerator() {
               </>
             ) : (
               <div className="rounded-xl bg-black/30 backdrop-blur-sm border border-white/[0.05] flex flex-col items-center justify-center py-20 text-white/20">
-                <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-4 border border-teal-500/15">
-                  <Sparkles className="w-7 h-7 text-teal-400/50" />
+                <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4 border border-violet-500/15">
+                  <Sparkles className="w-7 h-7 text-violet-400/50" />
                 </div>
                 <p className="text-sm font-medium text-white/30">Configure your pitch parameters</p>
                 <p className="text-xs text-white/15 mt-1">Select product, persona, and type to get started</p>

@@ -54,12 +54,12 @@ interface AnalysisResult {
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const C = {
-  bg: "#0b0b0c",
+  bg: "#020202",
   card: "rgba(246,246,253,0.03)",
   cardBorder: "rgba(246,246,253,0.08)",
-  accent: "#00c8c8",
-  primary: "#00989c",
-  secondary: "#33d6d6",
+  accent: "#696aac",
+  primary: "#3e3f7e",
+  secondary: "#a2a3e9",
   green: "#1dd1a1",
   red: "#f87171",
   amber: "#fbbf24",
@@ -67,7 +67,7 @@ const C = {
   textPrimary: "#f6f6fd",
   textMuted: "rgba(246,246,253,0.55)",
   textFaint: "rgba(246,246,253,0.35)",
-  font: "'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif",
+  font: "'Plus Jakarta Sans', system-ui, sans-serif",
 };
 
 const HEDGES = ["definitely", "absolutely", "strong fit", "very interested", "bullish", "top of mind", "100%", "for sure", "no question", "certainly"];
@@ -294,7 +294,7 @@ function TruthMeterArc({ score }: { score: number }) {
       </svg>
       <div
         style={{
-          fontFamily: "'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif",
+          fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
           fontSize: 36,
           fontWeight: 700,
           color: color,
@@ -741,7 +741,7 @@ export default function AtomAletheia() {
 
   const chipActive: React.CSSProperties = {
     ...chipBase,
-    background: `rgba(0,200,200,0.25)`,
+    background: `rgba(105,106,172,0.25)`,
     border: `1px solid ${C.accent}`,
     color: C.textPrimary,
     boxShadow: `0 0 10px ${C.accent}55`,
@@ -767,8 +767,8 @@ export default function AtomAletheia() {
 
   const subTabActive: React.CSSProperties = {
     ...subTabBase,
-    background: "rgba(0,200,200,0.18)",
-    border: `1px solid rgba(0,200,200,0.5)`,
+    background: "rgba(105,106,172,0.18)",
+    border: `1px solid rgba(105,106,172,0.5)`,
     color: C.textPrimary,
   };
 
@@ -795,7 +795,7 @@ export default function AtomAletheia() {
             position: "relative",
             borderRadius: 12,
             overflow: "hidden",
-            background: "radial-gradient(circle at top, rgba(0,200,200,0.3), #0b0b0c 60%)",
+            background: "radial-gradient(circle at top, rgba(105,106,172,0.3), #020202 60%)",
             border: "1px solid rgba(246,246,253,0.1)",
           }}
         >
@@ -1165,7 +1165,7 @@ export default function AtomAletheia() {
                 padding: "8px",
                 borderRadius: 8,
                 border: `1px solid ${C.accent}66`,
-                background: `linear-gradient(93.92deg, #00e0e0 -13%, #009a9e 40%, ${C.accent} 113%)`,
+                background: `linear-gradient(93.92deg, #8587e3 -13%, #4c4dac 40%, ${C.accent} 113%)`,
                 color: C.textPrimary,
                 fontSize: 10,
                 letterSpacing: "0.12em",
@@ -1304,7 +1304,7 @@ export default function AtomAletheia() {
                 padding: "10px 28px",
                 borderRadius: 40,
                 border: "none",
-                background: `linear-gradient(93.92deg, #00e0e0 -13%, #009a9e 40%, ${C.accent} 113%)`,
+                background: `linear-gradient(93.92deg, #8587e3 -13%, #4c4dac 40%, ${C.accent} 113%)`,
                 boxShadow: `0 0 10px ${C.accent}, inset 0 0 2px rgba(255,255,255,0.61)`,
                 color: C.textPrimary,
                 fontSize: 12,
@@ -1679,7 +1679,7 @@ export default function AtomAletheia() {
                 width: 32,
                 height: 32,
                 borderRadius: 999,
-                background: `radial-gradient(circle at 30% 0%, #c0f5f5, ${C.accent} 42%, #0b0b0c 100%)`,
+                background: `radial-gradient(circle at 30% 0%, #e3e3f8, ${C.accent} 42%, #020202 100%)`,
                 boxShadow: `0 0 24px ${C.accent}aa`,
                 display: "flex",
                 alignItems: "center",

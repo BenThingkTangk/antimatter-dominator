@@ -96,7 +96,7 @@ const TONE_COLORS: Record<string, string> = {
   "Empathetic":   "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
   "Direct":       "bg-rose-500/15 text-rose-400 border-rose-500/25",
   "Educational":  "bg-blue-500/15 text-blue-400 border-blue-500/25",
-  "Reassuring":   "bg-teal-500/15 text-teal-300 border-teal-500/25",
+  "Reassuring":   "bg-violet-500/15 text-violet-300 border-violet-500/25",
 };
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -581,7 +581,7 @@ export default function ObjectionHandler() {
                   {/* Key Insight */}
                   {activeResult.keyInsight && (
                     <div className="mt-4 pt-3 border-t border-white/[0.05] flex items-start gap-2">
-                      <Brain className="w-3.5 h-3.5 text-teal-300 shrink-0 mt-0.5" />
+                      <Brain className="w-3.5 h-3.5 text-violet-300 shrink-0 mt-0.5" />
                       <p className="text-xs text-white/50 italic">{activeResult.keyInsight}</p>
                     </div>
                   )}
@@ -633,7 +633,7 @@ export default function ObjectionHandler() {
                           onClick={() => setActiveStrategyTab(i)}
                           className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all ${
                             activeStrategyTab === i
-                              ? "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+                              ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
                               : "text-white/30 hover:text-white/50 border border-transparent"
                           }`}
                           data-testid={`button-strategy-tab-${i}`}>
@@ -659,7 +659,7 @@ export default function ObjectionHandler() {
                         {/* Action buttons — turn this strategy into action */}
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.05]">
                           <Button variant="outline" size="sm"
-                            className="h-7 text-[10px] gap-1.5 border-teal-500/20 text-teal-400 hover:bg-teal-500/10 bg-transparent"
+                            className="h-7 text-[10px] gap-1.5 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
                             onClick={() => navigate(`/pitch?context=${encodeURIComponent(`Rebuild pitch using this objection handling strategy: ${activeResult.strategies[activeStrategyTab].type} — ${activeResult.strategies[activeStrategyTab].response}`)}&product=${encodeURIComponent(selectedProduct)}`)}
                           >
                             <Sparkles className="w-3 h-3" />Build Pitch from This
@@ -686,12 +686,12 @@ export default function ObjectionHandler() {
                 {activeResult.followUpQuestions?.length > 0 && (
                   <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
-                      <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-teal-400/40">· click to prepare response</span>
+                      <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-violet-400/40">· click to prepare response</span>
                     </p>
                     <div className="space-y-2">
                       {activeResult.followUpQuestions.map((q, i) => (
                         <div key={i}
-                          className="group flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-teal-500/[0.06] hover:border-teal-500/20 transition-all cursor-pointer"
+                          className="group flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-violet-500/[0.06] hover:border-violet-500/20 transition-all cursor-pointer"
                           onClick={() => {
                             // Pre-fill objection with the follow-up question as the new scenario
                             setObjectionText(q);
@@ -701,7 +701,7 @@ export default function ObjectionHandler() {
                               btn?.click();
                             }, 200);
                           }}>
-                          <span className="text-teal-400/50 text-xs shrink-0 font-mono group-hover:text-teal-400">{i + 1}.</span>
+                          <span className="text-violet-400/50 text-xs shrink-0 font-mono group-hover:text-violet-400">{i + 1}.</span>
                           <p className="text-sm text-white/60 flex-1 group-hover:text-white/85 transition-colors">{q}</p>
                           <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="ghost" size="sm"
@@ -709,7 +709,7 @@ export default function ObjectionHandler() {
                               onClick={(e) => { e.stopPropagation(); copyToClipboard(q, `fq-${i}`); }}>
                               {copiedSection === `fq-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
                             </Button>
-                            <span className="text-[9px] text-teal-400/50 flex items-center gap-0.5">
+                            <span className="text-[9px] text-violet-400/50 flex items-center gap-0.5">
                               <ArrowRight className="w-2.5 h-2.5" />Prepare
                             </span>
                           </div>
@@ -722,7 +722,7 @@ export default function ObjectionHandler() {
                       <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Tactical Moves</p>
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm"
-                          className="h-7 text-[10px] gap-1 border-teal-500/15 text-teal-400/70 hover:bg-teal-500/10 bg-transparent"
+                          className="h-7 text-[10px] gap-1 border-violet-500/15 text-violet-400/70 hover:bg-violet-500/10 bg-transparent"
                           onClick={() => navigate(`/pitch?context=${encodeURIComponent(`They said: "${objectionText}". Build a pitch that directly addresses this concern and turns it into a reason to buy.`)}&product=${encodeURIComponent(selectedProduct)}`)}
                         >
                           <Sparkles className="w-3 h-3" />Rebuild Pitch Around This

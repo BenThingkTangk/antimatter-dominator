@@ -280,11 +280,11 @@ function generateVoiceBrief(result: WarBookResult): VoiceBrief {
 }
 
 // Color helpers
-const sevColor = (s: string) => s === "critical" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : s === "high" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-teal-500/15 text-teal-400 border-teal-500/25";
+const sevColor = (s: string) => s === "critical" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : s === "high" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-violet-500/15 text-violet-400 border-violet-500/25";
 const threatColor = (t: string) => t === "high" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : t === "medium" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
 const strengthColor = (s: string) => s === "strong" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : s === "moderate" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-white/5 text-white/40 border-white/10";
 const probColor = (p: string) => p === "high" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : p === "medium" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-white/5 text-white/40 border-white/10";
-const priorityColor = (l: string) => l === "high" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : l === "medium" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-teal-500/15 text-teal-400 border-teal-500/25";
+const priorityColor = (l: string) => l === "high" ? "bg-rose-500/15 text-rose-400 border-rose-500/25" : l === "medium" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-violet-500/15 text-violet-400 border-violet-500/25";
 
 function catBadge(cat: string): string {
   const m: Record<string, string> = {
@@ -296,7 +296,7 @@ function catBadge(cat: string): string {
     disruption: "bg-rose-500/10 text-rose-400 border-rose-500/20",
     acquisition: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
     tech_adoption: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-    earnings: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+    earnings: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   };
   return m[cat] || "bg-white/5 text-white/40 border-white/10";
 }
@@ -305,7 +305,7 @@ function fmtCat(cat: string): string {
 }
 function seniorityStyle(title: string): string {
   const t = title.toLowerCase();
-  if (/chief|cto|ceo|coo|cfo|ciso|c-/.test(t)) return "bg-teal-500/15 border-teal-500/30 text-teal-300";
+  if (/chief|cto|ceo|coo|cfo|ciso|c-/.test(t)) return "bg-violet-500/15 border-violet-500/30 text-violet-300";
   if (/vp|vice president/.test(t)) return "bg-blue-500/15 border-blue-500/30 text-blue-300";
   if (/director/.test(t)) return "bg-purple-500/15 border-purple-500/30 text-purple-300";
   return "bg-white/5 border-white/10 text-white/50";
@@ -357,7 +357,7 @@ function PipelineFlow() {
   ];
   const cards = [
     { icon: Radar, title: "SONAR SCANS", body: "News, filings, LinkedIn, Glassdoor, job posts, press releases, tech stack signals", color: "text-cyan-400", border: "border-cyan-500/20" },
-    { icon: Brain, title: "AI SYNTHESIZES", body: "Pain points, purchase triggers, buying signals, org structure, objection map", color: "text-teal-400", border: "border-teal-500/20" },
+    { icon: Brain, title: "AI SYNTHESIZES", body: "Pain points, purchase triggers, buying signals, org structure, objection map", color: "text-violet-400", border: "border-violet-500/20" },
     { icon: Mic, title: "VOICE BRIEF", body: "Personalized call script, live objection handling, talk track, discovery Qs", color: "text-emerald-400", border: "border-emerald-500/20" },
   ];
   return (
@@ -398,9 +398,9 @@ function HistoryDrawer({ open, onClose, onRestore }: { open: boolean; onClose: (
       <div className={`fixed top-0 right-0 bottom-0 w-96 z-50 flex flex-col transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`} style={{ background: "#111113", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-teal-400" />
+            <History className="w-4 h-4 text-violet-400" />
             <span className="text-sm font-semibold text-[#e8e8ea]">WarBook History</span>
-            {history.length > 0 && <Badge className="bg-teal-500/15 text-teal-400 border-teal-500/20 text-[10px] font-mono">{history.length}</Badge>}
+            {history.length > 0 && <Badge className="bg-violet-500/15 text-violet-400 border-violet-500/20 text-[10px] font-mono">{history.length}</Badge>}
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0 text-white/40 hover:text-white hover:bg-white/5"><X className="w-4 h-4" /></Button>
         </div>
@@ -411,10 +411,10 @@ function HistoryDrawer({ open, onClose, onRestore }: { open: boolean; onClose: (
               <p className="text-sm text-white/30">No WarBooks built yet</p>
             </div>
           ) : history.map(entry => (
-            <div key={entry.id} className="rounded-xl border border-white/[0.08] bg-[#161618] p-3 hover:border-teal-500/20 transition-all group">
+            <div key={entry.id} className="rounded-xl border border-white/[0.08] bg-[#161618] p-3 hover:border-violet-500/20 transition-all group">
               <div className="flex items-start justify-between gap-2">
                 <button className="flex-1 text-left" onClick={() => { onRestore(entry); onClose(); }}>
-                  <div className="flex items-center gap-2 mb-1"><Building2 className="w-3.5 h-3.5 text-teal-400" /><span className="text-sm font-semibold text-[#e8e8ea]">{entry.company}</span></div>
+                  <div className="flex items-center gap-2 mb-1"><Building2 className="w-3.5 h-3.5 text-violet-400" /><span className="text-sm font-semibold text-[#e8e8ea]">{entry.company}</span></div>
                   <div className="flex items-center gap-2"><Clock className="w-3 h-3 text-white/20" /><span className="text-[10px] text-white/30 font-mono">{fmtTimestamp(entry.timestamp)}</span></div>
                 </button>
                 <Button variant="ghost" size="sm" onClick={() => del(entry.id)} className="h-6 w-6 p-0 text-white/20 hover:text-rose-400 opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3" /></Button>
@@ -455,7 +455,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
                     {n.date && <span className="text-[10px] text-white/25 font-mono">{n.date}</span>}
                     {n.impactScore && <span className="text-[10px] text-white/20 font-mono">Impact: {n.impactScore}/10</span>}
                   </div>
-                  {n.salesAngle && <p className="text-[11px] text-teal-400/70 mt-1"><Zap size={9} className="inline mr-1" />{n.salesAngle}</p>}
+                  {n.salesAngle && <p className="text-[11px] text-violet-400/70 mt-1"><Zap size={9} className="inline mr-1" />{n.salesAngle}</p>}
                 </div>
               </div>
             ))}
@@ -495,7 +495,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
           <div className="space-y-2">
             {signals.map((sig, i) => (
               <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: sig.intentScore && sig.intentScore >= 7 ? "#22d3ee" : "#00c8c8" }} />
+                <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: sig.intentScore && sig.intentScore >= 7 ? "#22d3ee" : "#696aac" }} />
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="text-[13px] text-[#e8e8ea]">{sig.signal}</p>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -503,7 +503,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
                     {sig.category && <Badge className={`text-[9px] font-mono ${catBadge(sig.category)}`}>{fmtCat(sig.category)}</Badge>}
                     {sig.recency && <span className="text-[10px] text-white/20 font-mono">{sig.recency}</span>}
                   </div>
-                  {sig.actionableInsight && <p className="text-[11px] text-teal-400/60 mt-1"><Target size={9} className="inline mr-1" />{sig.actionableInsight}</p>}
+                  {sig.actionableInsight && <p className="text-[11px] text-violet-400/60 mt-1"><Target size={9} className="inline mr-1" />{sig.actionableInsight}</p>}
                 </div>
                 {sig.intentScore && <span className="text-[11px] text-white/30 font-mono shrink-0 tabular-nums">{sig.intentScore}/10</span>}
               </div>
@@ -553,7 +553,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
                   <p className="text-[13px] font-medium text-[#e8e8ea] leading-snug flex-1">{pp.pain}</p>
                   <Badge className={`text-[9px] font-mono shrink-0 ${sevColor(pp.severity)}`}>{pp.severity}</Badge>
                 </div>
-                {pp.opportunity && <p className="text-[11px] text-teal-400/70"><Target size={9} className="inline mr-1" />{pp.opportunity}</p>}
+                {pp.opportunity && <p className="text-[11px] text-violet-400/70"><Target size={9} className="inline mr-1" />{pp.opportunity}</p>}
                 {pp.evidence && <p className="text-[11px] text-white/30"><Eye size={9} className="inline mr-1" />{pp.evidence}</p>}
                 {pp.urgencyScore && (
                   <div className="flex items-center gap-2">
@@ -584,7 +584,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
                   <Badge className={`text-[9px] font-mono ${threatColor(c.threat)}`}>{c.threat} threat</Badge>
                 </div>
                 {c.differentiator && <p className="text-[11px] text-white/40">{c.differentiator}</p>}
-                {c.howToBeat && <p className="text-[11px] text-teal-400/70"><Crosshair size={9} className="inline mr-1" />How to beat: {c.howToBeat}</p>}
+                {c.howToBeat && <p className="text-[11px] text-violet-400/70"><Crosshair size={9} className="inline mr-1" />How to beat: {c.howToBeat}</p>}
                 {c.theirWeaknesses && c.theirWeaknesses.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {c.theirWeaknesses.slice(0, 3).map((w, j) => (
@@ -613,7 +613,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
                   {typeof obj !== "string" && <Badge className={`text-[9px] font-mono shrink-0 ${probColor(obj.probability)}`}>{obj.probability}</Badge>}
                 </div>
                 {typeof obj !== "string" && obj.counterStrategy && (
-                  <p className="text-[11px] text-teal-400/70"><Shield size={9} className="inline mr-1" />{obj.counterStrategy}</p>
+                  <p className="text-[11px] text-violet-400/70"><Shield size={9} className="inline mr-1" />{obj.counterStrategy}</p>
                 )}
                 {typeof obj !== "string" && obj.followUp && (
                   <p className="text-[11px] text-white/30"><ArrowRight size={9} className="inline mr-1" />{obj.followUp}</p>
@@ -643,7 +643,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
         </div>
         <div className="rounded-lg p-4 space-y-3" style={{ background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.12)" }}>
           <div className="flex items-start gap-2">
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(0,200,200,0.15)", color: "#00c8c8" }}>ADAM</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(105,106,172,0.15)", color: "#696aac" }}>ADAM</span>
             <p className="text-[13px] text-white/70 leading-relaxed">{brief.opener}</p>
           </div>
           <div className="flex items-start gap-2">
@@ -656,13 +656,13 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       {/* Talk Track */}
       <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
-          <Radio size={14} className="text-teal-400" />
+          <Radio size={14} className="text-violet-400" />
           <MonoLabel>Talk Track</MonoLabel>
         </div>
         <div className="space-y-2">
           {brief.talkTrack.map((step, i) => (
             <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold" style={{ background: "rgba(0,200,200,0.1)", color: "#00c8c8", border: "1px solid rgba(0,200,200,0.2)" }}>{i + 1}</div>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold" style={{ background: "rgba(105,106,172,0.1)", color: "#696aac", border: "1px solid rgba(105,106,172,0.2)" }}>{i + 1}</div>
               <p className="text-[12px] text-white/55 leading-relaxed">{step}</p>
             </div>
           ))}
@@ -678,7 +678,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
         <div className="space-y-1.5">
           {brief.discoveryQs.map((q, i) => (
             <div key={i} className="flex items-start gap-2 py-2 px-3 rounded-lg hover:bg-white/[0.02] transition-colors">
-              <ChevronRight size={12} className="text-teal-400/60 mt-0.5 shrink-0" />
+              <ChevronRight size={12} className="text-violet-400/60 mt-0.5 shrink-0" />
               <p className="text-[12px] text-white/55">{q}</p>
             </div>
           ))}
@@ -707,7 +707,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       {callStrategy && (
         <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <PhoneCall size={14} className="text-teal-400" />
+            <PhoneCall size={14} className="text-violet-400" />
             <MonoLabel>Call Strategy</MonoLabel>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -733,7 +733,7 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
       {/* Pricing & Terms */}
       {bc && (
         <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
-          <div className="flex items-center gap-2"><DollarSign size={14} className="text-teal-400" /><MonoLabel>Pricing & Lock-In</MonoLabel></div>
+          <div className="flex items-center gap-2"><DollarSign size={14} className="text-violet-400" /><MonoLabel>Pricing & Lock-In</MonoLabel></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <StatCell icon={DollarSign} label="Pricing Model" value={bc.pricingModel || "—"} />
             <StatCell icon={FileText} label="Contract Terms" value={bc.contractTerms || "—"} />
@@ -769,11 +769,11 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
 
       {/* Competitive Talking Points */}
       {bc?.talkingPoints?.length > 0 && (
-        <div className="rounded-xl border border-teal-500/15 bg-gradient-to-br from-teal-500/[0.03] to-transparent p-5 space-y-4">
-          <div className="flex items-center gap-2"><Crosshair size={14} className="text-teal-400" /><MonoLabel>Competitive Talking Points</MonoLabel></div>
+        <div className="rounded-xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.03] to-transparent p-5 space-y-4">
+          <div className="flex items-center gap-2"><Crosshair size={14} className="text-violet-400" /><MonoLabel>Competitive Talking Points</MonoLabel></div>
           <div className="space-y-2">
             {bc.talkingPoints.map((tp, i) => (
-              <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-white/[0.02] text-[12px] text-white/55"><Zap size={10} className="text-teal-400/60 mt-0.5 shrink-0" />{tp}</div>
+              <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-white/[0.02] text-[12px] text-white/55"><Zap size={10} className="text-violet-400/60 mt-0.5 shrink-0" />{tp}</div>
             ))}
           </div>
         </div>
@@ -782,12 +782,12 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
       {/* Pitch Angles */}
       {(bp?.pitchAngles || wb.pitchAngles || []).length > 0 && (
         <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
-          <div className="flex items-center gap-2"><TrendingUp size={14} className="text-teal-400" /><MonoLabel>Pitch Angles</MonoLabel></div>
+          <div className="flex items-center gap-2"><TrendingUp size={14} className="text-violet-400" /><MonoLabel>Pitch Angles</MonoLabel></div>
           <div className="space-y-2">
             {(bp?.pitchAngles || wb.pitchAngles || []).map((pa, i) => (
               <div key={i} className="p-3.5 rounded-lg border border-white/[0.06] bg-white/[0.02] space-y-1.5">
                 <p className="text-[13px] font-medium text-[#e8e8ea]">{typeof pa === "string" ? pa : pa.angle}</p>
-                {typeof pa !== "string" && pa.targetPersona && <p className="text-[11px] text-teal-400/60"><User size={9} className="inline mr-1" />{pa.targetPersona}</p>}
+                {typeof pa !== "string" && pa.targetPersona && <p className="text-[11px] text-violet-400/60"><User size={9} className="inline mr-1" />{pa.targetPersona}</p>}
                 {typeof pa !== "string" && pa.openingLine && <p className="text-[11px] text-white/35 italic">"{pa.openingLine}"</p>}
               </div>
             ))}
@@ -807,14 +807,14 @@ function PeopleSection({ contacts }: { contacts: Contact[] }) {
   return (
     <div className="space-y-3 fade-in">
       <div className="flex items-center gap-2 mb-4">
-        <Users size={14} className="text-teal-400" />
+        <Users size={14} className="text-violet-400" />
         <MonoLabel>Org Structure & Decision Makers</MonoLabel>
-        <Badge className="bg-teal-500/10 text-teal-400 border-teal-500/20 text-[10px] font-mono ml-auto">{contacts.length} contacts</Badge>
+        <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-[10px] font-mono ml-auto">{contacts.length} contacts</Badge>
       </div>
       {contacts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {contacts.map((c, i) => (
-            <div key={i} className="p-4 rounded-xl border border-white/[0.06] bg-[#111113] hover:border-teal-500/15 transition-all space-y-3">
+            <div key={i} className="p-4 rounded-xl border border-white/[0.06] bg-[#111113] hover:border-violet-500/15 transition-all space-y-3">
               <div className="flex items-start gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-bold border shrink-0 ${seniorityStyle(c.title)}`}>
                   {c.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
@@ -827,13 +827,13 @@ function PeopleSection({ contacts }: { contacts: Contact[] }) {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {c.email && (
-                  <button onClick={() => copy(c.email!)} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/40 hover:text-teal-400 bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/20 transition-all">
+                  <button onClick={() => copy(c.email!)} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/40 hover:text-violet-400 bg-white/[0.03] border border-white/[0.06] hover:border-violet-500/20 transition-all">
                     {copied === c.email ? <CheckCircle2 size={10} className="text-emerald-400" /> : <Mail size={10} />}
                     <span className="truncate max-w-[140px]">{c.email}</span>
                   </button>
                 )}
                 {c.phone && (
-                  <button onClick={() => copy(c.phone!)} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/40 hover:text-teal-400 bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/20 transition-all">
+                  <button onClick={() => copy(c.phone!)} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/40 hover:text-violet-400 bg-white/[0.03] border border-white/[0.06] hover:border-violet-500/20 transition-all">
                     {copied === c.phone ? <CheckCircle2 size={10} className="text-emerald-400" /> : <Phone size={10} />}
                     {c.phone}
                   </button>
@@ -944,7 +944,7 @@ export default function CompanyIntelligence() {
   const profile = result?.companyProfile;
 
   return (
-    <div style={{ fontFamily: "'Cabinet Grotesk', 'Satoshi', Arial, sans-serif" }}>
+    <div style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
       <style>{`
         @keyframes sonarPulse { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.08); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -957,8 +957,8 @@ export default function CompanyIntelligence() {
         {/* ── Header Bar ── */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: "rgba(0,200,200,0.08)", border: "1px solid rgba(0,200,200,0.2)" }}>
-              <Brain size={20} className="text-teal-400" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: "rgba(105,106,172,0.08)", border: "1px solid rgba(105,106,172,0.2)" }}>
+              <Brain size={20} className="text-violet-400" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-[#f6f6fd] leading-tight">ATOM WarBook</h1>
@@ -981,12 +981,12 @@ export default function CompanyIntelligence() {
                   key={d}
                   onClick={() => setDepth(d)}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wide transition-all ${depth === d
-                    ? "text-[#00c8c8] border-[#00c8c8]/40"
+                    ? "text-[#696aac] border-[#696aac]/40"
                     : "text-white/35 border-white/10 hover:border-white/20"
                   }`}
                   style={{
-                    background: depth === d ? "rgba(0,200,200,0.08)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${depth === d ? "rgba(0,200,200,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    background: depth === d ? "rgba(105,106,172,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${depth === d ? "rgba(105,106,172,0.4)" : "rgba(255,255,255,0.1)"}`,
                   }}
                 >
                   {d === "standard" ? "Standard (3 queries · ~20s)" : "Enterprise (5 queries · ~40s)"}
@@ -1006,7 +1006,7 @@ export default function CompanyIntelligence() {
                 placeholder="e.g. Cloudflare, Akamai, Salesforce..."
                 className="w-full pl-8 pr-3 py-2.5 rounded-lg text-[13px] text-[#f6f6fd] placeholder-white/25 outline-none transition-colors"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
-                onFocus={e => (e.currentTarget.style.borderColor = "rgba(0,200,200,0.3)")}
+                onFocus={e => (e.currentTarget.style.borderColor = "rgba(105,106,172,0.3)")}
                 onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
                 data-testid="input-company"
               />
@@ -1028,7 +1028,7 @@ export default function CompanyIntelligence() {
               onClick={handleBuild}
               disabled={isLoading}
               className="gap-2 px-5 py-2.5 rounded-lg font-semibold text-[13px] transition-all disabled:opacity-50"
-              style={{ background: "#00c8c8", color: "#0b0b0c" }}
+              style={{ background: "#696aac", color: "#020202" }}
               data-testid="button-build-warbook"
             >
               {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
@@ -1073,8 +1073,8 @@ export default function CompanyIntelligence() {
         {/* ── Empty State ── */}
         {!result && !isLoading && (
           <div className="flex flex-col items-center justify-center py-16 space-y-4">
-            <div className="flex items-center justify-center w-20 h-20 rounded-full" style={{ background: "rgba(0,200,200,0.06)", border: "1px solid rgba(0,200,200,0.15)" }}>
-              <Brain size={36} className="text-teal-400/50" style={{ animation: "sonarPulse 2.5s ease-in-out infinite" }} />
+            <div className="flex items-center justify-center w-20 h-20 rounded-full" style={{ background: "rgba(105,106,172,0.06)", border: "1px solid rgba(105,106,172,0.15)" }}>
+              <Brain size={36} className="text-violet-400/50" style={{ animation: "sonarPulse 2.5s ease-in-out infinite" }} />
             </div>
             <div className="text-center space-y-1">
               <h2 className="text-base font-semibold text-white/40">Enter a company to build their WarBook</h2>
@@ -1101,13 +1101,13 @@ export default function CompanyIntelligence() {
                     <Badge className={`text-[10px] font-mono ${priorityColor(wb.priorityLevel || "low")}`}>{wb.priorityLevel || "—"} priority</Badge>
                     {overview?.stockTicker && <Badge className="bg-white/5 text-white/40 border-white/10 text-[10px] font-mono">{overview.stockTicker}</Badge>}
                   </div>
-                  {overview?.industry && <p className="text-[12px] text-teal-400/70 font-mono uppercase tracking-wider">{overview.industry}</p>}
+                  {overview?.industry && <p className="text-[12px] text-violet-400/70 font-mono uppercase tracking-wider">{overview.industry}</p>}
                   {(overview?.description || wb.executiveSummary) && (
                     <p className="text-[13px] text-white/50 leading-relaxed max-w-2xl">{overview?.description || wb.executiveSummary}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-5">
-                  <Gauge value={wb.sentimentScore || 0} label="Sentiment" color="#00c8c8" />
+                  <Gauge value={wb.sentimentScore || 0} label="Sentiment" color="#696aac" />
                   <Gauge value={wb.buyerIntentScore ? wb.buyerIntentScore * 10 : 0} label="Intent" color="#22d3ee" />
                 </div>
               </div>
@@ -1132,10 +1132,10 @@ export default function CompanyIntelligence() {
                   <button
                     key={s.key}
                     onClick={() => setActiveSection(s.key)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap ${isActive ? "text-[#00c8c8]" : "text-white/35 hover:text-white/55"}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap ${isActive ? "text-[#696aac]" : "text-white/35 hover:text-white/55"}`}
                     style={{
-                      background: isActive ? "rgba(0,200,200,0.08)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isActive ? "rgba(0,200,200,0.25)" : "rgba(255,255,255,0.06)"}`,
+                      background: isActive ? "rgba(105,106,172,0.08)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? "rgba(105,106,172,0.25)" : "rgba(255,255,255,0.06)"}`,
                     }}
                     data-testid={`tab-${s.key}`}
                   >
@@ -1145,7 +1145,7 @@ export default function CompanyIntelligence() {
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-mono">{wb.recentNews.length}</span>
                     )}
                     {s.key === "people" && (result.contacts?.length || 0) > 0 && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-400 font-mono">{result.contacts.length}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400 font-mono">{result.contacts.length}</span>
                     )}
                   </button>
                 );
