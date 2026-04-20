@@ -126,7 +126,7 @@ async function searchApolloProspects(
   filters: ScanFilters,
   geoFilters: { personLocations?: string[]; organizationLocations?: string[] },
   employeeSizeRangeStr: string | null,
-  perPage: number = 25
+  perPage: number = 100
 ): Promise<any[]> {
   if (!APOLLO_API_KEY) return [];
 
@@ -393,7 +393,7 @@ async function hunterDomainSearch(
   try {
     const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
     const res = await fetch(
-      `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(cleanDomain)}&api_key=${HUNTER_API_KEY}&limit=10&type=personal`,
+      `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(cleanDomain)}&api_key=${HUNTER_API_KEY}&limit=20&type=personal`,
       { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
@@ -549,7 +549,7 @@ async function deduplicateContacts(contacts: EnrichedContact[]): Promise<Enriche
   // Phone fallback: for contacts without phone, try Hunter.io email-finder
   const noPhoneContacts = dedupedContacts.filter(c => !c.phone && c.email);
   if (noPhoneContacts.length > 0 && HUNTER_API_KEY) {
-    const phoneLookups = noPhoneContacts.slice(0, 5).map(async (c) => {
+    const phoneLookups = noPhoneContacts.slice(0, 10).map(async (c) => {
       try {
         const phone = await hunterPhoneLookup(c.email, c.firstName, c.lastName);
         if (phone) c.phone = phone;
@@ -700,7 +700,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       keywords: filters.keywords,
     }));
 
-    const apolloPeople = await searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 25);
+    const apolloPeople = await searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 100);
     console.log(`[scan] Apollo returned ${apolloPeople.length} people`);
 
     // ── STEP 2: Group people by organization to get distinct companies ────────
@@ -711,11 +711,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const excludeSet = new Set((filters.excludeCompanies || []).map((c) => c.toLowerCase()));
     const filteredOrgs = orgs.filter((o) => !excludeSet.has(o.companyName.toLowerCase()));
 
-    // Score and sort, take top 8
+    // Score and sort, take top 25
     const scoredOrgs = filteredOrgs
       .map((o) => ({ org: o, score: scoreCompany(o, filters) }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
+      .slice(0, 25);
 
     // ── STEP 3: For each org, reveal contacts + enrich with Hunter & PDL ──────
     const results = await Promise.all(
@@ -723,8 +723,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const domain = org.domain;
         const companyName = org.companyName;
 
-        // Reveal Apollo contacts (up to 5 per company to conserve credits)
-        const revealPromises = org.people.slice(0, 5).map((person) => revealApolloContact(person));
+        // Reveal Apollo contacts (up to 10 per company for deep coverage)
+        const revealPromises = org.people.slice(0, 10).map((person) => revealApolloContact(person));
         const [apolloContacts, hunterContacts, pdlData, apolloOrgData, theirStackTech, builtWithTech, webIntel] = await Promise.all([
           Promise.all(revealPromises).then((contacts) => contacts.filter(Boolean) as EnrichedContact[]),
           hunterDomainSearch(domain),
