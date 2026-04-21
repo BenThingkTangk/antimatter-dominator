@@ -47,6 +47,11 @@ import {
   Check,
   Plus,
   Radio,
+  Sparkles,
+  RefreshCw,
+  Send,
+  Download,
+  ChevronRight as ArrowRightIcon,
 } from "lucide-react";
 import {
   loadDeals,
@@ -68,6 +73,10 @@ import {
   findDealByCompany,
   getDeal,
   onWarRoomEvent,
+  updatePackageSection,
+  markPackageGenerating,
+  addDailyBrief,
+  updateTargetTier,
   type Deal,
   type Stakeholder,
   type CompanySignal,
@@ -77,6 +86,10 @@ import {
   type StakeholderRole,
   type ThreatLevel,
   type SignalType,
+  type TargetPackage,
+  type PackageSection,
+  type PackageStatus,
+  type TargetTier,
 } from "@/lib/warroom-store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1028,12 +1041,110 @@ function IntelAnalyzerTab({
 
 // ─── TAB 3: Operator Intel ────────────────────────────────────────────────────
 
+const PACKAGE_SECTIONS: { key: PackageSection; label: string; icon: any }[] = [
+  { key: "market_intent", label: "Market Intent", icon: Shield },
+  { key: "pitch", label: "Pitch", icon: TrendingUp },
+  { key: "objections", label: "Objections", icon: AlertTriangle },
+  { key: "warbook", label: "Warbook", icon: Brain },
+  { key: "prospects", label: "Prospects", icon: Users },
+];
+
+const roleColor = (r: StakeholderRole) =>
+  r === "economic_buyer" ? "#eab308" :
+  r === "champion" ? "#22c55e" :
+  r === "technical" ? "#22d3ee" :
+  r === "blocker" ? "#ef4444" :
+  r === "ghost" ? "#6b7280" : "#9ca3af";
+
+const signalDotColor = (t: string) => {
+  if (t === "funding" || t === "earnings" || t === "contract_win") return "bg-emerald-400";
+  if (t === "leadership" || t === "new_c_suite") return "bg-amber-400";
+  if (t === "competitor_mention") return "bg-rose-400";
+  if (t === "tech_change") return "bg-violet-400";
+  if (t === "hiring_surge" || t === "job_posting" || t === "job_post_matching") return "bg-cyan-400";
+  if (t === "product_launch") return "bg-fuchsia-400";
+  return "bg-white/20";
+};
+
+function TargetListCard({ deal, selected, onClick }: { deal: Deal; selected: boolean; onClick: () => void }) {
+  const sigScore = deal.targetMeta?.signalScore ?? 0;
+  const sigColor = sigScore >= 7 ? "#22d3ee" : sigScore >= 4 ? "#fbbf24" : "rgba(255,255,255,0.2)";
+  const tier = deal.targetMeta?.tier ?? "Watch";
+  const tierStyle = tier === "T1"
+    ? "bg-rose-500/15 text-rose-400 border-rose-500/25"
+    : tier === "T2"
+    ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+    : "bg-white/[0.06] text-white/30 border-white/10";
+  const lastBriefAt = deal.targetMeta?.lastBriefAt;
+  const r = 12;
+  const circumference = 2 * Math.PI * r;
+  const truthFilled = (deal.truthScore / 100) * circumference;
+  const sigFilled = (sigScore / 10) * circumference;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left p-3 rounded-xl border transition-all ${
+        selected
+          ? "border-rose-500/40 bg-rose-500/[0.06] ring-2 ring-rose-500/40"
+          : "border-white/[0.06] bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04]"
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[12px] font-semibold text-[#f6f6fd] truncate">{deal.company}</span>
+            {deal.isHVT && (
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)" }}>🎯 HVT</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${tierStyle}`}>{tier}</span>
+            <span className="text-[9px] font-mono text-white/25">
+              {lastBriefAt ? fmtTime(lastBriefAt) : "No brief yet"}
+            </span>
+          </div>
+        </div>
+        {/* TRUTH ring */}
+        <div className="shrink-0 flex flex-col items-center gap-0.5">
+          <svg width="32" height="32" viewBox="0 0 32 32" className="-rotate-90">
+            <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+            <circle cx="16" cy="16" r={r} fill="none"
+              stroke={deal.truthScore >= 70 ? "#1dd1a1" : deal.truthScore >= 40 ? "#fbbf24" : "#f87171"}
+              strokeWidth="3"
+              strokeDasharray={`${truthFilled} ${circumference - truthFilled}`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="text-[8px] font-mono text-white/30">{deal.truthScore}</span>
+        </div>
+        {/* Signal ring */}
+        <div className="shrink-0 flex flex-col items-center gap-0.5">
+          <svg width="32" height="32" viewBox="0 0 32 32" className="-rotate-90">
+            <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+            <circle cx="16" cy="16" r={r} fill="none"
+              stroke={sigColor}
+              strokeWidth="3"
+              strokeDasharray={`${sigFilled} ${circumference - sigFilled}`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="text-[8px] font-mono text-white/30">{sigScore.toFixed(1)}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function OperatorIntelTab({ deals }: { deals: Deal[] }) {
   const { toast } = useToast();
   const [selectedDealId, setSelectedDealId] = useState<string>(deals[0]?.id || "");
   const [showAddStakeholder, setShowAddStakeholder] = useState(false);
   const [showAddSignal, setShowAddSignal] = useState(false);
-  const [editingStakeholder, setEditingStakeholder] = useState<Stakeholder | null>(null);
+  const [activeSection, setActiveSection] = useState<PackageSection>("market_intent");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isBriefing, setIsBriefing] = useState(false);
 
   // Stakeholder form state
   const [skName, setSkName] = useState("");
@@ -1052,7 +1163,22 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
   const [sigImpact, setSigImpact] = useState(5);
 
   const deal = deals.find(d => d.id === selectedDealId);
-  const ms = deal ? multithreadingScore(deal) : null;
+  const ms = deal ? multithreadingScore(deal) : { engaged: 0, required: 0, fragile: false };
+
+  const hvts = deals.filter(d => d.isHVT).sort((a, b) => (b.targetMeta?.signalScore || 0) - (a.targetMeta?.signalScore || 0));
+  const others = deals.filter(d => !d.isHVT);
+
+  const sortedSignals = deal ? [...deal.signals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+  const latestBrief = deal?.dailyBriefs?.[0] ?? null;
+
+  const activeSectionContent = deal?.targetPackage
+    ? activeSection === "market_intent"
+      ? deal.targetPackage.marketIntent
+      : (deal.targetPackage as any)[activeSection]
+    : undefined;
+
+  const sourcesForSection: string[] = deal?.targetPackage?.sections?.[activeSection]?.sources ?? [];
+  const sectionLabel = PACKAGE_SECTIONS.find(s => s.key === activeSection)?.label ?? activeSection;
 
   function resetSkForm() {
     setSkName(""); setSkTitle(""); setSkEmail(""); setSkPhone(""); setSkLinkedin(""); setSkRole("unknown"); setSkEngagement(50);
@@ -1066,17 +1192,6 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
     setShowAddStakeholder(false);
   }
 
-  function handleUpdateStakeholderRole(stakeholderId: string, role: StakeholderRole) {
-    if (!deal) return;
-    updateStakeholder(deal.id, stakeholderId, { role });
-  }
-
-  function handleDeleteStakeholder(stakeholderId: string, name: string) {
-    if (!deal) return;
-    removeStakeholder(deal.id, stakeholderId);
-    toast({ title: "Stakeholder removed", description: `${name} removed.` });
-  }
-
   function handleAddSignal() {
     if (!deal || !sigHeadline.trim()) return;
     addSignal(deal.id, { type: sigType, headline: sigHeadline.trim(), date: sigDate, source: sigSource, impactScore: sigImpact });
@@ -1085,201 +1200,381 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
     setShowAddSignal(false);
   }
 
-  const sortedSignals = deal ? [...deal.signals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+  async function handleGenerateAll() {
+    if (!deal) return;
+    setIsGenerating(true);
+    markPackageGenerating(deal.id);
+    try {
+      const res = await apiRequest("POST", "/api/targets/generate-package", {
+        company: deal.company,
+        website: deal.website,
+        industry: deal.industry,
+      });
+      const data = await res.json();
+      if (data.sections) {
+        (Object.keys(data.sections) as PackageSection[]).forEach(key => {
+          const s = data.sections[key];
+          updatePackageSection(deal.id, key, {
+            status: s.status,
+            content: s.content,
+            sources: s.sources,
+          });
+        });
+        toast({ title: "🎯 Package ready", description: `Operator Intel for ${deal.company} deployed.` });
+      }
+    } catch (e: any) {
+      toast({ title: "Generation failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleRegenSection() {
+    if (!deal) return;
+    updatePackageSection(deal.id, activeSection, { status: "generating" });
+    try {
+      const res = await apiRequest("POST", "/api/targets/generate-package", { company: deal.company, website: deal.website, industry: deal.industry });
+      const data = await res.json();
+      const s = data.sections?.[activeSection];
+      if (s) {
+        updatePackageSection(deal.id, activeSection, { status: s.status, content: s.content, sources: s.sources });
+        toast({ title: "Section regenerated" });
+      }
+    } catch (e: any) {
+      updatePackageSection(deal.id, activeSection, { status: "failed" });
+      toast({ title: "Regen failed", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleGenerateBrief() {
+    if (!deal) return;
+    setIsBriefing(true);
+    try {
+      const res = await apiRequest("POST", "/api/targets/daily-brief", { company: deal.company });
+      const data = await res.json();
+      addDailyBrief(deal.id, {
+        briefDate: data.briefDate,
+        summary: data.summary,
+        overnightTriggers: data.overnightTriggers,
+        whyNow: data.whyNow,
+        pitchAngle: data.pitchAngle,
+        recommendedAction: data.recommendedAction,
+        dailySignalScore: data.dailySignalScore,
+        sources: data.sources,
+      });
+      (data.signals || []).forEach((s: any) => {
+        addSignal(deal.id, {
+          type: s.type,
+          headline: s.description,
+          date: s.date || new Date().toISOString().slice(0, 10),
+          source: s.source,
+          impactScore: s.impactScore || 5,
+        });
+      });
+      toast({ title: "📋 Daily Brief ready", description: `Score: ${data.dailySignalScore}/10` });
+    } catch (e: any) {
+      toast({ title: "Brief failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsBriefing(false);
+    }
+  }
+
+  function handleCopy() {
+    if (!activeSectionContent) return;
+    navigator.clipboard.writeText(activeSectionContent);
+    toast({ title: "Copied to clipboard" });
+  }
+
+  function handlePushToCampaign() {
+    if (!activeSectionContent || !deal) return;
+    try {
+      localStorage.setItem("atom_campaign_inject", JSON.stringify({
+        company: deal.company,
+        section: activeSection,
+        content: activeSectionContent,
+        at: Date.now(),
+      }));
+      toast({ title: "✅ Pushed to Campaign", description: "Open ATOM Campaign to use in your template." });
+    } catch {}
+  }
 
   return (
-    <div className="space-y-5">
-      {/* Deal selector */}
-      <div className="flex items-center gap-3">
-        <Building2 size={14} className="text-white/40" />
-        <select
-          value={selectedDealId}
-          onChange={e => setSelectedDealId(e.target.value)}
-          className="flex-1 px-3 py-2 rounded-lg text-[13px] text-[#f6f6fd] outline-none"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-        >
-          <option value="">— Select a deal —</option>
-          {deals.map(d => <option key={d.id} value={d.id}>{d.company} {d.isHVT ? "🎯" : ""}</option>)}
-        </select>
+    <div className="grid grid-cols-12 gap-4">
+
+      {/* ── LEFT: Target List ── */}
+      <div className="col-span-12 md:col-span-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <MonoLabel>Targets ({hvts.length + others.length})</MonoLabel>
+        </div>
+        {hvts.length > 0 && (
+          <>
+            <p className="text-[9px] font-mono uppercase tracking-wider text-rose-400/60 pl-1">🎯 HVT · {hvts.length}</p>
+            {hvts.map(d => (
+              <TargetListCard
+                key={d.id}
+                deal={d}
+                selected={selectedDealId === d.id}
+                onClick={() => setSelectedDealId(d.id)}
+              />
+            ))}
+          </>
+        )}
+        {others.length > 0 && (
+          <>
+            <p className="text-[9px] font-mono uppercase tracking-wider text-white/25 pl-1 mt-3">Watch · {others.length}</p>
+            {others.map(d => (
+              <TargetListCard
+                key={d.id}
+                deal={d}
+                selected={selectedDealId === d.id}
+                onClick={() => setSelectedDealId(d.id)}
+              />
+            ))}
+          </>
+        )}
+        {deals.length === 0 && (
+          <div className="text-center py-10 text-white/25 text-[12px]">No targets. Add deals from the Pipeline.</div>
+        )}
       </div>
 
-      {!deal ? (
-        <div className="text-center py-16 text-white/30 text-[13px]">Select a deal to view operator intelligence.</div>
-      ) : (
-        <>
-          {/* Section A: Stakeholder Power Map */}
-          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      {/* ── CENTER: Target Package ── */}
+      <div className="col-span-12 md:col-span-6 rounded-xl border border-white/[0.08] bg-[#111113] p-4 space-y-4">
+        {!deal ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+            <Sparkles size={28} className="text-white/15" />
+            <p className="text-[13px] text-white/25">Select a target to view the Operator Intel Package.</p>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Network size={14} className="text-violet-400" />
-                <span className="text-[13px] font-semibold text-[#f6f6fd]">Stakeholder Power Map</span>
-              </div>
-              <div className="flex items-center gap-3">
-                {ms && (
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-mono ${ms.fragile ? "text-rose-400" : "text-emerald-400"}`}>
-                      {ms.engaged}/{ms.required} engaged {ms.fragile ? "⚠ FRAGILE" : "✓ OK"}
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setShowAddStakeholder(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all hover:scale-[1.02]"
-                  style={CRIMSON_BTN_STYLE}
-                >
-                  <UserPlus size={11} /> Add
-                </button>
-              </div>
-            </div>
-
-            {deal.stakeholders.length === 0 ? (
-              <p className="text-[12px] text-white/30 text-center py-6">No stakeholders mapped. Add stakeholders to unlock stage advancement.</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {STAKEHOLDER_ROLES.filter(r => r.id !== "unknown").map(roleInfo => {
-                  const stakesInRole = deal.stakeholders.filter(s => s.role === roleInfo.id);
-                  return (
-                    <div key={roleInfo.id} className="space-y-2">
-                      <div className="text-center">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-white/30">{roleInfo.icon} {roleInfo.label}</span>
-                      </div>
-                      {stakesInRole.length === 0 ? (
-                        <div className="h-16 rounded-lg border border-dashed border-white/[0.08] flex items-center justify-center">
-                          <span className="text-[10px] text-white/20">Empty</span>
-                        </div>
-                      ) : (
-                        stakesInRole.map(s => (
-                          <div key={s.id} className="p-2.5 rounded-lg space-y-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{ background: "rgba(220,38,38,0.15)", color: "#f87171" }}>
-                                {s.name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-medium text-[#f6f6fd] truncate">{s.name}</p>
-                                {s.title && <p className="text-[9px] text-white/30 truncate">{s.title}</p>}
-                              </div>
-                            </div>
-                            <EngagementBar value={s.engagement} />
-                            <div className="flex items-center justify-between gap-1">
-                              <select
-                                value={s.role}
-                                onChange={e => handleUpdateStakeholderRole(s.id, e.target.value as StakeholderRole)}
-                                className="flex-1 text-[9px] font-mono px-1 py-0.5 rounded text-white/40 outline-none"
-                                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
-                              >
-                                {STAKEHOLDER_ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                              </select>
-                              <button onClick={() => handleDeleteStakeholder(s.id, s.name)} className="p-1 rounded hover:text-rose-400 text-white/20 transition-colors shrink-0">
-                                <Trash2 size={9} />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Unknown role stakeholders */}
-            {deal.stakeholders.filter(s => s.role === "unknown").length > 0 && (
-              <div className="pt-2 border-t border-white/[0.06]">
-                <MonoLabel>Unclassified</MonoLabel>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {deal.stakeholders.filter(s => s.role === "unknown").map(s => (
-                    <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <span className="text-[11px] text-white/50">{s.name}</span>
-                      <select
-                        value={s.role}
-                        onChange={e => handleUpdateStakeholderRole(s.id, e.target.value as StakeholderRole)}
-                        className="text-[9px] font-mono px-1 py-0.5 rounded text-white/40 outline-none"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
-                      >
-                        {STAKEHOLDER_ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                      </select>
-                      <button onClick={() => handleDeleteStakeholder(s.id, s.name)} className="hover:text-rose-400 text-white/20 transition-colors"><Trash2 size={9} /></button>
-                    </div>
-                  ))}
+              <div>
+                <h3 className="text-base font-bold text-[#f6f6fd]">{deal.company}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <select
+                    value={deal.targetMeta?.tier ?? "Watch"}
+                    onChange={e => updateTargetTier(deal.id, e.target.value as TargetTier)}
+                    className="text-[10px] bg-white/[0.04] border border-white/10 rounded px-2 py-0.5 text-white/60 outline-none"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                  >
+                    <option value="T1">T1 Priority</option>
+                    <option value="T2">T2 Watch</option>
+                    <option value="Watch">Watch</option>
+                  </select>
+                  <span className="text-[10px] text-white/30">Package: {deal.targetPackage?.overallStatus || "idle"}</span>
                 </div>
               </div>
-            )}
-          </div>
+              <Button
+                onClick={handleGenerateAll}
+                disabled={isGenerating}
+                className="gap-1.5 px-4 py-2 rounded-full text-[11px] font-semibold"
+                style={{
+                  background: "linear-gradient(93.92deg, #f87171 -13.51%, #dc2626 40.91%, #b91c1c 113.69%)",
+                  color: "#fff",
+                  boxShadow: "0 0 12px rgba(220,38,38,0.3)",
+                }}
+              >
+                {isGenerating
+                  ? <><Loader2 size={12} className="animate-spin" />Generating...</>
+                  : <><Sparkles size={12} />Regenerate All</>}
+              </Button>
+            </div>
 
-          {/* Section B: Signal Intelligence */}
-          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Radio size={14} className="text-cyan-400" />
-                <span className="text-[13px] font-semibold text-[#f6f6fd]">Company Signal Intelligence</span>
+            {/* Section tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {PACKAGE_SECTIONS.map(s => {
+                const SIcon = s.icon;
+                const sectionStatus = deal.targetPackage?.sections?.[s.key]?.status;
+                const isActive = activeSection === s.key;
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => setActiveSection(s.key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap shrink-0 transition-all"
+                    style={{
+                      background: isActive ? "rgba(220,38,38,0.10)" : "rgba(255,255,255,0.03)",
+                      color: isActive ? "#f87171" : "rgba(255,255,255,0.35)",
+                      border: isActive ? "1px solid rgba(220,38,38,0.25)" : "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <SIcon size={12} />
+                    {s.label}
+                    {sectionStatus === "generating" && <Loader2 size={10} className="animate-spin" />}
+                    {sectionStatus === "ready" && <Check size={10} className="text-emerald-400" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active section content */}
+            <div className="min-h-[400px] rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+              {activeSectionContent ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <MonoLabel>Operator Intel: {sectionLabel}</MonoLabel>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={handleRegenSection}
+                        className="text-[10px] text-white/30 hover:text-rose-400 flex items-center gap-1 transition-colors"
+                      >
+                        <RefreshCw size={10} />Regenerate
+                      </button>
+                      <button
+                        onClick={handleCopy}
+                        className="text-[10px] text-white/30 hover:text-rose-400 flex items-center gap-1 transition-colors"
+                      >
+                        <Copy size={10} />Copy
+                      </button>
+                      <button
+                        onClick={handlePushToCampaign}
+                        className="text-[10px] text-white/30 hover:text-rose-400 flex items-center gap-1 transition-colors"
+                      >
+                        <Send size={10} />Push to Campaign
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">{activeSectionContent}</div>
+                  {sourcesForSection.length > 0 && (
+                    <div className="pt-3 border-t border-white/[0.06]">
+                      <MonoLabel>Sources ({sourcesForSection.length})</MonoLabel>
+                      <div className="mt-1.5 space-y-1">
+                        {sourcesForSection.slice(0, 6).map((src, i) => (
+                          <a key={i} href={src} target="_blank" rel="noopener noreferrer"
+                            className="block text-[10px] text-rose-400/60 hover:text-rose-400 truncate transition-colors">
+                            {src}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full min-h-[360px] gap-3 text-center">
+                  {deal.targetPackage?.sections?.[activeSection]?.status === "generating" ? (
+                    <>
+                      <Loader2 size={24} className="animate-spin text-rose-400/50" />
+                      <p className="text-[12px] text-white/30">Generating {sectionLabel}...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={24} className="text-white/15" />
+                      <p className="text-[12px] text-white/25">Click Regenerate All to build the full Operator Intel Package.</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── RIGHT: Signal Feed + Daily Brief ── */}
+      <div className="col-span-12 md:col-span-3 space-y-4">
+
+        {/* Daily Brief panel */}
+        <div className="rounded-xl border border-rose-500/15 bg-gradient-to-br from-rose-500/[0.04] to-transparent p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <MonoLabel>📋 Daily Brief</MonoLabel>
+            <Button
+              onClick={handleGenerateBrief}
+              disabled={isBriefing || !deal}
+              size="sm"
+              className="h-6 text-[10px] gap-1 px-2 rounded border-white/10 bg-white/[0.03] text-white/50 hover:text-white/80"
+            >
+              {isBriefing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+              Pull
+            </Button>
+          </div>
+          {latestBrief ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-white/60">{latestBrief.summary}</p>
+              <div className="rounded bg-white/[0.03] p-2 space-y-1.5">
+                <MonoLabel>Why Now</MonoLabel>
+                <p className="text-[11px] text-rose-400/80">{latestBrief.whyNow}</p>
               </div>
+              <div className="rounded bg-white/[0.03] p-2 space-y-1.5">
+                <MonoLabel>Pitch Angle</MonoLabel>
+                <p className="text-[11px] text-emerald-400/80">{latestBrief.pitchAngle}</p>
+              </div>
+              <div className="rounded bg-white/[0.03] p-2 space-y-1.5">
+                <MonoLabel>Action Today</MonoLabel>
+                <p className="text-[11px] text-cyan-400/80">{latestBrief.recommendedAction}</p>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[9px] font-mono text-white/25">Signal Score: {latestBrief.dailySignalScore}/10</span>
+                <span className="text-[9px] font-mono text-white/25">{fmtTime(latestBrief.generatedAt)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-white/25">
+              {deal ? "No brief yet. Click Pull to generate today's intel." : "Select a target to generate a brief."}
+            </p>
+          )}
+        </div>
+
+        {/* Signal Feed */}
+        {deal && (
+          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <MonoLabel>🛰️ Signal Feed · {(deal.targetMeta?.signalScore ?? 0).toFixed(1)}/10</MonoLabel>
               <button
                 onClick={() => setShowAddSignal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all hover:scale-[1.02]"
-                style={CRIMSON_BTN_STYLE}
-              >
-                <Plus size={11} /> Add Signal
-              </button>
+                className="text-[10px] text-white/30 hover:text-rose-400 transition-colors"
+              >+ Add</button>
             </div>
-            {sortedSignals.length === 0 ? (
-              <p className="text-[12px] text-white/30 text-center py-6">No signals tracked. External signals will populate here from ATOM Market Intent integrations.</p>
-            ) : (
-              <div className="space-y-2">
-                {sortedSignals.map(sig => (
-                  <div key={sig.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span className={`shrink-0 text-[9px] font-mono px-2 py-0.5 rounded border ${signalBadgeColor(sig.type)}`}>{sig.type}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-[#f6f6fd] leading-snug">{sig.headline}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {sig.source && <span className="text-[10px] text-white/30">{sig.source}</span>}
-                        <span className="text-[10px] text-white/20">{sig.date}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className="w-1 h-3 rounded-sm" style={{ background: i < sig.impactScore ? "#dc2626" : "rgba(255,255,255,0.08)" }} />
-                      ))}
-                    </div>
+            {sortedSignals.length > 0 ? sortedSignals.slice(0, 10).map(sig => (
+              <div key={sig.id} className="flex items-start gap-2 text-[11px] py-1.5 border-b border-white/[0.04]">
+                <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${signalDotColor(sig.type)}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/70 leading-snug">{sig.headline}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] font-mono text-white/25">{sig.type.replace(/_/g, " ")}</span>
+                    <span className="text-[9px] font-mono text-white/25">{sig.date}</span>
+                    {sig.impactScore >= 7 && <span className="text-[9px] font-mono text-rose-400">HIGH</span>}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Section C: Competitive Threat Radar */}
-          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Radar size={14} className="text-amber-400" />
-                <span className="text-[13px] font-semibold text-[#f6f6fd]">Competitive Threat Radar</span>
-              </div>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${threatColor(deal.threatLevel)}`}>{deal.threatLevel.toUpperCase()}</span>
-            </div>
-            {deal.competitors.length === 0 ? (
-              <p className="text-[12px] text-white/30 text-center py-6">No competitive threats detected. ATOM War Room monitors all communications in real-time.</p>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {deal.competitors.map((c, i) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/20">
-                      <Crosshair size={11} className="text-amber-400" />
-                      <span className="text-[12px] text-amber-300">{c}</span>
-                    </div>
-                  ))}
                 </div>
-                {deal.analyses[0]?.competitors?.length > 0 && (
-                  <div>
-                    <MonoLabel>Last detected from analysis</MonoLabel>
-                    <p className="text-[11px] text-white/40 mt-1">{fmtTime(deal.analyses[0].timestamp)}</p>
-                  </div>
-                )}
               </div>
+            )) : <p className="text-[11px] text-white/25">No signals yet.</p>}
+          </div>
+        )}
+
+        {/* Stakeholder Quick View */}
+        {deal && (
+          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <MonoLabel>👥 Stakeholders · {ms.engaged}/{ms.required}</MonoLabel>
+              <button
+                onClick={() => setShowAddStakeholder(true)}
+                className="text-[10px] text-white/30 hover:text-rose-400 transition-colors"
+              >+ Add</button>
+            </div>
+            {ms.fragile && (
+              <Badge className="text-[9px] bg-rose-500/15 text-rose-400 border-rose-500/25">FRAGILE · Single-threaded</Badge>
+            )}
+            {deal.stakeholders.length === 0 ? (
+              <p className="text-[11px] text-white/25">No stakeholders yet.</p>
+            ) : (
+              deal.stakeholders.slice(0, 5).map(s => (
+                <div key={s.id} className="flex items-center gap-2 py-1 text-[11px]">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    style={{ background: roleColor(s.role), color: "#fff" }}
+                  >
+                    {s.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/70 truncate">{s.name}</p>
+                    <p className="text-[9px] text-white/30 truncate">{s.title || s.role}</p>
+                  </div>
+                  <span className="text-[9px] font-mono text-white/25">{s.engagement}%</span>
+                </div>
+              ))
             )}
           </div>
-        </>
-      )}
+        )}
+      </div>
 
-      {/* Add Stakeholder Modal */}
+      {/* ── Add Stakeholder Modal ── */}
       {showAddStakeholder && deal && (
         <Modal title={`Add Stakeholder — ${deal.company}`} onClose={() => { setShowAddStakeholder(false); resetSkForm(); }}>
           <div className="space-y-3">
@@ -1318,7 +1613,7 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
         </Modal>
       )}
 
-      {/* Add Signal Modal */}
+      {/* ── Add Signal Modal ── */}
       {showAddSignal && deal && (
         <Modal title={`Add Signal — ${deal.company}`} onClose={() => setShowAddSignal(false)}>
           <div className="space-y-3">

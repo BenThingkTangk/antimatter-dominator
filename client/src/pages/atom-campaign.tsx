@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { loadDeals, onWarRoomEvent, type Deal } from "@/lib/warroom-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -144,6 +146,74 @@ const MAX_TARGET_OPTIONS = [
 ];
 
 // ─── Phone formatter ──────────────────────────────────────────────────────────
+
+// ─── HVT Target Signal Panel (War Room Intel feed) ──────────────────────────
+function HVTTargetSignalPanel() {
+  const [deals, setDeals] = useState<Deal[]>(() => loadDeals());
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const refresh = () => setDeals(loadDeals());
+    const unsub = onWarRoomEvent(refresh);
+    return unsub;
+  }, []);
+
+  // Filter to HVTs or active deals with strong signals
+  const hotTargets = deals
+    .filter(d => d.isHVT && d.stage !== "closed_won" && d.stage !== "closed_lost")
+    .sort((a, b) => {
+      const aHot = (a.targetMeta?.signalScore || 0) * 10 + a.truthScore;
+      const bHot = (b.targetMeta?.signalScore || 0) * 10 + b.truthScore;
+      return bHot - aHot;
+    })
+    .slice(0, 6);
+
+  if (hotTargets.length === 0) return null;
+
+  const scoreColor = (n: number) => n >= 7 ? "#22d3ee" : n >= 4 ? "#fbbf24" : "rgba(255,255,255,0.3)";
+  const truthColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "#f87171";
+
+  return (
+    <div className="rounded-xl border border-rose-500/15 p-4 bg-gradient-to-br from-rose-500/[0.04] to-transparent" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-rose-400/80">🎯 HVT Target Signals · War Room Intel</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25 font-mono">{hotTargets.length} hot</span>
+        </div>
+        <button onClick={() => setLocation("/war-room")} className="text-[10px] text-rose-400/70 hover:text-rose-400 transition-colors flex items-center gap-1">
+          Open War Room <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {hotTargets.map(d => (
+          <button
+            key={d.id}
+            onClick={() => setLocation("/war-room")}
+            className="flex items-center gap-2.5 p-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:border-rose-500/20 hover:bg-rose-500/[0.03] transition-all text-left"
+          >
+            <div className="flex flex-col gap-0.5 shrink-0">
+              <span className="text-[9px] font-mono text-white/40">T</span>
+              <span className="text-sm font-bold tabular-nums leading-none" style={{ color: truthColor(d.truthScore) }}>{d.truthScore}</span>
+            </div>
+            <div className="flex flex-col gap-0.5 shrink-0">
+              <span className="text-[9px] font-mono text-white/40">S</span>
+              <span className="text-sm font-bold tabular-nums leading-none" style={{ color: scoreColor(d.targetMeta?.signalScore || 0) }}>{(d.targetMeta?.signalScore || 0).toFixed(1)}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1">
+                {d.isHVT && <span className="text-[8px] px-1 rounded bg-rose-500/15 text-rose-400 font-mono">HVT</span>}
+                <span className="text-[12px] font-semibold text-white/80 truncate">{d.company}</span>
+              </div>
+              <p className="text-[10px] text-white/30 truncate">
+                {d.dailyBriefs?.[0]?.summary ? d.dailyBriefs[0].summary.slice(0, 50) + "…" : (d.industry || "No brief yet")}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function formatPhoneNumber(raw: string): string {
   const stripped = raw.replace(/[\s\-().]/g, "");
@@ -1250,7 +1320,10 @@ export default function AtomCampaign() {
         <StepIndicator current={step} />
       </div>
 
-      {/* ── STEP 1: Brief ──────────────────────────────────────────────────── */}
+      {/* HVT Target Signal Panel — War Room Intel */}
+      {step === "brief" && <HVTTargetSignalPanel />}
+
+      {/* STEP 1: Campaign Brief */}
       {step === "brief" && (
         <Card className="bg-[#111113] border-white/[0.12]">
           <CardContent className="p-6 space-y-5">

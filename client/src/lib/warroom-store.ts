@@ -16,7 +16,42 @@ export type DealStage = "discovery" | "qualified" | "proposal" | "negotiation" |
 export type DealRisk = "healthy" | "caution" | "at_risk" | "dead";
 export type StakeholderRole = "economic_buyer" | "technical" | "champion" | "blocker" | "ghost" | "unknown";
 export type ThreatLevel = "low" | "elevated" | "critical";
-export type SignalType = "funding" | "leadership" | "job_posting" | "tech_change" | "news" | "contract_win" | "earnings";
+export type SignalType = "funding" | "leadership" | "job_posting" | "tech_change" | "news" | "contract_win" | "earnings" | "product_launch" | "competitor_mention" | "hiring_surge" | "conference" | "new_c_suite" | "job_post_matching";
+export type PackageStatus = "idle" | "generating" | "partial" | "ready" | "degraded" | "failed";
+export type PackageSection = "market_intent" | "pitch" | "objections" | "warbook" | "prospects";
+export type TargetTier = "T1" | "T2" | "Watch";
+
+export interface TargetPackage {
+  marketIntent?: string;
+  pitch?: string;
+  objections?: string;
+  warbook?: string;
+  prospects?: string;
+  sections: Record<PackageSection, { status: PackageStatus; updatedAt?: number; sources?: string[] }>;
+  generatedAt?: number;
+  overallStatus: PackageStatus;
+}
+
+export interface DailyBrief {
+  id: string;
+  briefDate: string;               // YYYY-MM-DD
+  summary: string;
+  overnightTriggers: string[];
+  whyNow: string;
+  pitchAngle: string;
+  recommendedAction: string;
+  dailySignalScore: number;        // 0-10
+  sources: string[];
+  generatedAt: number;
+}
+
+export interface TargetMeta {
+  tier: TargetTier;
+  signalScore: number;             // 0-10
+  lastBriefAt?: number;
+  assignedOwner?: string;
+  crmIds?: { hubspot?: string; salesforce?: string };
+}
 
 export interface Stakeholder {
   id: string;
@@ -106,6 +141,11 @@ export interface Deal {
   ghostScore: number;                // 0-100 probability of re-engagement
   coldCaseReason?: string;
 
+  // Target Intelligence
+  targetPackage?: TargetPackage;
+  dailyBriefs: DailyBrief[];
+  targetMeta: TargetMeta;
+
   // Notes
   notes?: string;
 }
@@ -159,7 +199,23 @@ function broadcast(type: EventType, dealId?: string, payload?: any) {
 export function loadDeals(): Deal[] {
   try {
     const raw = localStorage.getItem(DEALS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const deals: Deal[] = raw ? JSON.parse(raw) : [];
+    // Migration: backfill missing fields
+    return deals.map(d => ({
+      ...d,
+      targetPackage: d.targetPackage || {
+        sections: {
+          market_intent: { status: "idle" as PackageStatus },
+          pitch: { status: "idle" as PackageStatus },
+          objections: { status: "idle" as PackageStatus },
+          warbook: { status: "idle" as PackageStatus },
+          prospects: { status: "idle" as PackageStatus },
+        },
+        overallStatus: "idle" as PackageStatus,
+      },
+      dailyBriefs: d.dailyBriefs || [],
+      targetMeta: d.targetMeta || { tier: d.isHVT ? "T1" as TargetTier : "Watch" as TargetTier, signalScore: 0 },
+    }));
   } catch { return []; }
 }
 
@@ -203,6 +259,21 @@ export function createDeal(init: Partial<Deal> & { company: string; source: Deal
     plays: [],
     isGhost: false,
     ghostScore: 0,
+    targetPackage: {
+      sections: {
+        market_intent: { status: "idle" },
+        pitch: { status: "idle" },
+        objections: { status: "idle" },
+        warbook: { status: "idle" },
+        prospects: { status: "idle" },
+      },
+      overallStatus: "idle",
+    },
+    dailyBriefs: [],
+    targetMeta: {
+      tier: init.isHVT ? "T1" : "Watch",
+      signalScore: 0,
+    },
     notes: init.notes,
   };
   const deals = loadDeals();
@@ -393,6 +464,166 @@ export function canAdvanceStage(deal: Deal, toStage: DealStage): { allowed: bool
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
+
+// ─── Target Package management ────────────────────────────────────
+
+export function updatePackageSection(
+  dealId: string,
+  section: PackageSection,
+  data: { status: PackageStatus; content?: string; sources?: string[] }
+): Deal | undefined {
+  const deal = getDeal(dealId);
+  if (!deal) return undefined;
+  const pkg = deal.targetPackage || {
+    sections: {
+      market_intent: { status: "idle" as PackageStatus },
+      pitch: { status: "idle" as PackageStatus },
+      objections: { status: "idle" as PackageStatus },
+      warbook: { status: "idle" as PackageStatus },
+      prospects: { status: "idle" as PackageStatus },
+    },
+    overallStatus: "idle" as PackageStatus,
+  };
+  const newSections = {
+    ...pkg.sections,
+    [section]: { status: data.status, updatedAt: Date.now(), sources: data.sources },
+  };
+  const contentKey = section === "market_intent" ? "marketIntent" : section;
+  const newPkg: TargetPackage = {
+    ...pkg,
+    [contentKey]: data.content !== undefined ? data.content : (pkg as any)[contentKey],
+    sections: newSections,
+  };
+  // Compute overall status
+  const statuses = Object.values(newSections).map(s => s.status);
+  if (statuses.every(s => s === "ready")) newPkg.overallStatus = "ready";
+  else if (statuses.some(s => s === "generating")) newPkg.overallStatus = "generating";
+  else if (statuses.some(s => s === "failed")) newPkg.overallStatus = "degraded";
+  else if (statuses.some(s => s === "ready")) newPkg.overallStatus = "partial";
+  if (newPkg.overallStatus === "ready") newPkg.generatedAt = Date.now();
+  return updateDeal(dealId, { targetPackage: newPkg });
+}
+
+export function markPackageGenerating(dealId: string): Deal | undefined {
+  const deal = getDeal(dealId);
+  if (!deal) return undefined;
+  return updateDeal(dealId, {
+    targetPackage: {
+      ...deal.targetPackage,
+      sections: {
+        market_intent: { status: "generating", updatedAt: Date.now() },
+        pitch: { status: "generating", updatedAt: Date.now() },
+        objections: { status: "generating", updatedAt: Date.now() },
+        warbook: { status: "generating", updatedAt: Date.now() },
+        prospects: { status: "generating", updatedAt: Date.now() },
+      },
+      overallStatus: "generating",
+    },
+  });
+}
+
+// ─── Daily Briefs ───────────────────────────────────────────────────
+export function addDailyBrief(dealId: string, brief: Omit<DailyBrief, "id" | "generatedAt">): Deal | undefined {
+  const deal = getDeal(dealId);
+  if (!deal) return undefined;
+  const b: DailyBrief = { ...brief, id: crypto.randomUUID(), generatedAt: Date.now() };
+  const briefs = [b, ...(deal.dailyBriefs || [])].slice(0, 30);
+  return updateDeal(dealId, {
+    dailyBriefs: briefs,
+    targetMeta: {
+      ...deal.targetMeta,
+      signalScore: brief.dailySignalScore,
+      lastBriefAt: Date.now(),
+    },
+  });
+}
+
+// ─── Target Tier Management ────────────────────────────────────
+
+export function updateTargetTier(dealId: string, tier: TargetTier): Deal | undefined {
+  const deal = getDeal(dealId);
+  if (!deal) return undefined;
+  return updateDeal(dealId, { targetMeta: { ...deal.targetMeta, tier } });
+}
+
+// ─── Signal Score Computation (weighted) ───────────────────────────
+
+const SIGNAL_WEIGHTS: Record<SignalType, number> = {
+  funding: 4,
+  new_c_suite: 3,
+  leadership: 3,
+  hiring_surge: 3,
+  job_post_matching: 3,
+  job_posting: 2,
+  competitor_mention: 2,
+  product_launch: 2,
+  earnings: 2,
+  tech_change: 2,
+  contract_win: 2,
+  news: 1,
+  conference: 1,
+};
+
+export function computeSignalScore(signals: CompanySignal[]): number {
+  if (!signals || signals.length === 0) return 0;
+  // Only consider signals in last 30 days
+  const cutoff = Date.now() - 30 * 86400000;
+  const recent = signals.filter(s => {
+    const d = new Date(s.date).getTime();
+    return !isNaN(d) ? d >= cutoff : true;
+  });
+  const raw = recent.reduce((sum, s) => {
+    const weight = SIGNAL_WEIGHTS[s.type] || 1;
+    const impactMultiplier = (s.impactScore || 5) / 10;
+    return sum + weight * impactMultiplier;
+  }, 0);
+  return Math.min(10, Math.round(raw * 10) / 10);
+}
+
+// ─── TRUTH Score Composite ───────────────────────────────────────
+
+export function computeTruthScore(deal: Deal): number {
+  // Components:
+  // - buyerActivity (recency): 20 pts
+  // - sentiment trend (from latest analyses): 25 pts
+  // - multithreading depth: 20 pts
+  // - stage progression: 15 pts
+  // - signal score (external intel): 20 pts
+
+  // Buyer activity (20 pts)
+  const daysSince = stallDays(deal);
+  const buyerActivityPts = daysSince <= 2 ? 20 : daysSince <= 5 ? 15 : daysSince <= 10 ? 8 : daysSince <= 20 ? 3 : 0;
+
+  // Sentiment (25 pts) — average truthScore of last 3 analyses
+  const recentAnalyses = (deal.analyses || []).slice(0, 3);
+  const avgAnalysis = recentAnalyses.length > 0
+    ? recentAnalyses.reduce((s, a) => s + a.truthScore, 0) / recentAnalyses.length
+    : 50;
+  const sentimentPts = (avgAnalysis / 100) * 25;
+
+  // Multithreading (20 pts)
+  const mt = multithreadingScore(deal);
+  const mtPts = mt.required > 0 ? Math.min(20, (mt.engaged / mt.required) * 20) : 10;
+
+  // Stage progression (15 pts)
+  const stageWeight: Record<DealStage, number> = {
+    discovery: 3, qualified: 6, proposal: 10, negotiation: 13, closed_won: 15, closed_lost: 0,
+  };
+  const stagePts = stageWeight[deal.stage] || 0;
+
+  // External signal score (20 pts)
+  const signalPts = ((deal.targetMeta?.signalScore || 0) / 10) * 20;
+
+  return Math.min(100, Math.round(buyerActivityPts + sentimentPts + mtPts + stagePts + signalPts));
+}
+
+// Recompute TRUTH for a deal and persist
+export function recomputeTruth(dealId: string): Deal | undefined {
+  const deal = getDeal(dealId);
+  if (!deal) return undefined;
+  const score = computeTruthScore(deal);
+  return updateDeal(dealId, { truthScore: score });
+}
 
 export function dealStats() {
   const deals = loadDeals();
