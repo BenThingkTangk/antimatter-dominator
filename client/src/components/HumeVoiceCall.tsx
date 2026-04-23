@@ -336,6 +336,7 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
   companyName: string; contactName: string; productName: string; productSlug: string;
 }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [authType, setAuthType] = useState<"accessToken" | "apiKey">("accessToken");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -345,6 +346,9 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
         const res = await apiRequest("GET", "/api/atom-leadgen/hume-token");
         const data = await res.json();
         setAccessToken(data.accessToken);
+        if (data.authType === "apiKey" || data.authType === "accessToken") {
+          setAuthType(data.authType);
+        }
       } catch (err: any) {
         setError(err.message || "Failed to initialize voice");
       } finally {
@@ -384,7 +388,7 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
 
   return (
     <VoiceProvider
-      auth={{ type: "accessToken", value: accessToken }}
+      auth={{ type: authType, value: accessToken }}
       configId={HUME_CONFIG_ID}
       sessionSettings={{
         voice: { id: HUME_VOICE_ID },
