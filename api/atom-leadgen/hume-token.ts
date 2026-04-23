@@ -10,8 +10,9 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const HUME_API_KEY = process.env.HUME_API_KEY || "";
-const HUME_SECRET_KEY = process.env.HUME_SECRET_KEY || "";
+// Strip stray whitespace/newlines from env (Vercel env pulls can preserve literal \n)
+const HUME_API_KEY = (process.env.HUME_API_KEY || "").replace(/\\n/g, "").trim();
+const HUME_SECRET_KEY = (process.env.HUME_SECRET_KEY || "").replace(/\\n/g, "").trim();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
