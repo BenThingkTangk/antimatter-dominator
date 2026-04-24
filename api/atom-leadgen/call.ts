@@ -76,8 +76,8 @@ Tight, factual, no filler. Write as briefing notes, not marketing copy. If you d
         temperature: 0.2,
         max_tokens: 400,
       }),
-      // hard timeout via AbortSignal to keep call creation fast
-      signal: AbortSignal.timeout(8000),
+      // hard timeout via AbortSignal — give Sonar ~6s to think
+      signal: AbortSignal.timeout(6500),
     });
     if (!res.ok) {
       console.warn("Perplexity brief failed:", res.status, await res.text().catch(() => ""));
@@ -173,17 +173,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // itself rings for 3-10s before the prospect picks up, we still win.
     const briefPromise = buildCompanyBrief(first, company, productLabel);
 
-    // Wait briefly (up to 2s) to try to get the brief before dialing, but
-    // don't let it delay the call more than that — the call needs to start fast.
+    // Wait up to 7s to get the Perplexity brief before dialing.
+    // The phone rings 8-15s before pickup, so even the full Sonar round-trip
+    // (~4-5s) comfortably fits inside the ring window.
     let companyBrief: string;
     try {
       companyBrief = await Promise.race([
         briefPromise,
-        new Promise<string>((_, rej) => setTimeout(() => rej(new Error("brief timeout")), 2500)),
+        new Promise<string>((_, rej) => setTimeout(() => rej(new Error("brief timeout")), 7000)),
       ]);
     } catch {
       // Brief isn't ready in time — fall back to a generic briefing.
-      // (The promise continues in the background but we won't get its result.)
       companyBrief =
         `Pitching ${productLabel} to ${first} at ${company}. ` +
         `Lead with curiosity, listen more than talk, redirect objections to business outcomes.`;
