@@ -51,8 +51,36 @@ const HUME_API_KEY          = clean(process.env.HUME_API_KEY);
 const RAG_URL = clean(process.env.RAG_URL) || "https://atom-rag.45-79-202-76.sslip.io";
 
 // ─── Pre-warmed Hume assets (production, reused across all calls) ─────────────
-const HUME_CONFIG_ID = "3c6f8a5b-e6f3-4732-9570-36a22f38e147"; // v11 Stanford + RAG + pickup
+const HUME_CONFIG_ID = clean(process.env.HUME_CONFIG_ID) ||
+  "3c6f8a5b-e6f3-4732-9570-36a22f38e147"; // v11 Stanford + RAG + pickup (Claude Sonnet)
 const HUME_VOICE_ID  = "e891bda0-d013-4a46-9cbe-360d618b0e58"; // ATOM Jobs Tenor
+
+// ─── GPT-5.5 enterprise router ──────────────────────────────────────────────
+// Hume EVI's "custom LLM" feature lets us swap the reasoning backend on a
+// per-config basis. For high-stakes enterprise calls we want GPT-5.5: 1M
+// context window for stuffing entire CRM histories, better multi-turn
+// reasoning, ~30% close-rate lift on $50K+ deals per the Vibranium research.
+//
+// Routing rules (ALL must be true for GPT-5.5 path):
+//   1. tenant.plan === "enterprise"
+//   2. req.body.deal_value > GPT5_MIN_DEAL_VALUE  (default $50K)
+//   3. HUME_CONFIG_GPT5 env is set (the v13 config wired to OpenAI custom LLM)
+//
+// Fall-through default: standard Claude Sonnet via the v11 config above.
+const HUME_CONFIG_GPT5 = clean(process.env.HUME_CONFIG_GPT5);
+const GPT5_MIN_DEAL_VALUE = Number(clean(process.env.GPT5_MIN_DEAL_VALUE)) || 50000;
+
+function pickHumeConfig(opts: {
+  tenantPlan?: string | null;
+  dealValue?: number | null;
+}): { configId: string; reasoningModel: string; tier: "standard" | "enterprise" } {
+  const isEnterprise = opts.tenantPlan === "enterprise";
+  const isHighValue  = (opts.dealValue ?? 0) >= GPT5_MIN_DEAL_VALUE;
+  if (isEnterprise && isHighValue && HUME_CONFIG_GPT5) {
+    return { configId: HUME_CONFIG_GPT5, reasoningModel: "gpt-5.5", tier: "enterprise" };
+  }
+  return { configId: HUME_CONFIG_ID, reasoningModel: "claude-sonnet", tier: "standard" };
+}
 
 // ─── Brief compaction ─────────────────────────────────────────────────────────
 // RAG returns 4KB-7KB chunks. Twilio Url param has a 4000-char total budget,
@@ -185,7 +213,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     product,
     productSlug,
     productName,
+    deal_value,
+    dealValue,
+    tenant_slug,
+    tenantSlug,
   } = req.body || {};
+
+  // Normalize: accept both snake_case and camelCase from the frontend.
+  const dealValueNum = Number(deal_value ?? dealValue ?? 0) || 0;
+  const reqTenantSlug = (tenant_slug || tenantSlug || "").toString().trim();
 
   const phone = phoneNumber || to;
   if (!phone) return res.status(400).json({ error: "phoneNumber is required" });
@@ -226,6 +262,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `Always answer like you built the product yourself and know it cold.`;
     }
 
+    // 1.5. Resolve which Hume config + reasoning model to use for this call.
+    //      Enterprise tier + deal_value over threshold + GPT-5.5 config
+    //      configured → route to GPT-5.5 path. Else default Claude Sonnet.
+    let tenantPlan: string | null = null;
+    if (reqTenantSlug) {
+      try {
+        const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+        const host = (req.headers["x-forwarded-host"] as string)
+          || (req.headers.host as string)
+          || "atom-dominator-pro.vercel.app";
+        const tRes = await fetch(
+          `${proto}://${host}/api/tenant?slug=${encodeURIComponent(reqTenantSlug)}`,
+          { signal: AbortSignal.timeout(2000) }
+        );
+        if (tRes.ok) {
+          const t: any = await tRes.json();
+          tenantPlan = t?.plan || null;
+        }
+      } catch {
+        // Tenant lookup is non-blocking — standard config is the safe default.
+      }
+    }
+
+    const routedConfig = pickHumeConfig({ tenantPlan, dealValue: dealValueNum });
+
     // 2. Build Hume EVI's Twilio webhook URL with per-call session variables.
     //    Twilio has a 4000-char Url limit; after URL-encoding the brief balloons
     //    to ~3x its raw length. Budget: ~1200 raw chars of brief.
@@ -240,7 +301,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sessionId = `atom_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
     const humeTwimlUrl = new URL("https://api.hume.ai/v0/evi/twilio");
-    humeTwimlUrl.searchParams.set("config_id",         HUME_CONFIG_ID);
+    humeTwimlUrl.searchParams.set("config_id",         routedConfig.configId);
     humeTwimlUrl.searchParams.set("api_key",           HUME_API_KEY);
     humeTwimlUrl.searchParams.set("custom_session_id", sessionId);
     humeTwimlUrl.searchParams.set("first_name",        first);
@@ -262,8 +323,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       to: cleanNumber,
       from: TWILIO_PHONE_NUMBER,
       architecture: "twilio-hume-direct-rag-cached-v10",
-      humeConfigId: HUME_CONFIG_ID,
+      humeConfigId: routedConfig.configId,
       humeVoiceId: HUME_VOICE_ID,
+      reasoningModel: routedConfig.reasoningModel,        // "claude-sonnet" | "gpt-5.5"
+      tier: routedConfig.tier,                            // "standard" | "enterprise"
+      dealValue: dealValueNum || null,
+      tenantPlan: tenantPlan || null,
       firstName: first,
       briefSource: ragBrief ? "atom-rag (warm cache)" : "generic (ingest queued)",
       briefLength: trimmedBrief.length,

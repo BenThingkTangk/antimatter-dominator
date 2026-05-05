@@ -19,6 +19,19 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations?: Array<{ title: string; url: string }>;
+  memoryUsed?: number;
+}
+
+const SESSION_KEY = "atom_chat_session_v1";
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let id = "";
+  try { id = sessionStorage.getItem(SESSION_KEY) || ""; } catch {}
+  if (!id) {
+    id = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try { sessionStorage.setItem(SESSION_KEY, id); } catch {}
+  }
+  return id;
 }
 
 const ROUTE_TO_CONTEXT: Record<string, string> = {
@@ -104,6 +117,10 @@ export default function AtomChat() {
     setLoading(true);
 
     try {
+      const sessionId = getSessionId();
+      const tenantSlug = (typeof window !== "undefined")
+        ? (window.location.hostname.split(".")[0] || null)
+        : null;
       const res = await fetch("/api/atom-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +128,8 @@ export default function AtomChat() {
           message: msg,
           context,
           history: messages.slice(-6),
+          sessionId,
+          tenantSlug,
         }),
       });
       const data = await res.json();
@@ -121,6 +140,7 @@ export default function AtomChat() {
           role: "assistant",
           content: data.content || "(no response)",
           citations: data.citations || [],
+          memoryUsed: data.memoryUsed || 0,
         }]);
       }
     } catch (e: any) {
@@ -251,6 +271,19 @@ export default function AtomChat() {
                   }
                 >
                   <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+                  {m.role === "assistant" && (m.memoryUsed ?? 0) > 0 && (
+                    <div
+                      className="mt-2 text-[10px] uppercase tracking-[0.18em] inline-flex items-center gap-1 px-1.5 py-0.5 rounded"
+                      style={{
+                        color: "var(--color-primary)",
+                        background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
+                        border: "1px solid color-mix(in oklab, var(--color-primary) 24%, transparent)",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      · recalled {m.memoryUsed} past
+                    </div>
+                  )}
                   {m.citations && m.citations.length > 0 && (
                     <div className="mt-2.5 pt-2.5 border-t flex flex-wrap gap-1.5" style={{ borderColor: "var(--color-divider)" }}>
                       {m.citations.slice(0, 5).map((c, ci) => (

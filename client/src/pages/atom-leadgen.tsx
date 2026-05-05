@@ -664,6 +664,12 @@ export default function ATOMLeadGen() {
   const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || params.get("contact") || "");
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
+  // Deal value drives GPT-5.5 enterprise routing on the backend.
+  // Empty / 0 → default Claude Sonnet path. >= GPT5_MIN_DEAL_VALUE on enterprise tenants → GPT-5.5.
+  const [dealValue, setDealValue] = useState<string>(params.get("dealValue") || "");
+  // Tier badge shown after dial — set from /api/atom-leadgen/call response.
+  const [callTier, setCallTier] = useState<"standard" | "enterprise" | null>(null);
+  const [reasoningModel, setReasoningModel] = useState<string | null>(null);
 
   // Call state
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
@@ -1028,6 +1034,9 @@ export default function ATOMLeadGen() {
         companyName: companyName.trim() || undefined,
         product: productSlug.trim() || undefined,
         productIntel: productIntelData || undefined,
+        // GPT-5.5 router inputs
+        dealValue: dealValue ? Number(dealValue.replace(/[^0-9.]/g, "")) : undefined,
+        tenantSlug: window.location.hostname.split(".")[0] || undefined,
       };
 
       console.log("[handleDial] POST /api/atom-leadgen/call", JSON.stringify(callPayload));
@@ -1053,6 +1062,9 @@ export default function ATOMLeadGen() {
       const sessionId: string = json.sessionId || json.humeCustomSessionId || sid;
       setCallSid(sid);
       callSidRef.current = sid;
+      // Surface backend's tier routing decision
+      setCallTier(json.tier || "standard");
+      setReasoningModel(json.reasoningModel || null);
       // Start polling Hume chat-events for live transcript + emotions
       startPolling(sessionId);
       setCallStatus("active");
@@ -1356,6 +1368,46 @@ export default function ATOMLeadGen() {
                     }}
                   />
                 </div>
+
+                {/* Deal Value — drives GPT-5.5 enterprise routing */}
+                <div>
+                  <label className="block text-xs mb-1.5 flex items-center gap-2" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Deal Value <span style={{ color: "rgba(246,246,253,0.3)" }}>(optional)</span>
+                    {Number(dealValue.replace(/[^0-9.]/g, "")) >= 50000 && (
+                      <span
+                        className="text-[9px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
+                        style={{
+                          background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
+                          color: "var(--color-primary)",
+                          border: "1px solid color-mix(in oklab, var(--color-primary) 35%, transparent)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        GPT-5.5 eligible
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="$50,000"
+                    value={dealValue}
+                    onChange={(e) => setDealValue(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                      fontFamily: "var(--font-mono)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  />
+                  <div className="text-[10px] mt-1" style={{ color: "rgba(246,246,253,0.35)" }}>
+                    Calls on enterprise tenants with deal value ≥ $50K route to GPT-5.5 reasoning.
+                  </div>
+                </div>
               </div>
 
               {/* CTA row */}
@@ -1388,13 +1440,41 @@ export default function ATOMLeadGen() {
                 </div>
               ) : callStatus === "active" ? (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <PulsingDot />
                     <span className="text-sm font-medium" style={{ color: "#34d399" }}>
                       Call Active
                       {companyName && ` — ${companyName}`}
                       {contactName && ` — ${contactName}`}
                     </span>
+                    {callTier === "enterprise" && (
+                      <span
+                        className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                        style={{
+                          background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
+                          color: "var(--color-primary)",
+                          border: "1px solid color-mix(in oklab, var(--color-primary) 35%, transparent)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: 700,
+                          boxShadow: "0 0 8px var(--color-primary-glow)",
+                        }}
+                      >
+                        ⚡ Enterprise · {reasoningModel || "GPT-5.5"}
+                      </span>
+                    )}
+                    {callTier === "standard" && reasoningModel && (
+                      <span
+                        className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full"
+                        style={{
+                          background: "rgba(246,246,253,0.04)",
+                          color: "rgba(246,246,253,0.55)",
+                          border: "1px solid var(--color-border)",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        {reasoningModel}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={handleEndCall}
