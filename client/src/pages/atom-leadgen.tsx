@@ -1374,7 +1374,8 @@ export default function ATOMLeadGen() {
                       cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
                       fontFamily: "var(--font-display)",
                       fontWeight: 700,
-                      letterSpacing: "-0.01em",
+                      letterSpacing: "0.01em",       // positive tracking for short labels
+                      wordSpacing: "0.05em",         // breathing room between Dial / with / ATOM
                     }}
                   >
                     {callStatus === "dialing" ? (

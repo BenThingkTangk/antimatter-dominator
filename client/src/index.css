@@ -242,14 +242,30 @@
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    word-spacing: 0.01em;            /* prevent display-font word collisions */
   }
-  h1, h2, h3, h4, h5, h6 {
+  /* Display tracking only applies to the *display* sizes. Smaller sizes
+     (subheads, button labels, badges) keep neutral tracking so words don't
+     collide — the V4 spec calls for tight headlines, not tight buttons. */
+  h1, h2 {
     font-family: var(--font-display);
     letter-spacing: -0.03em;
     font-weight: 800;
+    word-spacing: 0.02em;
+  }
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    word-spacing: 0.02em;
+  }
+  h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    font-weight: 700;
   }
   code, pre, kbd, samp { font-family: var(--font-mono); font-feature-settings: "ss01" 1; }
-  button { font-family: inherit; }
+  button { font-family: inherit; word-spacing: normal; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -342,7 +358,8 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-sm);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
   color: var(--color-text-inverse);
   background: linear-gradient(96deg, var(--color-primary), var(--color-primary-2));
   box-shadow: var(--shadow-md), var(--shadow-glow);
@@ -366,6 +383,8 @@
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--text-sm);
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
   color: var(--color-text);
   background: var(--color-surface-glass);
   border: 1px solid var(--color-border);
