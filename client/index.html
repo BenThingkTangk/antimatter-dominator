@@ -2,7 +2,16 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+
+    <!-- PWA: manifest + theme + apple touch icon -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ATOM" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="ATOM" />
 
     <!-- ATOM canonical favicon — atomic orbit, teal plasma -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Ccircle cx='32' cy='32' r='30' stroke='%2300e6d3' stroke-opacity='0.18' stroke-width='1.25'/%3E%3Cellipse cx='32' cy='32' rx='12' ry='29' stroke='%2300e6d3' stroke-width='1.5' fill='none'/%3E%3Cellipse cx='32' cy='32' rx='29' ry='12' stroke='%2300e6d3' stroke-width='1.5' stroke-opacity='0.48' fill='none'/%3E%3Cellipse cx='32' cy='32' rx='23' ry='10' stroke='%2300e6d3' stroke-width='1.5' stroke-opacity='0.32' fill='none' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='4.25' fill='%2300e6d3'/%3E%3Ccircle cx='32' cy='3' r='2.6' fill='%2300e6d3'/%3E%3Ccircle cx='61' cy='32' r='2.4' fill='%2300e6d3'/%3E%3Ccircle cx='15.5' cy='48.5' r='2.2' fill='%2300e6d3'/%3E%3C/svg%3E" />
@@ -25,5 +34,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register the PWA service worker (production only — Vite dev mode
+      // serves through its own origin and we don't want stale caches).
+      if ("serviceWorker" in navigator && location.hostname !== "localhost") {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

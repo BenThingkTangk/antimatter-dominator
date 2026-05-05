@@ -519,3 +519,495 @@
   color: var(--color-text) !important;
   border-color: var(--color-border-strong) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATOM Mobile — v2.0 native-feeling PWA surface
+   Isolated under .atom-mobile-root so desktop surfaces are untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.atom-mobile-root {
+  --m-bg:          #05090c;
+  --m-bg-2:        #0a1014;
+  --m-surface:     #0f161b;
+  --m-surface-2:   #131b22;
+  --m-border:      rgba(0,230,211,0.12);
+  --m-border-soft: rgba(255,255,255,0.06);
+  --m-divider:     rgba(255,255,255,0.04);
+  --m-teal:        #00e6d3;
+  --m-teal-soft:   rgba(0,230,211,0.18);
+  --m-teal-glow:   rgba(0,230,211,0.42);
+  --m-warn:        #ff8a65;
+  --m-warn-soft:   rgba(255,138,101,0.16);
+  --m-danger:      #ff6b8b;
+  --m-text:        #e8f4f3;
+  --m-text-muted:  #7b8b8a;
+  --m-text-faint:  #54625f;
+  --m-safe-top:    env(safe-area-inset-top, 0px);
+  --m-safe-bot:    env(safe-area-inset-bottom, 0px);
+
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: radial-gradient(120% 80% at 50% 0%, #0b1f25 0%, #05090c 55%, #03060a 100%);
+  color: var(--m-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+.atom-mobile-root * { box-sizing: border-box; }
+
+.atom-mobile-root .m-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--m-safe-top) + 68px) 20px calc(var(--m-safe-bot) + 96px);
+  scrollbar-width: none;
+}
+.atom-mobile-root .m-scroll::-webkit-scrollbar { display: none; }
+
+/* ─── Top bar ────────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: calc(var(--m-safe-top) + 60px);
+  padding: var(--m-safe-top) 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(5,9,12,0.92) 0%, rgba(5,9,12,0.7) 68%, rgba(5,9,12,0) 100%);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  z-index: 20;
+  border-bottom: 1px solid var(--m-divider);
+}
+.atom-mobile-root .m-topbar-title {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+}
+.atom-mobile-root .m-topbar-title .m-o { color: var(--m-teal); text-shadow: 0 0 18px var(--m-teal-glow); }
+.atom-mobile-root .m-icon-btn {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--m-border-soft);
+  color: var(--m-text-muted);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background 140ms var(--ease-out);
+}
+.atom-mobile-root .m-icon-btn:active { transform: scale(0.92); background: rgba(0,230,211,0.08); color: var(--m-teal); }
+
+/* ─── Bottom tab bar ─────────────────────────────────────────────────────── */
+.atom-mobile-root .m-tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--m-safe-bot) + 72px);
+  padding-bottom: var(--m-safe-bot);
+  display: flex;
+  background: linear-gradient(0deg, rgba(5,9,12,0.96) 0%, rgba(5,9,12,0.82) 70%, rgba(5,9,12,0) 100%);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border-top: 1px solid var(--m-border-soft);
+  z-index: 20;
+}
+.atom-mobile-root .m-tab {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  padding-top: 8px;
+  color: var(--m-text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 160ms var(--ease-out);
+  position: relative;
+}
+.atom-mobile-root .m-tab svg { width: 22px; height: 22px; }
+.atom-mobile-root .m-tab.is-active { color: var(--m-teal); }
+.atom-mobile-root .m-tab.is-active::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 2px;
+  background: var(--m-teal);
+  border-radius: 2px;
+  box-shadow: 0 0 16px var(--m-teal-glow);
+}
+
+/* ─── Cards & surfaces ───────────────────────────────────────────────────── */
+.atom-mobile-root .m-card {
+  background: linear-gradient(180deg, rgba(15,22,27,0.92) 0%, rgba(10,16,20,0.92) 100%);
+  border: 1px solid var(--m-border-soft);
+  border-radius: 20px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.atom-mobile-root .m-card-glow {
+  border-color: var(--m-teal-soft);
+  box-shadow: 0 0 36px -8px var(--m-teal-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.atom-mobile-root .m-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.atom-mobile-root .m-card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-text-muted);
+}
+.atom-mobile-root .m-card-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* ─── Pill badges ────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border: 1px solid var(--m-border-soft);
+  background: rgba(255,255,255,0.02);
+  color: var(--m-text-muted);
+}
+.atom-mobile-root .m-pill-live {
+  color: var(--m-teal);
+  border-color: var(--m-teal-soft);
+  background: rgba(0,230,211,0.06);
+}
+.atom-mobile-root .m-pill-live .m-pill-dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--m-teal);
+  box-shadow: 0 0 10px var(--m-teal);
+  animation: m-pulse 2s var(--ease-in-out) infinite;
+}
+.atom-mobile-root .m-pill-warn {
+  color: var(--m-warn);
+  border-color: rgba(255,138,101,0.28);
+  background: var(--m-warn-soft);
+}
+.atom-mobile-root .m-pill-danger {
+  color: var(--m-danger);
+  border-color: rgba(255,107,139,0.32);
+  background: rgba(255,107,139,0.08);
+}
+@keyframes m-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), box-shadow 160ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.atom-mobile-root .m-btn:active { transform: scale(0.97); }
+.atom-mobile-root .m-btn-primary {
+  background: var(--m-teal);
+  color: #041413;
+  box-shadow: 0 0 40px -6px var(--m-teal-glow), 0 8px 30px -10px rgba(0,230,211,0.45);
+}
+.atom-mobile-root .m-btn-primary:active { box-shadow: 0 0 20px -4px var(--m-teal-glow); }
+.atom-mobile-root .m-btn-ghost {
+  background: rgba(255,255,255,0.03);
+  color: var(--m-text);
+  border-color: var(--m-border-soft);
+}
+.atom-mobile-root .m-btn-danger {
+  background: rgba(255,107,139,0.14);
+  color: var(--m-danger);
+  border-color: rgba(255,107,139,0.34);
+}
+
+/* ─── Inputs ─────────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--m-border-soft);
+  color: var(--m-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.atom-mobile-root .m-input:focus {
+  border-color: var(--m-teal-soft);
+  box-shadow: 0 0 0 4px rgba(0,230,211,0.08);
+}
+.atom-mobile-root .m-input::placeholder { color: var(--m-text-faint); }
+.atom-mobile-root .m-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-text-muted);
+  margin-bottom: 8px;
+}
+
+/* ─── KPI numerals ───────────────────────────────────────────────────────── */
+.atom-mobile-root .m-kpi {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--m-teal);
+  text-shadow: 0 0 30px var(--m-teal-glow);
+  font-variant-numeric: tabular-nums;
+}
+.atom-mobile-root .m-kpi-xl { font-size: 64px; line-height: 1; }
+.atom-mobile-root .m-kpi-lg { font-size: 42px; line-height: 1; }
+.atom-mobile-root .m-kpi-md { font-size: 28px; line-height: 1; }
+
+/* ─── Boot sequence ──────────────────────────────────────────────────────── */
+.atom-mobile-root .m-boot {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(120% 80% at 50% 32%, #0c2024 0%, #05090c 58%, #03060a 100%);
+  z-index: 50;
+  animation: m-boot-out 400ms var(--ease-out) forwards;
+  animation-play-state: paused;
+}
+.atom-mobile-root .m-boot.is-leaving { animation-play-state: running; }
+@keyframes m-boot-out { to { opacity: 0; transform: scale(1.06); pointer-events: none; } }
+
+.atom-mobile-root .m-boot-mark {
+  width: 170px; height: 170px;
+  color: var(--m-teal);
+  filter: drop-shadow(0 0 42px var(--m-teal-glow));
+  margin-bottom: 22px;
+}
+.atom-mobile-root .m-boot-mark .atom-orbits { animation-duration: 14s; }
+
+.atom-mobile-root .m-boot-wordmark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  font-size: 44px;
+  margin-bottom: 22px;
+}
+.atom-mobile-root .m-boot-wordmark .m-o {
+  color: var(--m-teal);
+  text-shadow: 0 0 24px var(--m-teal-glow);
+}
+
+.atom-mobile-root .m-boot-bar {
+  width: 240px; height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  position: relative;
+}
+.atom-mobile-root .m-boot-bar-fill {
+  position: absolute; inset: 0; right: auto;
+  background: linear-gradient(90deg, var(--m-teal) 0%, #9b7bff 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 14px var(--m-teal-glow);
+  animation: m-boot-progress 2.4s var(--ease-out) forwards;
+}
+@keyframes m-boot-progress {
+  0%   { width: 0%; }
+  45%  { width: 62%; }
+  100% { width: 100%; }
+}
+
+.atom-mobile-root .m-boot-lines {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.9;
+  letter-spacing: 0.06em;
+  text-align: left;
+  min-width: 260px;
+}
+.atom-mobile-root .m-boot-line { opacity: 0; transform: translateY(4px); animation: m-boot-line-in 280ms var(--ease-out) forwards; }
+.atom-mobile-root .m-boot-line:nth-child(1) { animation-delay: 280ms; }
+.atom-mobile-root .m-boot-line:nth-child(2) { animation-delay: 720ms; }
+.atom-mobile-root .m-boot-line:nth-child(3) { animation-delay: 1280ms; }
+.atom-mobile-root .m-boot-line:nth-child(4) { animation-delay: 1820ms; }
+.atom-mobile-root .m-boot-line .m-boot-key {
+  color: var(--m-teal);
+  font-weight: 700;
+  text-shadow: 0 0 10px var(--m-teal-glow);
+}
+.atom-mobile-root .m-boot-line .m-boot-val { color: rgba(232,244,243,0.62); text-transform: uppercase; letter-spacing: 0.12em; }
+@keyframes m-boot-line-in { to { opacity: 1; transform: translateY(0); } }
+
+/* ─── Waveform ───────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 96px;
+  padding: 0 16px;
+}
+.atom-mobile-root .m-wave-bar {
+  width: 3px;
+  border-radius: 3px;
+  background: var(--m-teal);
+  opacity: 0.72;
+  transition: height 140ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms var(--ease-out), opacity 200ms var(--ease-out);
+}
+.atom-mobile-root .m-wave.is-warn .m-wave-bar { background: linear-gradient(180deg, var(--m-teal) 0%, var(--m-warn) 100%); }
+
+/* ─── Transcript bubbles ─────────────────────────────────────────────────── */
+.atom-mobile-root .m-transcript {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 0 4px;
+}
+.atom-mobile-root .m-bubble-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-text-muted);
+  margin-bottom: 2px;
+}
+.atom-mobile-root .m-bubble-label.is-atom { color: var(--m-teal); }
+.atom-mobile-root .m-bubble {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--m-text);
+  white-space: pre-wrap;
+}
+
+/* ─── Swipe cards (leads) ────────────────────────────────────────────────── */
+.atom-mobile-root .m-swipe-card {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 240ms var(--ease-out), opacity 240ms var(--ease-out);
+  will-change: transform;
+}
+.atom-mobile-root .m-swipe-actions {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  pointer-events: none;
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(0,230,211,0.12) 0%, transparent 30%, transparent 70%, rgba(255,107,139,0.14) 100%);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.atom-mobile-root .m-swipe-actions .m-swipe-left  { color: var(--m-teal); }
+.atom-mobile-root .m-swipe-actions .m-swipe-right { color: var(--m-danger); }
+
+/* ─── Dial FAB ───────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-dial-fab {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--m-safe-bot) + 88px);
+  transform: translateX(-50%);
+  width: 72px; height: 72px;
+  border-radius: 999px;
+  background: var(--m-teal);
+  color: #041413;
+  display: grid; place-items: center;
+  box-shadow: 0 0 48px -4px var(--m-teal-glow), 0 18px 44px -12px rgba(0,230,211,0.55);
+  border: none;
+  cursor: pointer;
+  z-index: 22;
+  transition: transform 160ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.atom-mobile-root .m-dial-fab:active { transform: translateX(-50%) scale(0.92); }
+.atom-mobile-root .m-dial-fab svg { width: 28px; height: 28px; }
+
+/* ─── Sheets ─────────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5,9,12,0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 40;
+  animation: m-fade-in 180ms var(--ease-out) forwards;
+}
+.atom-mobile-root .m-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #0a1218;
+  border-top: 1px solid var(--m-border-soft);
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  padding: 14px 20px calc(var(--m-safe-bot) + 20px);
+  max-height: 92vh;
+  overflow-y: auto;
+  z-index: 41;
+  animation: m-sheet-in 280ms var(--ease-out) forwards;
+}
+.atom-mobile-root .m-sheet-handle {
+  width: 44px; height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 auto 14px;
+}
+@keyframes m-fade-in   { from { opacity: 0 } to { opacity: 1 } }
+@keyframes m-sheet-in  { from { transform: translateY(20%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+/* ─── Skeletons / loading ────────────────────────────────────────────────── */
+.atom-mobile-root .m-skel {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: m-skel 1.4s linear infinite;
+  border-radius: 10px;
+}
+@keyframes m-skel { to { background-position: -200% 0 } }
+
+/* ─── Utility ────────────────────────────────────────────────────────────── */
+.atom-mobile-root .m-text-muted { color: var(--m-text-muted); }
+.atom-mobile-root .m-text-faint { color: var(--m-text-faint); }
+.atom-mobile-root .m-mono { font-family: var(--font-mono); letter-spacing: 0.08em; }
+.atom-mobile-root .m-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-text-muted); }
+.atom-mobile-root .m-stack > * + * { margin-top: 14px; }
+.atom-mobile-root .m-stack-lg > * + * { margin-top: 24px; }
+.atom-mobile-root .m-row { display: flex; gap: 10px; align-items: center; }
+.atom-mobile-root .m-row-btw { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.atom-mobile-root .m-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.atom-mobile-root .m-divider {
+  height: 1px;
+  background: var(--m-divider);
+  margin: 14px 0;
+}
+

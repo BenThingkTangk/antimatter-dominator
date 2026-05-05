@@ -1,6 +1,7 @@
-import { Switch, Route, Router, Redirect } from "wouter";
+import { Switch, Route, Router, Redirect, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
@@ -16,12 +17,54 @@ import AdminTenants from "./pages/admin-tenants";
 import NotFound from "./pages/not-found";
 import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
+import MobileApp from "./mobile/MobileApp";
+
+/**
+ * Detects phone-class viewports + touch UA. We check both width AND touch
+ * capability so a narrow desktop window doesn't accidentally launch the
+ * mobile app, and an iPad in landscape stays on desktop.
+ */
+function isPhoneClass(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const touch = matchMedia("(pointer: coarse)").matches;
+  const narrow = window.innerWidth <= 820;
+  const iphoneLike = /iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  return (touch && narrow) || iphoneLike;
+}
+
+/**
+ * MobileGate — on first paint, if this is a phone AND the URL is at the
+ * root, redirect to /m/home. Users can still get to desktop via
+ * "?desktop=1" or by hitting a non-mobile route directly.
+ */
+function MobileGate() {
+  const [location, navigate] = useLocation();
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const forceDesktop = url.searchParams.get("desktop") === "1";
+    if (forceDesktop) {
+      try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
+      return;
+    }
+    let stickDesktop = false;
+    try { stickDesktop = sessionStorage.getItem("m_force_desktop") === "1"; } catch {}
+    if (stickDesktop) return;
+    if (location.startsWith("/m")) return;
+    if (isPhoneClass()) navigate("/m/home");
+  }, [location, navigate]);
+  return null;
+}
 
 function AppRouter() {
-  // Resolve tenant on first paint. Loading state is silent — we render
-  // the cached/default brand immediately and swap if the API returns
-  // something different.
+  // Resolve tenant on first paint (shared between mobile + desktop).
   useTenant();
+  const [location] = useLocation();
+
+  if (location.startsWith("/m")) {
+    return <MobileApp />;
+  }
+
   return (
     <AppLayout>
       <Switch>
@@ -37,7 +80,7 @@ function AppRouter() {
         <Route path="/admin/tenants" component={AdminTenants} />
         <Route component={NotFound} />
       </Switch>
-      {/* Floating ATOM Chat — visible on every page, route-aware context */}
+      {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
       <AtomChat />
     </AppLayout>
   );
@@ -47,6 +90,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router hook={useHashLocation}>
+        <MobileGate />
         <AppRouter />
       </Router>
       <Toaster />
