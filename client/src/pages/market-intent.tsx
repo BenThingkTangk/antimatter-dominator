@@ -18,6 +18,8 @@ import {
 import type { Product } from "@shared/schema";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
+import { Input } from "@/components/ui/input";
+import { ATOM_PRODUCTS_INCL_ALL, resolveProductLabel, isCustom } from "@/lib/atom-products";
 
 // ─── HVT Flag Button ───────────────────────────────────────────────────────────
 function HVTFlagButton({ companyName, industry, signal }: { companyName: string; industry?: string; signal?: string }) {
@@ -48,7 +50,7 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
     return (
       <button onClick={() => setLocation("/war-room")}
         className="h-6 px-2 rounded border text-[10px] font-bold font-mono transition-all"
-        style={{ background: "rgba(220,38,38,0.12)", borderColor: "rgba(220,38,38,0.4)", color: "#f87171" }}>
+        style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", borderColor: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)" }}>
         🎯 HVT
       </button>
     );
@@ -56,7 +58,7 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
 
   return (
     <button onClick={handleFlag}
-      className="h-6 px-2 rounded border border-white/10 text-[10px] text-white/40 hover:text-[#f87171] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all flex items-center gap-1"
+      className="h-6 px-2 rounded border border-white/10 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all flex items-center gap-1"
       title="Flag as HVT — Send to ATOM War Room">
       <Crosshair className="w-2.5 h-2.5" />Flag
     </button>
@@ -133,15 +135,7 @@ interface LocalMarketEntry {
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const PRODUCTS = [
-  { value: "all", label: "All Products" },
-  { value: "antimatter-ai-platform", label: "Antimatter AI Platform" },
-  { value: "atom-enterprise-ai", label: "ATOM Enterprise AI" },
-  { value: "vidzee", label: "Vidzee" },
-  { value: "clinix-agent", label: "Clinix Agent" },
-  { value: "clinix-ai", label: "Clinix AI" },
-  { value: "red-team-atom", label: "Red Team ATOM" },
-];
+// Canonical roster lives in client/src/lib/atom-products.ts.
 
 const INDUSTRIES = [
   "Healthcare", "Financial Services", "Real Estate", "Cybersecurity / Defense",
@@ -227,7 +221,7 @@ function SentimentGauge({ sentiment }: { sentiment: MarketSentiment }) {
   // Map 0-100 to gauge angle (-90 to +90 degrees, center is 0 = 50)
   const angle = ((score / 100) * 180) - 90;
 
-  const color = score >= 65 ? "#22c55e" : score >= 45 ? "#f59e0b" : "#ef4444";
+  const color = score >= 65 ? "#22c55e" : score >= 45 ? "#f59e0b" : "var(--color-error)";
   const label = sentiment?.label || (score >= 65 ? "Bullish" : score >= 45 ? "Neutral" : "Bearish");
   const DirectionIcon = score >= 65 ? TrendingUp : score >= 45 ? Minus : TrendingDown;
 
@@ -254,7 +248,7 @@ function SentimentGauge({ sentiment }: { sentiment: MarketSentiment }) {
 
           <defs>
             <linearGradient id="sentGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#ef4444" />
+              <stop offset="0%" stopColor="var(--color-error)" />
               <stop offset="50%" stopColor="#f59e0b" />
               <stop offset="100%" stopColor="#22c55e" />
             </linearGradient>
@@ -364,17 +358,21 @@ export default function MarketIntent() {
 
   useEffect(() => { setLocalHistory(loadHistory()); }, []);
 
-  const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
-
-  const allProducts = [
-    ...PRODUCTS,
-    ...products.filter(p => !PRODUCTS.find(sp => sp.value === p.slug)).map(p => ({ value: p.slug, label: p.name })),
-  ];
+  // Free-text override for Custom Product
+  const [customProduct, setCustomProduct] = useState("");
+  const allProducts = ATOM_PRODUCTS_INCL_ALL;
 
   const analyzeIntent = useMutation({
     mutationFn: async () => {
+      const productSlug = (selectedProduct === "all" || !selectedProduct)
+        ? undefined
+        : isCustom(selectedProduct) ? "custom" : selectedProduct;
+      const productLabel = (selectedProduct === "all" || !selectedProduct)
+        ? undefined
+        : resolveProductLabel(selectedProduct, customProduct);
       const res = await apiRequest("POST", "/api/market-intent/analyze", {
-        productSlug: selectedProduct === "all" ? undefined : selectedProduct,
+        productSlug,
+        product: productLabel,
         industry: selectedIndustry || undefined,
         region: selectedRegion || undefined,
         analysisType,
@@ -574,6 +572,17 @@ export default function MarketIntent() {
                     {allProducts.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {isCustom(selectedProduct) && (
+                  <Input
+                    autoFocus
+                    placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
+                    value={customProduct}
+                    onChange={e => setCustomProduct(e.target.value)}
+                    className="mt-2 bg-white/[0.03] border-white/10 text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
+                    data-testid="input-custom-product"
+                  />
+                )}
               </div>
 
               {/* Industry */}

@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Product } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "@/lib/atom-products";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -60,14 +62,7 @@ interface LocalObjectionEntry {
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const PRODUCTS = [
-  { value: "antimatter-ai-platform", label: "Antimatter AI Platform" },
-  { value: "atom-enterprise-ai", label: "ATOM Enterprise AI" },
-  { value: "vidzee", label: "Vidzee" },
-  { value: "clinix-agent", label: "Clinix Agent" },
-  { value: "clinix-ai", label: "Clinix AI" },
-  { value: "red-team-atom", label: "Red Team ATOM" },
-];
+// Canonical 6-item roster lives in client/src/lib/atom-products.ts.
 
 const QUICK_OBJECTIONS = [
   "We already have something in place",
@@ -151,7 +146,7 @@ function SentimentMeter({ label, value, low, high }: { label: string; value: num
           className="absolute right-0 h-full rounded-r-full transition-all duration-1000"
           style={{
             width: `${rightPct}%`,
-            background: "linear-gradient(to left, #ef444420, #ef444460)",
+            background: "linear-gradient(to left, var(--color-error)20, var(--color-error)60)",
           }}
         />
         {/* Indicator needle */}
@@ -166,7 +161,7 @@ function SentimentMeter({ label, value, low, high }: { label: string; value: num
 }
 
 function BuyingSignalGauge({ score }: { score: number }) {
-  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "var(--color-error)";
   const radius = 32;
   const circumference = Math.PI * radius; // half circle
   const progress = (score / 100) * circumference;
@@ -198,7 +193,7 @@ function BuyingSignalGauge({ score }: { score: number }) {
 }
 
 function CircularClosingProb({ score }: { score: number }) {
-  const color = score >= 65 ? "#0d9488" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const color = score >= 65 ? "#0d9488" : score >= 40 ? "#f59e0b" : "var(--color-error)";
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
 
@@ -261,16 +256,14 @@ export default function ObjectionHandler() {
 
   useEffect(() => { setLocalHistory(loadHistory()); }, []);
 
-  const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
+  // Free-text override when the user picks "Custom Product"
+  const [customProduct, setCustomProduct] = useState("");
 
-  const allProducts = [
-    ...PRODUCTS,
-    ...products.filter(p => !PRODUCTS.find(sp => sp.value === p.slug)).map(p => ({ value: p.slug, label: p.name })),
-  ];
+  const allProducts = ATOM_PRODUCTS;
 
   const handleObjection = useMutation({
     mutationFn: async () => {
-      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
+      const productLabel = resolveProductLabel(selectedProduct, customProduct);
       const res = await apiRequest("POST", "/api/objection/handle", {
         productSlug: selectedProduct,
         selectedProduct: productLabel,
@@ -294,7 +287,7 @@ export default function ObjectionHandler() {
         createdAt: new Date().toISOString(),
       });
 
-      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
+      const productLabel = resolveProductLabel(selectedProduct, customProduct);
       const entry: LocalObjectionEntry = {
         id: `${Date.now()}-${Math.random()}`,
         product: productLabel,
@@ -468,6 +461,17 @@ export default function ObjectionHandler() {
                     {allProducts.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {isCustom(selectedProduct) && (
+                  <Input
+                    autoFocus
+                    placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
+                    value={customProduct}
+                    onChange={e => setCustomProduct(e.target.value)}
+                    className="mt-2 bg-white/[0.03] border-white/10 text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
+                    data-testid="input-custom-product"
+                  />
+                )}
               </div>
 
               {/* Objection */}

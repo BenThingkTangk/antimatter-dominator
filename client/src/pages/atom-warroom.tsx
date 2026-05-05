@@ -265,14 +265,14 @@ const riskColor = (r: string) => {
 };
 
 const sevColor = (s: string) => s === "high" ? "text-rose-400" : s === "medium" ? "text-amber-400" : "text-emerald-400";
-const scoreColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "#f87171";
+const scoreColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "var(--color-error)";
 const intentLabel = (s: string) => (s || "unknown").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 const phraseColor = (c: string) => c === "red" ? "bg-rose-500/20 border-rose-500/30 text-rose-300" : c === "amber" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-300";
 const strengthColor = (s: string) => s === "strong" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : s === "moderate" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-white/5 text-white/40 border-white/10";
 
 const CRIMSON_BTN_STYLE = {
-  background: "linear-gradient(93.92deg, #f87171 -13.51%, #dc2626 40.91%, #b91c1c 113.69%)",
-  boxShadow: "0 0 15px rgba(220,38,38,0.4), inset 0 0 2px rgba(255,255,255,0.3)",
+  background: "linear-gradient(93.92deg, var(--color-primary) -13.51%, var(--color-primary) 40.91%, var(--color-primary) 113.69%)",
+  boxShadow: "0 0 15px color-mix(in oklab, var(--color-primary) 12%, transparent), inset 0 0 2px rgba(255,255,255,0.3)",
   color: "#fff",
 };
 
@@ -305,9 +305,9 @@ function TruthGauge({ score }: { score: number }) {
         <svg width="128" height="128" viewBox="0 0 128 128" className="-rotate-90">
           <defs>
             <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f87171" />
-              <stop offset="50%" stopColor="#dc2626" />
-              <stop offset="100%" stopColor="#b91c1c" />
+              <stop offset="0%" stopColor="var(--color-primary)" />
+              <stop offset="50%" stopColor="var(--color-primary)" />
+              <stop offset="100%" stopColor="var(--color-primary)" />
             </linearGradient>
           </defs>
           <circle cx="64" cy="64" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
@@ -365,7 +365,7 @@ function MiniBar({ label, value, color }: { label: string; value: number; color:
 }
 
 function EngagementBar({ value }: { value: number }) {
-  const color = value >= 70 ? "#1dd1a1" : value >= 40 ? "#fbbf24" : "#f87171";
+  const color = value >= 70 ? "#1dd1a1" : value >= 40 ? "#fbbf24" : "var(--color-error)";
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">
@@ -427,7 +427,7 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
   if (deals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(220,38,38,0.08)", border: "1.5px solid rgba(220,38,38,0.2)" }}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", border: "1.5px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
           <Swords size={28} className="text-red-500/60" />
         </div>
         <div className="space-y-2 max-w-sm">
@@ -450,8 +450,8 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total Deals", value: stats.total, icon: Briefcase, color: "#f87171" },
-          { label: "HVT Accounts", value: stats.hvt, icon: Target, color: "#dc2626" },
+          { label: "Total Deals", value: stats.total, icon: Briefcase, color: "var(--color-primary)" },
+          { label: "HVT Accounts", value: stats.hvt, icon: Target, color: "var(--color-error)" },
           { label: "Avg TRUTH Score", value: stats.avgTruth, icon: TrendingUp, color: scoreColor(stats.avgTruth) },
           { label: "Open Plays", value: stats.openPlays, icon: Zap, color: stats.openPlays > 0 ? "#fbbf24" : "#1dd1a1" },
         ].map(card => {
@@ -493,7 +493,7 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-semibold text-[#f6f6fd] truncate">{deal.company}</span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)" }}>🎯 HVT</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)" }}>🎯 HVT</span>
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
                         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${riskColor(deal.risk)}`}>{deal.risk}</span>
@@ -696,9 +696,9 @@ function IntelAnalyzerTab({
                 onClick={() => setChannel(ch.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
                 style={{
-                  background: active ? "rgba(220,38,38,0.10)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${active ? "rgba(220,38,38,0.35)" : "rgba(255,255,255,0.06)"}`,
-                  color: active ? "#f87171" : "rgba(255,255,255,0.35)",
+                  background: active ? "color-mix(in oklab, var(--color-primary) 12%, transparent)" : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${active ? "color-mix(in oklab, var(--color-primary) 12%, transparent)" : "rgba(255,255,255,0.06)"}`,
+                  color: active ? "var(--color-primary)" : "rgba(255,255,255,0.35)",
                 }}
               >
                 <Icon size={12} />{ch.label}
@@ -751,7 +751,7 @@ function IntelAnalyzerTab({
             <div className="absolute inset-0 rounded-full border-2 border-red-400/30" />
             <div className="absolute inset-0 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
           </div>
-          <span className="text-[13px] font-mono" style={{ color: "rgba(248,113,113,0.8)" }}>
+          <span className="text-[13px] font-mono" style={{ color: "color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
             Von Clausewitz scanning for deception patterns, behavioral signals, competitive intelligence...
           </span>
         </div>
@@ -799,7 +799,7 @@ function IntelAnalyzerTab({
                 {Object.entries(result.deceptionLayer).map(([key, val]) => {
                   const v = typeof val === "number" ? val : 0;
                   const label = key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-                  const color = v > 60 ? "#f87171" : v > 30 ? "#fbbf24" : "#1dd1a1";
+                  const color = v > 60 ? "var(--color-primary)" : v > 30 ? "#fbbf24" : "#1dd1a1";
                   return <MiniBar key={key} label={label} value={v} color={color} />;
                 })}
               </div>
@@ -818,7 +818,7 @@ function IntelAnalyzerTab({
                   {Object.entries(result.linguisticCues).map(([key, val]) => {
                     const v = typeof val === "number" ? val : 0;
                     const label = key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-                    const color = key.includes("Commitment") || key.includes("Implementation") || key.includes("Urgency") ? (v > 50 ? "#1dd1a1" : "#fbbf24") : v > 50 ? "#f87171" : "#1dd1a1";
+                    const color = key.includes("Commitment") || key.includes("Implementation") || key.includes("Urgency") ? (v > 50 ? "#1dd1a1" : "#fbbf24") : v > 50 ? "var(--color-primary)" : "#1dd1a1";
                     return <MiniBar key={key} label={label} value={v} color={color} />;
                   })}
                 </div>
@@ -833,7 +833,7 @@ function IntelAnalyzerTab({
                 <div className="space-y-3">
                   {(["powerScore","urgencyScore","commitmentScore"] as const).map(key => {
                     const v = (result.negotiationPosture as any)[key] as number;
-                    return <MiniBar key={key} label={key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())} value={v} color={v > 60 ? "#1dd1a1" : v > 30 ? "#fbbf24" : "#f87171"} />;
+                    return <MiniBar key={key} label={key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())} value={v} color={v > 60 ? "#1dd1a1" : v > 30 ? "#fbbf24" : "var(--color-primary)"} />;
                   })}
                   {result.negotiationPosture.concessionPattern && (
                     <div className="pt-1">
@@ -1053,7 +1053,7 @@ const roleColor = (r: StakeholderRole) =>
   r === "economic_buyer" ? "#eab308" :
   r === "champion" ? "#22c55e" :
   r === "technical" ? "#22d3ee" :
-  r === "blocker" ? "#ef4444" :
+  r === "blocker" ? "var(--color-error)" :
   r === "ghost" ? "#6b7280" : "#9ca3af";
 
 const signalDotColor = (t: string) => {
@@ -1096,7 +1096,7 @@ function TargetListCard({ deal, selected, onClick }: { deal: Deal; selected: boo
             <span className="text-[12px] font-semibold text-[#f6f6fd] truncate">{deal.company}</span>
             {deal.isHVT && (
               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0"
-                style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)" }}>🎯 HVT</span>
+                style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)" }}>🎯 HVT</span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1.5">
@@ -1111,7 +1111,7 @@ function TargetListCard({ deal, selected, onClick }: { deal: Deal; selected: boo
           <svg width="32" height="32" viewBox="0 0 32 32" className="-rotate-90">
             <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
             <circle cx="16" cy="16" r={r} fill="none"
-              stroke={deal.truthScore >= 70 ? "#1dd1a1" : deal.truthScore >= 40 ? "#fbbf24" : "#f87171"}
+              stroke={deal.truthScore >= 70 ? "#1dd1a1" : deal.truthScore >= 40 ? "#fbbf24" : "var(--color-primary)"}
               strokeWidth="3"
               strokeDasharray={`${truthFilled} ${circumference - truthFilled}`}
               strokeLinecap="round"
@@ -1369,9 +1369,9 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
                 disabled={isGenerating}
                 className="gap-1.5 px-4 py-2 rounded-full text-[11px] font-semibold"
                 style={{
-                  background: "linear-gradient(93.92deg, #f87171 -13.51%, #dc2626 40.91%, #b91c1c 113.69%)",
+                  background: "linear-gradient(93.92deg, var(--color-primary) -13.51%, var(--color-primary) 40.91%, var(--color-primary) 113.69%)",
                   color: "#fff",
-                  boxShadow: "0 0 12px rgba(220,38,38,0.3)",
+                  boxShadow: "0 0 12px color-mix(in oklab, var(--color-primary) 12%, transparent)",
                 }}
               >
                 {isGenerating
@@ -1392,9 +1392,9 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
                     onClick={() => setActiveSection(s.key)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap shrink-0 transition-all"
                     style={{
-                      background: isActive ? "rgba(220,38,38,0.10)" : "rgba(255,255,255,0.03)",
-                      color: isActive ? "#f87171" : "rgba(255,255,255,0.35)",
-                      border: isActive ? "1px solid rgba(220,38,38,0.25)" : "1px solid rgba(255,255,255,0.06)",
+                      background: isActive ? "color-mix(in oklab, var(--color-primary) 12%, transparent)" : "rgba(255,255,255,0.03)",
+                      color: isActive ? "var(--color-primary)" : "rgba(255,255,255,0.35)",
+                      border: isActive ? "1px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" : "1px solid rgba(255,255,255,0.06)",
                     }}
                   >
                     <SIcon size={12} />
@@ -1734,7 +1734,7 @@ function DealPipelineTab({ deals, onTabChange, onSelectDeal }: { deals: Deal[]; 
                           <div className="flex-1 min-w-0">
                             {deal.isHVT && (
                               <div className="flex items-center gap-1 mb-1">
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)" }}>🎯 HVT</span>
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)" }}>🎯 HVT</span>
                               </div>
                             )}
                             <p className="text-[12px] font-semibold text-[#f6f6fd] leading-tight truncate">{deal.company}</p>
@@ -1828,12 +1828,12 @@ function DealPipelineTab({ deals, onTabChange, onSelectDeal }: { deals: Deal[]; 
 // ─── TAB 5: Playbook Engine ───────────────────────────────────────────────────
 
 const DECEPTION_PATTERNS = [
-  { id: "stall", title: "The Stall", icon: Clock, color: "#f87171", description: "Buyer delays without substance. Uses vague timelines and false urgency.", signals: ["circle back", "next quarter", "when things settle", "internal reprioritization"], tactics: ["Set hard deadline with value consequence", "Request exec sponsor meeting", "Deploy FOMO sequence"] },
+  { id: "stall", title: "The Stall", icon: Clock, color: "var(--color-primary)", description: "Buyer delays without substance. Uses vague timelines and false urgency.", signals: ["circle back", "next quarter", "when things settle", "internal reprioritization"], tactics: ["Set hard deadline with value consequence", "Request exec sponsor meeting", "Deploy FOMO sequence"] },
   { id: "ghost", title: "The Ghost", icon: Ghost, color: "#a78bfa", description: "Buyer goes dark after positive signals. Engagement collapse.", signals: ["Unread emails >7 days", "Missed calls", "No calendar response", "Last read: 2+ weeks"], tactics: ["Resurrection sequence: CEO video", "Mutual connection bridge", "Value reframe with new case study"] },
   { id: "coach", title: "The False Champion", icon: Users, color: "#fbbf24", description: "Internal champion claims support but can't drive action.", signals: ["CEO is bullish", "Everyone loves it", "I just need to get approval", "Not in buying chair"], tactics: ["Map real economic buyer", "Skip-level executive bridge", "Demand org chart clarity"] },
   { id: "budget", title: "The Budget Fabrication", icon: DollarSign, color: "#34d399", description: "Buyer invents budget constraints that don't match signals.", signals: ["Budget is tight", "Spending freeze", "Not in this year's budget", "Next year maybe"], tactics: ["ROI proof of concept", "Phased deployment offer", "Finance sponsor meeting"] },
   { id: "competitive", title: "The Competitive Smokescreen", icon: Crosshair, color: "#38bdf8", description: "Buyer uses competitor mentions to negotiate, not evaluate.", signals: ["We're also looking at X", "X offered half the price", "X has more features", "Comparing options"], tactics: ["Competitive differentiation deck", "Win story for this exact profile", "POC head-to-head"] },
-  { id: "authority", title: "The Authority Deflection", icon: Shield, color: "#fb923c", description: "Buyer claims no authority to prevent commitment.", signals: ["Need to check with team", "Board needs to approve", "Not my decision", "Legal needs to review"], tactics: ["Multi-thread to actual authority", "Executive alignment meeting", "Create internal champion toolkit"] },
+  { id: "authority", title: "The Authority Deflection", icon: Shield, color: "var(--color-primary-2)", description: "Buyer claims no authority to prevent commitment.", signals: ["Need to check with team", "Board needs to approve", "Not my decision", "Legal needs to review"], tactics: ["Multi-thread to actual authority", "Executive alignment meeting", "Create internal champion toolkit"] },
   { id: "overenthusiasm", title: "The Over-Enthusiasm Trap", icon: Zap, color: "#e879f9", description: "Buyer is suspiciously positive — creating false safety.", signals: ["This is amazing", "We definitely want this", "100% moving forward", "Love everything about it"], tactics: ["Test commitment: ask for PO timeline", "Require documented next step", "Get executive verbal on record"] },
   { id: "timeline", title: "The Timeline Vagueness", icon: Calendar, color: "#4ade80", description: "Buyer gives elastic timelines to avoid commitment.", signals: ["Soon", "Q3 or Q4", "Maybe end of year", "When the time is right"], tactics: ["Reverse timeline anchor", "Cost of delay calculation", "Create mutual action plan with dates"] },
 ];
@@ -2045,13 +2045,13 @@ function GhostOpsTab({ deals }: { deals: Deal[] }) {
           <div key={deal.id} className="rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.05] to-transparent p-5 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(220,38,38,0.12)", border: "1px solid rgba(220,38,38,0.25)" }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
                   <Ghost size={18} className="text-rose-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[14px] font-semibold text-[#f6f6fd]">{deal.company}</span>
-                    {deal.isHVT && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)" }}>🎯 HVT</span>}
+                    {deal.isHVT && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)" }}>🎯 HVT</span>}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] font-mono text-rose-400">{sd}d dark</span>
@@ -2091,7 +2091,7 @@ function GhostOpsTab({ deals }: { deals: Deal[] }) {
             )}
 
             {/* Resurrection Strategy */}
-            <div className="p-3 rounded-lg space-y-2" style={{ background: "rgba(220,38,38,0.04)", border: "1px solid rgba(220,38,38,0.15)" }}>
+            <div className="p-3 rounded-lg space-y-2" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
               <div className="flex items-center gap-2">
                 <Zap size={11} className="text-red-400" />
                 <MonoLabel>Resurrection Strategy</MonoLabel>
@@ -2149,13 +2149,13 @@ export default function AtomWarRoom() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)", boxShadow: "0 0 12px rgba(220,38,38,0.4)" }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary))", boxShadow: "0 0 12px color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
                 <Swords size={14} className="text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[14px] font-bold text-[#f6f6fd]">ATOM War Room</span>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full" style={{ background: "rgba(220,38,38,0.12)", color: "#f87171", border: "1px solid rgba(220,38,38,0.25)" }}>Von Clausewitz Engine</span>
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", color: "var(--color-primary)", border: "1px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>Von Clausewitz Engine</span>
                 </div>
               </div>
             </div>
@@ -2182,9 +2182,9 @@ export default function AtomWarRoom() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-all shrink-0"
                   style={{
-                    background: active ? "rgba(220,38,38,0.10)" : "transparent",
-                    color: active ? "#f87171" : "rgba(255,255,255,0.35)",
-                    borderBottom: active ? "2px solid #dc2626" : "2px solid transparent",
+                    background: active ? "color-mix(in oklab, var(--color-primary) 12%, transparent)" : "transparent",
+                    color: active ? "var(--color-primary)" : "rgba(255,255,255,0.35)",
+                    borderBottom: active ? "2px solid var(--color-primary)" : "2px solid transparent",
                   }}
                 >
                   <Icon size={13} />

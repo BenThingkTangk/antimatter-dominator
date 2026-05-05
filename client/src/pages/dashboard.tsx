@@ -88,7 +88,7 @@ const PERF_METRICS = [
   { label: "Objection",         ms: 6000,  maxMs: 40000, color: "#4ade80" },
   { label: "Market Intent",     ms: 12000, maxMs: 40000, color: "#fbbf24" },
   { label: "Prospect Scan",     ms: 12000, maxMs: 40000, color: "#fbbf24" },
-  { label: "WarBook Research",  ms: 35000, maxMs: 40000, color: "#f87171" },
+  { label: "WarBook Research",  ms: 35000, maxMs: 40000, color: "var(--color-error)" },
   { label: "Aletheia Text",     ms: 4000,  maxMs: 40000, color: "#4ade80" },
 ];
 
@@ -125,8 +125,8 @@ function StatusBadge({ status }: { status: ApiStatus }) {
     );
   }
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#f87171", fontSize: 11, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-      <XCircle size={12} color="#f87171" />
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--color-error)", fontSize: 11, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      <XCircle size={12} color="var(--color-error)" />
       Error
     </span>
   );

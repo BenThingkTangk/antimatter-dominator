@@ -10,7 +10,7 @@
  * Defaults (used when fetch fails OR domain doesn't match a tenant):
  *   slug: "antimatter"
  *   name: "AntimatterAI"
- *   primary_hex: "#ef4444"
+ *   primary_hex: "#00e6d3"  (ATOM teal)
  *   accent_hex: "#06b6d4"
  */
 import { useEffect, useState } from "react";
@@ -31,8 +31,8 @@ const DEFAULT_TENANT: Tenant = {
   slug: "antimatter",
   name: "AntimatterAI",
   logo_url: "/logo-atom.svg",
-  primary_hex: "#ef4444",
-  accent_hex: "#06b6d4",
+  primary_hex: "#00e6d3",
+  accent_hex: "#00a7ff",
   plan: "enterprise",
   hume_config_id: null,
   twilio_subaccount_sid: null,

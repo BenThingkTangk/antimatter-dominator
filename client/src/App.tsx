@@ -15,6 +15,7 @@ import AtomWarRoom from "./pages/atom-warroom";
 import AdminTenants from "./pages/admin-tenants";
 import NotFound from "./pages/not-found";
 import { useTenant } from "./lib/useTenant";
+import AtomChat from "./components/AtomChat";
 
 function AppRouter() {
   // Resolve tenant on first paint. Loading state is silent — we render
@@ -36,6 +37,8 @@ function AppRouter() {
         <Route path="/admin/tenants" component={AdminTenants} />
         <Route component={NotFound} />
       </Switch>
+      {/* Floating ATOM Chat — visible on every page, route-aware context */}
+      <AtomChat />
     </AppLayout>
   );
 }

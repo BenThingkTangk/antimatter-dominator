@@ -246,7 +246,7 @@ function ScoreBar({ score }: { score: number }) {
           className="h-full rounded-full transition-all duration-700"
           style={{
             width: `${score}%`,
-            background: "linear-gradient(to right, #22c55e, #eab308, #ef4444)",
+            background: "linear-gradient(to right, #22c55e, #eab308, var(--color-error))",
           }}
         />
       </div>
@@ -428,10 +428,10 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
         onClick={() => setLocation("/war-room")}
         className="h-7 px-2.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold font-mono shrink-0 transition-all"
         style={{
-          background: "rgba(220,38,38,0.12)",
-          borderColor: "rgba(220,38,38,0.4)",
-          color: "#f87171",
-          boxShadow: "0 0 8px rgba(220,38,38,0.25)",
+          background: "color-mix(in oklab, var(--color-error) 12%, transparent)",
+          borderColor: "color-mix(in oklab, var(--color-error) 12%, transparent)",
+          color: "var(--color-error)",
+          boxShadow: "0 0 8px color-mix(in oklab, var(--color-error) 12%, transparent)",
         }}
         title="Already flagged — click to view in War Room"
       >
@@ -443,7 +443,7 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
   return (
     <button
       onClick={handleFlag}
-      className="h-7 px-2.5 rounded-lg border border-white/[0.08] flex items-center gap-1 text-[10px] text-white/40 hover:text-[#f87171] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all shrink-0"
+      className="h-7 px-2.5 rounded-lg border border-white/[0.08] flex items-center gap-1 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all shrink-0"
       title="Flag as HVT — Send to ATOM War Room"
     >
       <Crosshair className="w-3 h-3" />Flag HVT

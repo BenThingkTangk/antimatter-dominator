@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { useLocation } from "wouter";
+import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "@/lib/atom-products";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -64,15 +65,7 @@ interface LocalPitchEntry {
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const PRODUCTS = [
-  { value: "antimatter-ai-platform", label: "ATOM Platform" },
-  { value: "atom-enterprise-ai", label: "ATOM Enterprise AI" },
-  { value: "vidzee", label: "Vidzee" },
-  { value: "clinix-agent", label: "Clinix Agent" },
-  { value: "clinix-ai", label: "Clinix AI" },
-  { value: "red-team-atom", label: "Red Team ATOM" },
-  { value: "custom", label: "Custom Product" },
-];
+// Canonical 6-item roster lives in client/src/lib/atom-products.ts.
 
 const PITCH_TYPES = [
   { value: "Cold Call Opening", label: "Cold Call Opening", icon: Phone, desc: "Phone opener that hooks in 10 sec" },
@@ -157,7 +150,7 @@ function CircularGauge({ score, size = 120, label }: { score: number; size?: num
   const radius = (size - 16) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 100) * circumference;
-  const color = score >= 80 ? "#0d9488" : score >= 60 ? "#a3b845" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const color = score >= 80 ? "#0d9488" : score >= 60 ? "#a3b845" : score >= 40 ? "#f59e0b" : "var(--color-error)";
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -249,18 +242,17 @@ export default function PitchGenerator() {
 
   useEffect(() => { setLocalHistory(loadHistory()); }, []);
 
-  const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
+  // Free-text override when the user picks "Custom Product"
+  const [customProduct, setCustomProduct] = useState("");
 
-  const allProducts = [
-    ...PRODUCTS,
-    ...products.filter(p => !PRODUCTS.find(sp => sp.value === p.slug)).map(p => ({ value: p.slug, label: p.name })),
-  ];
+  // Single source of truth — no API merge to avoid duplicate options.
+  const allProducts = ATOM_PRODUCTS;
 
   const generatePitch = useMutation({
     mutationFn: async () => {
-      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
+      const productLabel = resolveProductLabel(selectedProduct, customProduct);
       const res = await apiRequest("POST", "/api/pitch/generate", {
-        productSlug: selectedProduct,
+        productSlug: isCustom(selectedProduct) ? "custom" : selectedProduct,
         product: productLabel,
         pitchType,
         persona,
@@ -284,8 +276,9 @@ export default function PitchGenerator() {
         createdAt: new Date().toISOString(),
       });
 
-      // Save to localStorage
-      const productLabel = allProducts.find(p => p.value === selectedProduct)?.label || selectedProduct;
+      // Save to localStorage — use the resolved label so Custom Product
+      // history shows the user's typed-in name, not the literal "Custom Product".
+      const productLabel = resolveProductLabel(selectedProduct, customProduct);
       const entry: LocalPitchEntry = {
         id: `${Date.now()}-${Math.random()}`,
         product: productLabel,
@@ -336,7 +329,14 @@ export default function PitchGenerator() {
 
   const loadFromHistory = (entry: LocalPitchEntry) => {
     const productObj = allProducts.find(p => p.label === entry.product || p.value === entry.product);
-    if (productObj) setSelectedProduct(productObj.value);
+    if (productObj) {
+      setSelectedProduct(productObj.value);
+    } else if (entry.product) {
+      // Historical pitch used a custom / now-removed product label — reload
+      // it as Custom Product with the original label as the override.
+      setSelectedProduct("custom");
+      setCustomProduct(entry.product);
+    }
     setPitchType(entry.pitchType);
     setPersona(entry.persona);
     setIndustry(entry.industry || "");
@@ -481,6 +481,17 @@ export default function PitchGenerator() {
                     ))}
                   </SelectContent>
                 </Select>
+                {isCustom(selectedProduct) && (
+                  <Input
+                    autoFocus
+                    placeholder="Type the product to pitch — e.g. Akamai, Five9, PhysioPS"
+                    value={customProduct}
+                    onChange={e => setCustomProduct(e.target.value)}
+                    className="mt-2 bg-white/[0.03] border-white/10 text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
+                    data-testid="input-custom-product"
+                  />
+                )}
               </div>
 
               {/* Company Name */}

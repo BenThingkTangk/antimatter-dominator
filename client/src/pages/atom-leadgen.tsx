@@ -36,7 +36,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
       <button
         onClick={() => setLocation("/war-room")}
         className="h-[46px] px-4 rounded-xl border flex items-center gap-1.5 text-[12px] font-bold font-mono transition-all"
-        style={{ background: "rgba(220,38,38,0.12)", borderColor: "rgba(220,38,38,0.4)", color: "#f87171", boxShadow: "0 0 8px rgba(220,38,38,0.25)" }}
+        style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", borderColor: "color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)", boxShadow: "0 0 8px color-mix(in oklab, var(--color-error) 12%, transparent)" }}
       >
         🎯 HVT → War Room
       </button>
@@ -46,7 +46,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
   return (
     <button
       onClick={handleFlag}
-      className="h-[46px] px-4 rounded-xl border border-white/[0.08] flex items-center gap-1.5 text-[12px] text-white/50 hover:text-[#f87171] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all"
+      className="h-[46px] px-4 rounded-xl border border-white/[0.08] flex items-center gap-1.5 text-[12px] text-white/50 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all"
       title="Flag as HVT — Send to ATOM War Room"
     >
       <Crosshair className="w-3.5 h-3.5" />Flag HVT
@@ -172,7 +172,7 @@ function sentimentColor(v: number) {
   if (v >= 80) return "#a78bfa";
   if (v >= 55) return "#34d399";
   if (v >= 35) return "#fbbf24";
-  return "#f87171";
+  return "var(--color-error)";
 }
 
 function outcomeLabel(intent: number): string {
@@ -186,13 +186,13 @@ function outcomeBadgeStyle(intent: number): React.CSSProperties {
     return { background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" };
   if (intent >= 40)
     return { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" };
-  return { background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" };
+  return { background: "color-mix(in oklab, var(--color-error) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)", color: "var(--color-error)" };
 }
 
 function cardBorderColor(intent: number): string {
   if (intent > 60) return "#34d399";
   if (intent >= 30) return "#fbbf24";
-  return "#f87171";
+  return "var(--color-error)";
 }
 
 // Polar coords for arc endpoint
@@ -215,7 +215,7 @@ function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: st
       <svg viewBox="0 0 200 120" className="w-full max-w-[220px]" overflow="visible">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="0%" stopColor="var(--color-error)" />
             <stop offset="33%" stopColor="#fbbf24" />
             <stop offset="66%" stopColor="#34d399" />
             <stop offset="100%" stopColor="#a78bfa" />
@@ -270,7 +270,7 @@ const EMOTION_COLORS: Record<string, string> = {
   interest: "#34d399",
   skepticism: "#fbbf24",
   excitement: "#a78bfa",
-  frustration: "#f87171",
+  frustration: "var(--color-error)",
   neutrality: "#94a3b8",
 };
 
@@ -1280,7 +1280,7 @@ export default function ATOMLeadGen() {
                 {/* Phone */}
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
-                    Phone Number <span style={{ color: "#f87171" }}>*</span>
+                    Phone Number <span style={{ color: "var(--color-error)" }}>*</span>
                   </label>
                   <input
                     type="tel"
@@ -1400,9 +1400,9 @@ export default function ATOMLeadGen() {
                     onClick={handleEndCall}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
                     style={{
-                      background: "rgba(248,113,113,0.15)",
-                      border: "1px solid rgba(248,113,113,0.3)",
-                      color: "#f87171",
+                      background: "color-mix(in oklab, var(--color-error) 12%, transparent)",
+                      border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)",
+                      color: "var(--color-error)",
                       cursor: "pointer",
                     }}
                   >
@@ -1420,7 +1420,7 @@ export default function ATOMLeadGen() {
                     onClick={handleNewCall}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium"
                     style={{
-                      background: "linear-gradient(93.92deg, #fb923c -13.51%, #f97316 40.91%, #ea580c 113.69%)", boxShadow: "0 0 15px rgba(249,115,22,0.4), inset 0 0 2px rgba(255,255,255,0.3)",
+                      background: "linear-gradient(93.92deg, var(--color-primary-2) -13.51%, var(--color-primary) 40.91%, #ea580c 113.69%)", boxShadow: "0 0 15px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.3)",
                       color: "white",
                       boxShadow: "0 0 16px rgba(133,135,227,0.3)",
                       cursor: "pointer",
@@ -1537,7 +1537,7 @@ export default function ATOMLeadGen() {
                     <div className="flex items-center justify-between">
                       <div
                         className="text-xs uppercase tracking-wider font-semibold"
-                        style={{ color: "#ef4444" }}
+                        style={{ color: "var(--color-error)" }}
                       >
                         ⚔️ War Room — Von Clausewitz Engine
                       </div>
@@ -1547,11 +1547,11 @@ export default function ATOMLeadGen() {
                           background: warroom.dealRisk === "HEALTHY" ? "rgba(34,197,94,0.2)" :
                                       warroom.dealRisk === "CAUTION" ? "rgba(250,204,21,0.2)" :
                                       warroom.dealRisk === "AT_RISK" ? "rgba(251,146,60,0.2)" :
-                                      "rgba(239,68,68,0.25)",
+                                      "color-mix(in oklab, var(--color-error) 12%, transparent)",
                           color: warroom.dealRisk === "HEALTHY" ? "#4ade80" :
                                  warroom.dealRisk === "CAUTION" ? "#fde047" :
-                                 warroom.dealRisk === "AT_RISK" ? "#fb923c" :
-                                 "#f87171",
+                                 warroom.dealRisk === "AT_RISK" ? "var(--color-primary-2)" :
+                                 "var(--color-error)",
                         }}
                       >
                         {warroom.dealRisk || "—"}
@@ -1573,7 +1573,7 @@ export default function ATOMLeadGen() {
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider opacity-60">Ghost Risk</div>
-                        <div className="text-2xl font-bold" style={{ color: warroom.ghostProbability > 50 ? "#f87171" : "#f6f6fd" }}>
+                        <div className="text-2xl font-bold" style={{ color: warroom.ghostProbability > 50 ? "var(--color-error)" : "#f6f6fd" }}>
                           {warroom.ghostProbability ?? 0}%
                         </div>
                       </div>
@@ -1587,7 +1587,7 @@ export default function ATOMLeadGen() {
                           <div key={k} className="flex items-center gap-3 text-[11px]">
                             <span className="w-32 capitalize opacity-80">{k.replace(/Pct|Probability/g, "").replace(/([A-Z])/g, " $1").trim()}</span>
                             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(246,246,253,0.08)" }}>
-                              <div style={{ width: `${v}%`, height: "100%", background: v > 60 ? "#f87171" : v > 30 ? "#fb923c" : "#4ade80" }} />
+                              <div style={{ width: `${v}%`, height: "100%", background: v > 60 ? "var(--color-error)" : v > 30 ? "var(--color-primary-2)" : "#4ade80" }} />
                             </div>
                             <span className="w-8 text-right opacity-70">{v}</span>
                           </div>
@@ -1606,7 +1606,7 @@ export default function ATOMLeadGen() {
                               title={f.phrase}
                               className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider"
                               style={{
-                                background: f.severity === "high" ? "rgba(239,68,68,0.2)" :
+                                background: f.severity === "high" ? "color-mix(in oklab, var(--color-error) 12%, transparent)" :
                                             f.severity === "medium" ? "rgba(251,146,60,0.2)" :
                                             "rgba(250,204,21,0.15)",
                                 color: f.severity === "high" ? "#fca5a5" :
@@ -1626,7 +1626,7 @@ export default function ATOMLeadGen() {
                     {warroom.competitiveRadar?.competitorMentioned && (
                       <div
                         className="rounded-lg p-2.5 text-[11px]"
-                        style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}
+                        style={{ background: "color-mix(in oklab, var(--color-error) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--color-error) 12%, transparent)" }}
                       >
                         <span className="font-semibold" style={{ color: "#fca5a5" }}>⚠️ Competitor mentioned: </span>
                         <span className="opacity-90">{warroom.competitiveRadar.competitors?.join(", ") || "unnamed"}</span>

@@ -166,7 +166,7 @@ const riskColor = (r: string) => {
   return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
 };
 const sevColor = (s: string) => s === "high" ? "text-rose-400" : s === "medium" ? "text-amber-400" : "text-emerald-400";
-const scoreColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "#f87171";
+const scoreColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "var(--color-error)";
 const intentLabel = (s: string) => (s || "unknown").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 const phraseColor = (c: string) => c === "red" ? "bg-rose-500/20 border-rose-500/30" : c === "amber" ? "bg-amber-500/20 border-amber-500/30" : "bg-emerald-500/20 border-emerald-500/30";
 
@@ -351,9 +351,9 @@ function TextAnalyzerTab() {
                 {result.linguisticCues && (
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <MiniBar label="Passive Voice" value={result.linguisticCues.passiveVoice} color="#a2a3e9" />
-                    <MiniBar label="Distancing" value={result.linguisticCues.distancingLanguage} color="#f87171" />
+                    <MiniBar label="Distancing" value={result.linguisticCues.distancingLanguage} color="var(--color-error)" />
                     <MiniBar label="Over-Certainty" value={result.linguisticCues.overCertainty} color="#fbbf24" />
-                    <MiniBar label="Non-Answer" value={result.linguisticCues.nonAnswerRatio} color="#f87171" />
+                    <MiniBar label="Non-Answer" value={result.linguisticCues.nonAnswerRatio} color="var(--color-error)" />
                     <MiniBar label="Filler Words" value={result.linguisticCues.fillerWords} color="#a2a3e9" />
                   </div>
                 )}

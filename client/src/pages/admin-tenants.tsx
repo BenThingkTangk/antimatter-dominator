@@ -36,12 +36,14 @@ const PLAN_TIERS = [
   { value: "enterprise", label: "Enterprise — Custom" },
 ];
 
+// V4 brand-coordinated palette — first option is the canonical ATOM teal.
+// Tenants can pick from these or use the color pickers for full custom.
 const PRESET_COLORS = [
-  { primary: "#ef4444", accent: "#06b6d4", label: "ATOM crimson" },
-  { primary: "#0ea5e9", accent: "#a78bfa", label: "Cyan / violet" },
-  { primary: "#10b981", accent: "#fbbf24", label: "Emerald / amber" },
-  { primary: "#f97316", accent: "#06b6d4", label: "Orange / cyan" },
-  { primary: "#8b5cf6", accent: "#ec4899", label: "Violet / pink" },
+  { primary: "#00e6d3", accent: "#00a7ff", label: "ATOM teal" },
+  { primary: "#0ea5e9", accent: "#b987ff", label: "Cyan / violet" },
+  { primary: "#10b981", accent: "#ffd166", label: "Emerald / amber" },
+  { primary: "#a78bfa", accent: "#00e6d3", label: "Violet / teal" },
+  { primary: "#ff7569", accent: "#ffd166", label: "Coral / amber" },
 ];
 
 export default function AdminTenants() {
@@ -162,7 +164,7 @@ export default function AdminTenants() {
         <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-3">
-              <Sparkles size={28} style={{ color: "var(--brand-primary, #ef4444)" }} />
+              <Sparkles size={28} style={{ color: "var(--brand-primary, var(--color-error))" }} />
               Tenants
             </h1>
             <p className="mt-2 text-sm" style={{ color: "rgba(246,246,253,0.55)" }}>
@@ -296,7 +298,7 @@ export default function AdminTenants() {
             </div>
 
             {error && (
-              <div className="mt-4 text-sm flex items-center gap-2" style={{ color: "#f87171" }}>
+              <div className="mt-4 text-sm flex items-center gap-2" style={{ color: "var(--color-error)" }}>
                 <AlertCircle size={14} /> {error}
               </div>
             )}

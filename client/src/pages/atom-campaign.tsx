@@ -171,7 +171,7 @@ function HVTTargetSignalPanel() {
   if (hotTargets.length === 0) return null;
 
   const scoreColor = (n: number) => n >= 7 ? "#22d3ee" : n >= 4 ? "#fbbf24" : "rgba(255,255,255,0.3)";
-  const truthColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "#f87171";
+  const truthColor = (n: number) => n >= 70 ? "#1dd1a1" : n >= 40 ? "#fbbf24" : "var(--color-error)";
 
   return (
     <div className="rounded-xl border border-rose-500/15 p-4 bg-gradient-to-br from-rose-500/[0.04] to-transparent" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
