@@ -71,8 +71,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "health":
         return res.json(await forwardToRag("/", undefined, "GET"));
 
+      // ── Pickup-delay killer ──────────────────────────────────────────────────
+      // Frontend calls this when the user types/selects a product, so the
+      // RAG is HOT by the time they click Dial. Returns immediately even if
+      // the load is still ingesting — the next /company/context call will
+      // be warm. Idempotent. Safe to fire on every product-field debounce.
+      case "prewarm": {
+        const productName = req.body?.company_name || req.body?.product || company;
+        if (!productName) return res.status(400).json({ error: "product/company_name required" });
+
+        // Fire load (background ingest if cold) AND context (warm hit if hot)
+        // simultaneously. We don't wait for either fully — we just want both
+        // pipes primed. RAG service caches both calls server-side.
+        const loadPromise = forwardToRag("/company/load", { company_name: productName })
+          .catch((e: any) => ({ error: e.message }));
+        const ctxPromise = forwardToRag("/company/context", {
+          company_name: productName,
+          module: "pitch",
+          query: "prewarm",
+        }).catch((e: any) => ({ error: e.message }));
+
+        // Race with a 1.2s budget — we don't want the frontend hanging.
+        const result = await Promise.race([
+          Promise.all([loadPromise, ctxPromise]).then(([load, ctx]) => ({
+            load, ctx, status: "complete" as const,
+          })),
+          new Promise<{ status: "primed"; message: string }>((resolve) =>
+            setTimeout(() => resolve({ status: "primed", message: "prewarm dispatched" }), 1200)
+          ),
+        ]);
+        return res.json(result);
+      }
+
       default:
-        return res.status(400).json({ error: `Unknown action: ${action}. Use: load|status|context|companies|pitch|objection|health` });
+        return res.status(400).json({ error: `Unknown action: ${action}. Use: load|status|context|companies|pitch|objection|prewarm|health` });
     }
   } catch (err: any) {
     return res.status(500).json({ error: err.message || "RAG service unavailable" });

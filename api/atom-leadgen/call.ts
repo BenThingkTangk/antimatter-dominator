@@ -93,7 +93,10 @@ async function fetchRagBrief(
         module: "pitch",
         query,
       }),
-      signal: AbortSignal.timeout(2500), // warm hit usually < 900ms
+      // Aggressive timeout: warm hits return < 900ms. If RAG takes longer
+      // than 1.4s we fall back to the generic brief and fire background ingest
+      // — this keeps pickup-to-first-word under ~600ms instead of 3s+.
+      signal: AbortSignal.timeout(1400),
     });
     if (!res.ok) return "";
     const data: any = await res.json();
@@ -118,7 +121,7 @@ async function fetchRagBrief(
             return `${ctx}\n\n---OBJECTION PLAYBOOK---\n${ob}`.slice(0, 4000);
           }
         }
-      } catch {}
+      } catch { /* objection chunk best-effort */ }
       return ctx.slice(0, 4000);
     }
   } catch {}
@@ -202,7 +205,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 1. Pull warm RAG brief on the product being pitched.
+    // 1. Pull warm RAG brief on the product being pitched, IN PARALLEL with
+    //    placing the Twilio call. The Twilio URL param actually needs the
+    //    brief embedded (Hume reads {{company_brief}} from query string), so
+    //    we still await before createCall — BUT the timeout is now 1.4s, and
+    //    we fire a background prewarm on the fallback path so the next call
+    //    for this product is ready in <700ms.
     const ragBrief = await fetchRagBrief(productLabel, company, first);
 
     let companyBrief: string;

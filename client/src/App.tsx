@@ -12,9 +12,15 @@ import AtomLeadGen from "./pages/atom-leadgen";
 import AtomCampaign from "./pages/atom-campaign";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
+import AdminTenants from "./pages/admin-tenants";
 import NotFound from "./pages/not-found";
+import { useTenant } from "./lib/useTenant";
 
 function AppRouter() {
+  // Resolve tenant on first paint. Loading state is silent — we render
+  // the cached/default brand immediately and swap if the API returns
+  // something different.
+  useTenant();
   return (
     <AppLayout>
       <Switch>
@@ -27,6 +33,7 @@ function AppRouter() {
         <Route path="/atom-campaign" component={AtomCampaign} />
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
+        <Route path="/admin/tenants" component={AdminTenants} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

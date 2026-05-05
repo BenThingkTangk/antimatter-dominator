@@ -129,6 +129,44 @@ function inferStage(transcript: { role: string; text: string }[]): 1 | 2 | 3 | 4
   return 1;
 }
 
+// ─── Buying signals ───────────────────────────────────────────────
+// Lightweight regex-based extractor over the prospect's utterances. We DO
+// NOT round-trip through OpenAI for this — it's deterministic, fast, and
+// the patterns are good enough to populate the chips panel during a call.
+// The previous version of this endpoint dropped this entirely. Restored.
+const SIGNAL_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /how (does|do) (it|that|this) work/i,                          label: "asking how it works" },
+  { re: /how much|what.*cost|pricing|price.*range|budget/i,            label: "asked about pricing" },
+  { re: /(can|could) you (show|demo|walk me through)/i,                label: "requested a demo" },
+  { re: /case study|reference|other client|who.*using/i,               label: "asking for proof / references" },
+  { re: /increase revenue|grow.*revenue|more revenue|drive revenue/i,  label: "looking for ways to increase revenue" },
+  { re: /save (us|me) (time|money)|reduce cost|cut cost/i,             label: "focused on cost reduction" },
+  { re: /talk to (a |the )?(human|person|someone)|speak to.*human/i,   label: "requested to speak with a human" },
+  { re: /follow.?up|circle back|call.*back|next week|tomorrow/i,       label: "agreed to follow-up" },
+  { re: /send.*(info|email|deck|details)|email me/i,                   label: "requested info via email" },
+  { re: /(sounds good|that's helpful|love that|interesting)/i,         label: "expressed positive interest" },
+  { re: /(team|stakeholder|boss|partner|cto|cfo|ceo).*(decide|review)/i, label: "flagged stakeholders involved" },
+  { re: /timeline|when.*available|how soon|by (q[1-4]|end of)/i,       label: "asking about timeline" },
+  { re: /integrate|integration|works with|compatible/i,                label: "asking about integrations" },
+  { re: /tried|using|currently|right now we/i,                         label: "shared current stack" },
+  { re: /not (sure|interested)|maybe later|not (a |the )?(right|good) (time|fit)/i, label: "hesitation expressed" },
+  { re: /next step|move forward|let.s do it|sign me up/i,              label: "ready to move forward" },
+  { re: /security|compliance|soc.?2|gdpr|hipaa/i,                      label: "asking about security/compliance" },
+  { re: /how.*tested|what.*tested|test.*for|run.*test/i,               label: "asking what's being tested" },
+  { re: /interpret|explain.*results?|what does.*mean/i,                label: "asking how to interpret results" },
+];
+
+function extractBuyingSignals(transcript: { role: string; text: string }[]): string[] {
+  const out = new Set<string>();
+  for (const t of transcript) {
+    if (t.role !== "user") continue;
+    for (const { re, label } of SIGNAL_PATTERNS) {
+      if (re.test(t.text)) out.add(label);
+    }
+  }
+  return Array.from(out).slice(0, 12);
+}
+
 // ─── Von Clausewitz / Aletheia engine ────────────────────────────────────
 // Lightweight analyzer that runs DIRECTLY here (not via a chained fetch) to
 // keep latency under 800ms. Focused on the prospect's most recent utterance +
@@ -287,12 +325,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       warroom = await runAletheia(lastUserMsg.text, transcript, dealContext);
     }
 
+    const buyingSignals = extractBuyingSignals(transcript);
+
     return res.status(200).json({
       sessionId,
       chatId,
       status: endEvent ? "ended" : "active",
       endReason: endEvent?.end_reason || null,
       transcript,
+      buyingSignals,                            // restored: chip list for UI
       metrics: {
         sentiment: computeSentiment(blended),   // -100..100
         buyerIntent: computeIntent(blended),    // 0..100

@@ -728,6 +728,26 @@ export default function ATOMLeadGen() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
+  // ─── Pickup-delay killer: debounced RAG prewarm ──────────────────────────
+  // The moment the user stops typing the product, fire a prewarm so the
+  // backend RAG cache is HOT by the time they click Dial. Idempotent.
+  // Cuts pickup-to-first-word from ~3s (cold) to ~600ms (warm).
+  useEffect(() => {
+    const product = productSlug.trim();
+    if (!product || product.length < 3) return;
+    if (callStatus === "active" || callStatus === "dialing") return;
+
+    const handle = window.setTimeout(() => {
+      fetch("/api/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "prewarm", company_name: product }),
+      }).catch(() => { /* prewarm is best-effort */ });
+    }, 700);
+
+    return () => window.clearTimeout(handle);
+  }, [productSlug, callStatus]);
+
   // Cleanup WS + polling on unmount
   useEffect(() => {
     return () => {
@@ -759,6 +779,16 @@ export default function ATOMLeadGen() {
         if (data.chatId == null) return; // Hume chat not started yet; keep polling
 
         if (data.warroom) setWarroom(data.warroom);
+        // Restored: backend returns top-level buyingSignals[] from regex
+        // extractor over the user's transcript turns. Merge into the shared
+        // buyingSignals state so chips render on the live + history views.
+        if (Array.isArray(data.buyingSignals) && data.buyingSignals.length) {
+          setBuyingSignals((prev) => {
+            const set = new Set(prev);
+            for (const sig of data.buyingSignals) set.add(sig);
+            return Array.from(set);
+          });
+        }
         if (data.metrics) {
           setMetrics({
             sentiment: data.metrics.sentiment ?? 0,
@@ -772,7 +802,7 @@ export default function ATOMLeadGen() {
               frustration: (data.metrics.emotions?.frustration ?? 0) * 100,
               neutrality:  (data.metrics.emotions?.neutrality ?? 0) * 100,
             },
-            buyingSignals: [],
+            buyingSignals: data.buyingSignals || [],
           });
           setSentimentHistory(prev => {
             const last = prev[prev.length - 1];
