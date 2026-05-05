@@ -30,6 +30,42 @@ async function sonarResearch(query: string, ctx: "low" | "medium" | "high" = "me
   } catch (e: any) { console.error(`Sonar: ${e.message}`); return { content: "", citations: [] as string[] }; }
 }
 
+// ─── Sonar Deep Research (Sonar Agent) ─────────────────────────────────────────
+// Multi-step agentic search. The model issues sub-queries autonomously and
+// reasons across them. We use this for Deep Mode briefs only — latency is
+// 30-60s but the depth is dramatically better than chained Sonar Pro calls.
+async function sonarDeepResearch(query: string) {
+  if (!PERPLEXITY_API_KEY) return { content: "", citations: [] as string[] };
+  try {
+    const res = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "sonar-deep-research",
+        messages: [{ role: "user", content: query }],
+        stream: false,
+        web_search_options: { search_context_size: "high" },
+        return_related_questions: true,
+      }),
+      signal: AbortSignal.timeout(75000),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      console.error(`Sonar Deep ${res.status}: ${err.slice(0, 200)}`);
+      return { content: "", citations: [] as string[] };
+    }
+    const d = await res.json();
+    return {
+      content: d.choices?.[0]?.message?.content || "",
+      citations: (d.citations || []) as string[],
+      relatedQuestions: d.related_questions || [],
+    };
+  } catch (e: any) {
+    console.error(`Sonar Deep: ${e.message}`);
+    return { content: "", citations: [] as string[] };
+  }
+}
+
 // ─── Apollo mixed_people/api_search ──────────────────────────────────────────
 
 async function findDecisionMakers(company: string, domain?: string) {
@@ -139,9 +175,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  const { company, website } = req.body || {};
+  const { company, website, deep } = req.body || {};
   if (!company) return res.status(400).json({ error: "Missing: company" });
   const domain = website || null;
+
+  // ─── DEEP MODE — single Sonar Agent call instead of 5 parallel Sonar Pro ──
+  // Use when the user clicks "Deep Research". Returns a richer multi-section
+  // brief sourced via agentic reasoning. Falls through to fast mode if Sonar
+  // Deep fails or returns nothing.
+  if (deep === true) {
+    try {
+      const t0 = Date.now();
+      const deepBrief = await sonarDeepResearch(
+        `Build a comprehensive sales-intelligence brief on ${company}${domain ? ` (${domain})` : ""}. ` +
+        `Cover: business model, products, revenue, headcount, leadership, recent news (last 6 months), ` +
+        `competitive positioning, tech stack, pain points, buying signals, customer sentiment, and a ` +
+        `competitive battle card. Cite primary sources for every claim. Be brutally specific with numbers, dates, and quotes.`
+      );
+      const [people, pdlData] = await Promise.all([
+        findDecisionMakers(company, domain),
+        pdlEnrich(company, domain),
+      ]);
+      const revealPromises = people.slice(0, 10).map((p: any) => revealApolloContact(p));
+      const contacts = (await Promise.all(revealPromises)).filter(Boolean);
+
+      if (deepBrief.content && deepBrief.content.length > 200) {
+        return res.status(200).json({
+          mode: "deep",
+          company,
+          domain,
+          brief: deepBrief.content,
+          relatedQuestions: deepBrief.relatedQuestions || [],
+          citations: deepBrief.citations,
+          contacts,
+          firmographics: pdlData,
+          generatedIn: Date.now() - t0,
+          model: "sonar-deep-research",
+        });
+      }
+      // else: fall through to fast mode
+      console.warn(`[warbook] deep mode returned empty for ${company}, falling back to fast mode`);
+    } catch (e: any) {
+      console.error(`[warbook] deep mode failed: ${e?.message}, falling back to fast mode`);
+    }
+  }
 
   try {
     // ── STEP 1: Parallel Sonar queries + Apollo search + PDL enrich ──────────
