@@ -70,6 +70,11 @@ const HUME_VOICE_ID  = "e891bda0-d013-4a46-9cbe-360d618b0e58"; // ATOM Jobs Teno
 const HUME_CONFIG_GPT5 = clean(process.env.HUME_CONFIG_GPT5);
 const GPT5_MIN_DEAL_VALUE = Number(clean(process.env.GPT5_MIN_DEAL_VALUE)) || 50000;
 
+// Note on model name: Hume EVI's OpenAI integration accepts gpt-5 / gpt-5-mini
+// / gpt-4.1 / gpt-4o. gpt-5.5 is not yet whitelisted (verified May 2026).
+// We expose the running model name so the UI can show the truth.
+const GPT5_MODEL_LABEL = clean(process.env.HUME_GPT5_MODEL_LABEL) || "gpt-5";
+
 function pickHumeConfig(opts: {
   tenantPlan?: string | null;
   dealValue?: number | null;
@@ -77,7 +82,7 @@ function pickHumeConfig(opts: {
   const isEnterprise = opts.tenantPlan === "enterprise";
   const isHighValue  = (opts.dealValue ?? 0) >= GPT5_MIN_DEAL_VALUE;
   if (isEnterprise && isHighValue && HUME_CONFIG_GPT5) {
-    return { configId: HUME_CONFIG_GPT5, reasoningModel: "gpt-5.5", tier: "enterprise" };
+    return { configId: HUME_CONFIG_GPT5, reasoningModel: GPT5_MODEL_LABEL, tier: "enterprise" };
   }
   return { configId: HUME_CONFIG_ID, reasoningModel: "claude-sonnet", tier: "standard" };
 }
@@ -272,9 +277,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const host = (req.headers["x-forwarded-host"] as string)
           || (req.headers.host as string)
           || "atom-dominator-pro.vercel.app";
+        // 4s timeout: cold-start internal fetch can take ~2.5s on Vercel.
+        // We still fail soft — standard tier is the right safe default.
         const tRes = await fetch(
           `${proto}://${host}/api/tenant?slug=${encodeURIComponent(reqTenantSlug)}`,
-          { signal: AbortSignal.timeout(2000) }
+          { signal: AbortSignal.timeout(4000) }
         );
         if (tRes.ok) {
           const t: any = await tRes.json();

@@ -1384,7 +1384,7 @@ export default function ATOMLeadGen() {
                           fontWeight: 600,
                         }}
                       >
-                        GPT-5.5 eligible
+                        GPT-5 eligible
                       </span>
                     )}
                   </label>
@@ -1405,7 +1405,7 @@ export default function ATOMLeadGen() {
                     }}
                   />
                   <div className="text-[10px] mt-1" style={{ color: "rgba(246,246,253,0.35)" }}>
-                    Calls on enterprise tenants with deal value ≥ $50K route to GPT-5.5 reasoning.
+                    Calls on enterprise tenants with deal value ≥ $50K route to GPT-5 reasoning (1M context).
                   </div>
                 </div>
               </div>
@@ -1459,7 +1459,7 @@ export default function ATOMLeadGen() {
                           boxShadow: "0 0 8px var(--color-primary-glow)",
                         }}
                       >
-                        ⚡ Enterprise · {reasoningModel || "GPT-5.5"}
+                        ⚡ Enterprise · {reasoningModel || "GPT-5"}
                       </span>
                     )}
                     {callTier === "standard" && reasoningModel && (
