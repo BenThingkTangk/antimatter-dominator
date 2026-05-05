@@ -1366,11 +1366,15 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "dialing"}
                     className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm transition-all"
                     style={{
-                      background: "linear-gradient(93.92deg, #fb923c -13.51%, #f97316 40.91%, #ea580c 113.69%)",
-                      color: "white",
-                      boxShadow: "0 0 15px rgba(249,115,22,0.4), inset 0 0 2px rgba(255,255,255,0.3)",
+                      background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",
+                      color: "var(--color-text-inverse)",
+                      boxShadow: "0 0 18px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.25)",
+                      border: "1px solid color-mix(in oklab, var(--color-primary) 60%, transparent)",
                       opacity: callStatus === "dialing" ? 0.7 : 1,
                       cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700,
+                      letterSpacing: "-0.01em",
                     }}
                   >
                     {callStatus === "dialing" ? (
