@@ -62,35 +62,122 @@ import {
 
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 
+// Alphabetized by group: top-level scope, US (whole / regions / states),
+// then external regions with their countries indented underneath.
 const GEO_OPTIONS = [
-  "All US", "US South (TX, FL, GA, NC, TN...)", "US Northeast (NY, NJ, MA, CT...)",
-  "US Midwest (IL, OH, MI, IN, MN...)", "US West (CA, WA, OR, CO, AZ...)",
-  "US Southeast (FL, GA, NC, SC, VA...)", "Texas", "California", "New York",
-  "Florida", "Illinois", "Georgia", "North Carolina", "Washington",
-  "Massachusetts", "Colorado", "EU", "UK", "Canada", "Global",
+  "Global",
+
+  // United States
+  "United States",
+  "  US Midwest (IL, IN, MI, MN, OH, WI...)",
+  "  US Northeast (CT, MA, NJ, NY, PA, RI...)",
+  "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)",
+  "  US Southeast (FL, GA, NC, SC, VA...)",
+  "  US West (AZ, CA, CO, OR, UT, WA...)",
+  "    Arizona",
+  "    California",
+  "    Colorado",
+  "    Florida",
+  "    Georgia",
+  "    Illinois",
+  "    Massachusetts",
+  "    New York",
+  "    North Carolina",
+  "    Ohio",
+  "    Pennsylvania",
+  "    Tennessee",
+  "    Texas",
+  "    Washington",
+
+  // External regions, alphabetized
+  "APAC",
+  "  Australia",
+  "  India",
+  "  Japan",
+  "  Singapore",
+  "  South Korea",
+
+  "Canada",
+
+  "European Union",
+  "  France",
+  "  Germany",
+  "  Ireland",
+  "  Italy",
+  "  Netherlands",
+  "  Spain",
+  "  Sweden",
+
+  "Latin America",
+  "  Argentina",
+  "  Brazil",
+  "  Chile",
+  "  Colombia",
+  "  Mexico",
+
+  "Middle East",
+  "  Israel",
+  "  Saudi Arabia",
+  "  United Arab Emirates",
+
+  "United Kingdom",
 ];
 
 const GEO_VALUES: Record<string, string> = {
-  "All US": "All US",
-  "US South (TX, FL, GA, NC, TN...)": "US South",
-  "US Northeast (NY, NJ, MA, CT...)": "US Northeast",
-  "US Midwest (IL, OH, MI, IN, MN...)": "US Midwest",
-  "US West (CA, WA, OR, CO, AZ...)": "US West",
-  "US Southeast (FL, GA, NC, SC, VA...)": "US Southeast",
-  "Texas": "Texas",
-  "California": "California",
-  "New York": "New York",
-  "Florida": "Florida",
-  "Illinois": "Illinois",
-  "Georgia": "Georgia",
-  "North Carolina": "North Carolina",
-  "Washington": "Washington",
-  "Massachusetts": "Massachusetts",
-  "Colorado": "Colorado",
-  "EU": "EU",
-  "UK": "UK",
-  "Canada": "Canada",
   "Global": "Global",
+
+  "United States": "All US",
+  "  US Midwest (IL, IN, MI, MN, OH, WI...)": "US Midwest",
+  "  US Northeast (CT, MA, NJ, NY, PA, RI...)": "US Northeast",
+  "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)": "US South",
+  "  US Southeast (FL, GA, NC, SC, VA...)": "US Southeast",
+  "  US West (AZ, CA, CO, OR, UT, WA...)": "US West",
+  "    Arizona": "Arizona",
+  "    California": "California",
+  "    Colorado": "Colorado",
+  "    Florida": "Florida",
+  "    Georgia": "Georgia",
+  "    Illinois": "Illinois",
+  "    Massachusetts": "Massachusetts",
+  "    New York": "New York",
+  "    North Carolina": "North Carolina",
+  "    Ohio": "Ohio",
+  "    Pennsylvania": "Pennsylvania",
+  "    Tennessee": "Tennessee",
+  "    Texas": "Texas",
+  "    Washington": "Washington",
+
+  "APAC": "APAC",
+  "  Australia": "Australia",
+  "  India": "India",
+  "  Japan": "Japan",
+  "  Singapore": "Singapore",
+  "  South Korea": "South Korea",
+
+  "Canada": "Canada",
+
+  "European Union": "EU",
+  "  France": "France",
+  "  Germany": "Germany",
+  "  Ireland": "Ireland",
+  "  Italy": "Italy",
+  "  Netherlands": "Netherlands",
+  "  Spain": "Spain",
+  "  Sweden": "Sweden",
+
+  "Latin America": "Latin America",
+  "  Argentina": "Argentina",
+  "  Brazil": "Brazil",
+  "  Chile": "Chile",
+  "  Colombia": "Colombia",
+  "  Mexico": "Mexico",
+
+  "Middle East": "Middle East",
+  "  Israel": "Israel",
+  "  Saudi Arabia": "Saudi Arabia",
+  "  United Arab Emirates": "UAE",
+
+  "United Kingdom": "UK",
 };
 
 const INDUSTRIES = [
@@ -579,6 +666,17 @@ export default function AtomCampaign() {
   const pausedRef = useRef(false);
 
   pausedRef.current = isPaused;
+
+  // Auto-build targets when arriving with ?brief= so Objection Handler
+  // 'Use in Campaign' lands directly into a running target build.
+  const autoBuiltRef = useRef(false);
+  useEffect(() => {
+    if (autoBuiltRef.current) return;
+    if (brief && brief.length > 10) {
+      autoBuiltRef.current = true;
+      setTimeout(() => buildTargets(), 500);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Step 2: Build Targets ─────────────────────────────────────────────────
 

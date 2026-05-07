@@ -155,8 +155,11 @@ const ANALYSIS_TYPES = [
 ];
 
 const REGIONS = [
-  "North America", "United States", "Canada", "Europe", "United Kingdom",
-  "APAC", "Latin America", "Middle East", "Global",
+  "Global", "United States", "Canada", "Mexico",
+  "Europe", "United Kingdom", "Germany", "France", "Netherlands", "Spain", "Italy",
+  "APAC", "Japan", "Australia", "Singapore", "India",
+  "Latin America", "Brazil", "Argentina",
+  "Middle East", "UAE", "Saudi Arabia", "Israel",
 ];
 
 const TIME_HORIZONS = [
@@ -343,7 +346,7 @@ export default function MarketIntent() {
   // Form state
   const [selectedProduct, setSelectedProduct] = useState("all");
   const [selectedIndustry, setSelectedIndustry] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("North America");
+  const [selectedRegion, setSelectedRegion] = useState("United States");
   const [analysisType, setAnalysisType] = useState("Trend Analysis");
   const [timeHorizon, setTimeHorizon] = useState("90 days");
   const [customQuery, setCustomQuery] = useState(params.get("query") || "");
@@ -412,7 +415,7 @@ export default function MarketIntent() {
       saveHistory(updated);
       setLocalHistory(updated);
 
-      toast({ title: "Intel ready", description: "Market intelligence complete." });
+      toast({ title: "Intel ready", description: "Market intelligence complete.", ...(({ navigateTo: "/market" } as any)) });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -438,7 +441,7 @@ export default function MarketIntent() {
     if (productObj) setSelectedProduct(productObj.value);
     setSelectedIndustry(entry.industry || "");
     setAnalysisType(entry.analysisType || "Trend Analysis");
-    setSelectedRegion(entry.region || "North America");
+    setSelectedRegion(entry.region || "United States");
     setTimeHorizon(entry.timeHorizon || "90 days");
     setActiveResult(entry.result);
     setShowHistory(false);

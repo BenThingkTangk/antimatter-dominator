@@ -126,7 +126,8 @@ async function searchApolloProspects(
   filters: ScanFilters,
   geoFilters: { personLocations?: string[]; organizationLocations?: string[] },
   employeeSizeRangeStr: string | null,
-  perPage: number = 100
+  perPage: number = 100,
+  page: number = 1
 ): Promise<any[]> {
   if (!APOLLO_API_KEY) return [];
 
@@ -135,7 +136,7 @@ async function searchApolloProspects(
 
     const searchBody: Record<string, any> = {
       person_seniorities: seniorityCriteria,
-      page: 1,
+      page,
       per_page: perPage,
     };
 
@@ -700,8 +701,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       keywords: filters.keywords,
     }));
 
-    const apolloPeople = await searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 100);
-    console.log(`[scan] Apollo returned ${apolloPeople.length} people`);
+    // Apollo paginated fetch — fan out 3 pages of 100 in parallel for ~300 people,
+    // ensuring we surface enough distinct orgs after grouping (was 14, now 60–100).
+    const requestedMax = Math.max(25, Math.min(150, Number((filters as any).maxResults) || 100));
+    const pageCount = requestedMax >= 80 ? 3 : requestedMax >= 40 ? 2 : 1;
+    const pageResults = await Promise.all(
+      Array.from({ length: pageCount }, (_, i) =>
+        searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 100, i + 1)
+      )
+    );
+    const apolloPeople = pageResults.flat();
+    console.log(`[scan] Apollo returned ${apolloPeople.length} people across ${pageCount} pages`);
 
     // ── STEP 2: Group people by organization to get distinct companies ────────
     const orgs = groupPeopleByOrg(apolloPeople);
@@ -711,11 +721,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const excludeSet = new Set((filters.excludeCompanies || []).map((c) => c.toLowerCase()));
     const filteredOrgs = orgs.filter((o) => !excludeSet.has(o.companyName.toLowerCase()));
 
-    // Score and sort, take top 25
+    // Score and sort, take requested max (default 100, was capped at 25).
     const scoredOrgs = filteredOrgs
       .map((o) => ({ org: o, score: scoreCompany(o, filters) }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 25);
+      .slice(0, requestedMax);
 
     // ── STEP 3: For each org, reveal contacts + enrich with Hunter & PDL ──────
     const results = await Promise.all(

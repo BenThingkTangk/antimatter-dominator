@@ -300,7 +300,7 @@ export default function ObjectionHandler() {
       saveHistory(updated);
       setLocalHistory(updated);
 
-      toast({ title: "Response ready", description: "Counter-objection crafted." });
+      toast({ title: "Response ready", description: "Counter-objection crafted.", ...({ navigateTo: "/objections" } as any) });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });

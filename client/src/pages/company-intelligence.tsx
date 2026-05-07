@@ -862,8 +862,13 @@ function PeopleSection({ contacts }: { contacts: Contact[] }) {
 export default function CompanyIntelligence() {
   const { toast } = useToast();
 
-  const [company, setCompany] = useState("");
-  const [website, setWebsite] = useState("");
+  // URL params — e.g. /company-intelligence?query=Acme or ?company=Acme&website=acme.com
+  const urlParams = new URLSearchParams(window.location.hash.split("?")[1] || "");
+  const initialCompany = urlParams.get("company") || urlParams.get("query") || "";
+  const initialWebsite = urlParams.get("website") || (initialCompany.includes(".") ? initialCompany : "");
+
+  const [company, setCompany] = useState(initialCompany);
+  const [website, setWebsite] = useState(initialWebsite);
   const [depth, setDepth] = useState<"standard" | "enterprise">("enterprise");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<WarBookResult | null>(null);
@@ -873,6 +878,19 @@ export default function CompanyIntelligence() {
   const [sonarStep, setSonarStep] = useState(0);
 
   const stepRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-build when arriving with ?company= or ?query= so Objection Handler
+  // 'Research Their Pain Point' lands directly into a running WarBook query.
+  const autoRanRef = useRef(false);
+  useEffect(() => {
+    if (autoRanRef.current) return;
+    if (initialCompany) {
+      autoRanRef.current = true;
+      // If no website was passed but the company looks like a domain, derive it.
+      if (!initialWebsite && initialCompany.includes(".")) setWebsite(initialCompany);
+      setTimeout(() => handleBuild(), 400);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sonar loading animation
   useEffect(() => {
@@ -887,10 +905,12 @@ export default function CompanyIntelligence() {
   }, [isLoading]);
 
   async function handleBuild() {
-    if (!company.trim() || !website.trim()) {
-      toast({ title: !company.trim() ? "Company name required" : "Website URL required", description: "Both company name and website URL are required to build a WarBook.", variant: "destructive" });
+    if (!company.trim()) {
+      toast({ title: "Company name required", description: "Enter a company to build a WarBook.", variant: "destructive" });
       return;
     }
+    // Website is optional — if missing, derive from company if it looks like a domain.
+    if (!website.trim() && company.includes(".")) setWebsite(company);
     setIsLoading(true);
     setResult(null);
     setVoiceBrief(null);
@@ -920,7 +940,7 @@ export default function CompanyIntelligence() {
       hist.unshift(entry);
       saveHistory(hist);
 
-      toast({ title: "WarBook Complete", description: `Full intelligence dossier loaded for ${company}.` });
+      toast({ title: "WarBook Complete", description: `Full intelligence dossier loaded for ${company}.`, ...({ navigateTo: "/company-intelligence" } as any) });
     } catch (err) {
       console.error(err);
       toast({ title: "Research failed", description: "Could not complete research. Please try again.", variant: "destructive" });

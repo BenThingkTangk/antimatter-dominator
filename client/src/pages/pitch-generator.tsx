@@ -294,7 +294,7 @@ export default function PitchGenerator() {
       saveHistory(updated);
       setLocalHistory(updated);
 
-      toast({ title: "Pitch generated", description: "Your lethal pitch is ready." });
+      toast({ title: "Pitch generated", description: "Your lethal pitch is ready.", ...({ navigateTo: "/pitch" } as any) });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -302,7 +302,12 @@ export default function PitchGenerator() {
   // Auto-generate when navigated from another module with context
   const autoGenRef = useRef(false);
   useEffect(() => {
-    if (!autoGenRef.current && params.get("context") && selectedProduct) {
+    // Auto-generate when arriving from another module via ?context= URL param.
+    // Even if no product was passed (selectedProduct empty), we still kick off
+    // the pitch — the user can refine the product after. This is the fix for
+    // 'click likely objection in Pitch → Objection Handler' (and the reverse:
+    // 'Build Pitch from This' in Objection Handler) actually generating.
+    if (!autoGenRef.current && params.get("context")) {
       autoGenRef.current = true;
       setTimeout(() => generatePitch.mutate(), 400);
     }

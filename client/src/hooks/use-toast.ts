@@ -5,8 +5,13 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 3
+// Toasts auto-dismiss in 5s and are removed from DOM 600ms later (after
+// the slide-out animation). Was 1000000ms (~16 minutes) which left the
+// toast hanging forever — and clicking X left an empty Radix shell behind
+// because we never reached the REMOVE_TOAST step.
+const TOAST_REMOVE_DELAY = 600
+const TOAST_AUTO_DISMISS_MS = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -160,6 +165,10 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // Auto-dismiss after TOAST_AUTO_DISMISS_MS so toasts never linger.
+  // The DISMISS → REMOVE pipeline already handles cleanup of the Radix shell.
+  setTimeout(dismiss, TOAST_AUTO_DISMISS_MS)
 
   return {
     id: id,

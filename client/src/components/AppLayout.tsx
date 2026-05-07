@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
   { href: "/objections", icon: MessageSquareWarning, label: "ΔTOM Objection Handler" },
   { href: "/market", icon: Shield, label: "ΔTOM Market Intent" },
   { href: "/prospects", icon: Radar, label: "ΔTOM Prospect" },
-  { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Lead Gen" },
+  { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Dial" },
   { href: "/atom-campaign", icon: Megaphone, label: "ΔTOM Campaign" },
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];

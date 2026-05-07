@@ -85,31 +85,66 @@ const INDUSTRIES = [
   "Biotech & Pharma",
 ];
 
+// Alphabetized by group: top-level regions first, then US sub-regions,
+// then states within the US, then countries within each external region.
 const GEOGRAPHIES = [
-  { value: "All US", label: "All US" },
-  { value: "US South", label: "US South (TX, FL, GA, NC, TN...)" },
-  { value: "US Northeast", label: "US Northeast (NY, NJ, MA, CT, PA...)" },
-  { value: "US Midwest", label: "US Midwest (IL, OH, MI, IN, MN...)" },
-  { value: "US West", label: "US West (CA, WA, OR, CO, AZ...)" },
-  { value: "US Southeast", label: "US Southeast (FL, GA, NC, SC, VA...)" },
-  { value: "Texas", label: "Texas" },
-  { value: "California", label: "California" },
-  { value: "New York", label: "New York" },
-  { value: "Florida", label: "Florida" },
-  { value: "Illinois", label: "Illinois" },
-  { value: "Georgia", label: "Georgia" },
-  { value: "North Carolina", label: "North Carolina" },
-  { value: "Washington", label: "Washington" },
-  { value: "Massachusetts", label: "Massachusetts" },
-  { value: "Colorado", label: "Colorado" },
-  { value: "Arizona", label: "Arizona" },
-  { value: "Tennessee", label: "Tennessee" },
-  { value: "Pennsylvania", label: "Pennsylvania" },
-  { value: "Ohio", label: "Ohio" },
-  { value: "EU", label: "EU (Germany, France, Netherlands...)" },
-  { value: "UK", label: "United Kingdom" },
-  { value: "Canada", label: "Canada" },
+  // Top-level scope
   { value: "Global", label: "Global" },
+
+  // United States — the whole country, then alphabetized regions, then states
+  { value: "All US",        label: "United States" },
+  { value: "US Midwest",    label: "  US Midwest (IL, IN, MI, MN, OH, WI...)" },
+  { value: "US Northeast",  label: "  US Northeast (CT, MA, NJ, NY, PA, RI...)" },
+  { value: "US South",      label: "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)" },
+  { value: "US Southeast",  label: "  US Southeast (FL, GA, NC, SC, VA...)" },
+  { value: "US West",       label: "  US West (AZ, CA, CO, OR, UT, WA...)" },
+  { value: "Arizona",       label: "    Arizona" },
+  { value: "California",    label: "    California" },
+  { value: "Colorado",      label: "    Colorado" },
+  { value: "Florida",       label: "    Florida" },
+  { value: "Georgia",       label: "    Georgia" },
+  { value: "Illinois",      label: "    Illinois" },
+  { value: "Massachusetts", label: "    Massachusetts" },
+  { value: "New York",      label: "    New York" },
+  { value: "North Carolina",label: "    North Carolina" },
+  { value: "Ohio",          label: "    Ohio" },
+  { value: "Pennsylvania",  label: "    Pennsylvania" },
+  { value: "Tennessee",     label: "    Tennessee" },
+  { value: "Texas",         label: "    Texas" },
+  { value: "Washington",    label: "    Washington" },
+
+  // Other major regions, alphabetized, with their countries indented
+  { value: "APAC",          label: "APAC" },
+  { value: "Australia",     label: "  Australia" },
+  { value: "India",         label: "  India" },
+  { value: "Japan",         label: "  Japan" },
+  { value: "Singapore",     label: "  Singapore" },
+  { value: "South Korea",   label: "  South Korea" },
+
+  { value: "Canada",        label: "Canada" },
+
+  { value: "EU",            label: "European Union" },
+  { value: "France",        label: "  France" },
+  { value: "Germany",       label: "  Germany" },
+  { value: "Ireland",       label: "  Ireland" },
+  { value: "Italy",         label: "  Italy" },
+  { value: "Netherlands",   label: "  Netherlands" },
+  { value: "Spain",         label: "  Spain" },
+  { value: "Sweden",        label: "  Sweden" },
+
+  { value: "Latin America", label: "Latin America" },
+  { value: "Argentina",     label: "  Argentina" },
+  { value: "Brazil",        label: "  Brazil" },
+  { value: "Chile",         label: "  Chile" },
+  { value: "Colombia",      label: "  Colombia" },
+  { value: "Mexico",        label: "  Mexico" },
+
+  { value: "Middle East",   label: "Middle East" },
+  { value: "Israel",        label: "  Israel" },
+  { value: "Saudi Arabia",  label: "  Saudi Arabia" },
+  { value: "UAE",           label: "  United Arab Emirates" },
+
+  { value: "UK",            label: "United Kingdom" },
 ];
 
 const EMPLOYEE_SIZES = [

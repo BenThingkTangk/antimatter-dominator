@@ -661,12 +661,23 @@ export default function ATOMLeadGen() {
 
   // Form — pre-fill from cross-module navigation
   const [phone, setPhone] = useState(params.get("phone") || "");
-  const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || params.get("contact") || "");
+  // Contact name is split into first + last fields per the brand spec.
+  // We back-populate from a single ?contact=/?name= param too so old links keep working.
+  const _legacyName = params.get("firstName") || params.get("name") || params.get("contact") || "";
+  const _legacyParts = _legacyName.trim().split(/\s+/);
+  const [firstName, setFirstName] = useState(params.get("contactFirstName") || _legacyParts[0] || "");
+  const [lastName, setLastName]   = useState(params.get("contactLastName") || _legacyParts.slice(1).join(" ") || "");
+  const contactName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const setContactName = (v: string) => {
+    const parts = (v || "").trim().split(/\s+/);
+    setFirstName(parts[0] || "");
+    setLastName(parts.slice(1).join(" "));
+  };
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
-  // Deal value drives GPT-5.5 enterprise routing on the backend.
-  // Empty / 0 → default Claude Sonnet path. >= GPT5_MIN_DEAL_VALUE on enterprise tenants → GPT-5.5.
-  const [dealValue, setDealValue] = useState<string>(params.get("dealValue") || "");
+  // Deal value field removed from the UI — enterprise routing now keys off
+  // tenant plan + Apollo firmographics rather than a manual rep input.
+  const dealValue = "";
   // Tier badge shown after dial — set from /api/atom-leadgen/call response.
   const [callTier, setCallTier] = useState<"standard" | "enterprise" | null>(null);
   const [reasoningModel, setReasoningModel] = useState<string | null>(null);
@@ -1162,7 +1173,7 @@ export default function ATOMLeadGen() {
         <div className="flex items-start justify-between gap-4 mb-2">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
-              ATOM Lead Gen
+              ATOM Dial
             </h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
               AI-powered outbound calling with live analytics
@@ -1309,16 +1320,36 @@ export default function ATOMLeadGen() {
                   />
                 </div>
 
-                {/* Contact Name */}
+                {/* Contact First Name */}
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
-                    Contact Name
+                    Contact First Name
                   </label>
                   <input
                     type="text"
-                    placeholder="Jane Smith"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Jane"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                </div>
+
+                {/* Contact Last Name */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                    Contact Last Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Smith"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
@@ -1369,45 +1400,8 @@ export default function ATOMLeadGen() {
                   />
                 </div>
 
-                {/* Deal Value — drives GPT-5.5 enterprise routing */}
-                <div>
-                  <label className="block text-xs mb-1.5 flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
-                    Deal Value <span style={{ color: "var(--color-text-muted)" }}>(optional)</span>
-                    {Number(dealValue.replace(/[^0-9.]/g, "")) >= 50000 && (
-                      <span
-                        className="text-[9px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
-                          color: "var(--color-primary)",
-                          border: "1px solid color-mix(in oklab, var(--color-primary) 35%, transparent)",
-                          fontFamily: "var(--font-mono)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        GPT-5 eligible
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="$50,000"
-                    value={dealValue}
-                    onChange={(e) => setDealValue(e.target.value)}
-                    disabled={callStatus === "active" || callStatus === "dialing"}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
-                      fontFamily: "var(--font-mono)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  />
-                  <div className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)" }}>
-                    Calls on enterprise tenants with deal value ≥ $50K route to GPT-5 reasoning (1M context).
-                  </div>
-                </div>
+                {/* Deal Value field removed — enterprise routing keys off
+                    tenant plan + Apollo firmographics on the backend now. */}
               </div>
 
               {/* CTA row */}

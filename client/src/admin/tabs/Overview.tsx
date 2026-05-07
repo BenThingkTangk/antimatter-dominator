@@ -28,7 +28,7 @@ export default function Overview() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
         <KpiCard label="Active tenants" value={kpis.tenants} sub="Live workspaces" icon={Building2} tone="default" />
         <KpiCard label="Seats" value={kpis.users} sub="Across every tenant" icon={Users} tone="default" />
-        <KpiCard label="Dials · Today" value={kpis.dialsToday} sub="ΔTOM Lead Gen" icon={Phone} tone="success" />
+        <KpiCard label="Dials · Today" value={kpis.dialsToday} sub="ΔTOM Dial" icon={Phone} tone="success" />
         <KpiCard label="Compliance blocks · 24h" value={kpis.complianceBlocks24h} sub="TCPA pre-dial gate" icon={Shield} tone={kpis.complianceBlocks24h > 0 ? "warn" : "default"} />
         <KpiCard label="Open incidents" value={kpis.openIncidents} sub="System health" icon={AlertTriangle} tone={kpis.openIncidents > 0 ? "danger" : "success"} />
       </div>
