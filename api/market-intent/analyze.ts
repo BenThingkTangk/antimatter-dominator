@@ -3,6 +3,56 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
 
+// ─── Apollo enrichment (inlined per Vercel nft requirement) ─────────────────
+const APOLLO_KEY = (process.env.APOLLO_API_KEY || "").replace(/\\n/g, "").trim();
+async function apolloBrief(opts: { domain?: string; companyName?: string; firstName?: string; lastName?: string }): Promise<string> {
+  if (!APOLLO_KEY) return "";
+  const cleanedDomain = opts.domain ? opts.domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] : "";
+  if (!cleanedDomain && !opts.companyName) return "";
+  try {
+    const tasks: Promise<any>[] = [];
+    if (cleanedDomain) {
+      tasks.push(fetch(`https://api.apollo.io/api/v1/organizations/enrich?domain=${encodeURIComponent(cleanedDomain)}`,
+        { headers: { "X-Api-Key": APOLLO_KEY }, signal: AbortSignal.timeout(2500) }).then(r => r.ok ? r.json() : null).catch(() => null));
+    } else { tasks.push(Promise.resolve(null)); }
+    if (opts.firstName) {
+      tasks.push(fetch("https://api.apollo.io/api/v1/people/match", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-Api-Key": APOLLO_KEY },
+        body: JSON.stringify({ first_name: opts.firstName, last_name: opts.lastName, domain: cleanedDomain, organization_name: opts.companyName, reveal_personal_emails: false, reveal_phone_number: false }),
+        signal: AbortSignal.timeout(2500),
+      }).then(r => r.ok ? r.json() : null).catch(() => null));
+    } else { tasks.push(Promise.resolve(null)); }
+    const [orgData, personData] = await Promise.all(tasks);
+    const org = orgData?.organization;
+    const person = personData?.person;
+    if (!org && !person) return "";
+    const lines: string[] = ["", "FRESH APOLLO INTEL:"];
+    if (org) {
+      if (org.name)                    lines.push(`• ${org.name} — ${org.industry || "?"}`);
+      if (org.estimated_num_employees) lines.push(`• ~${org.estimated_num_employees.toLocaleString()} employees`);
+      const rev = org.organization_revenue_printed || org.annual_revenue_printed;
+      if (rev)                         lines.push(`• Revenue: ${rev}`);
+      if (org.short_description)       lines.push(`• ${String(org.short_description).slice(0, 220)}`);
+      if (Array.isArray(org.technology_names) && org.technology_names.length)
+                                       lines.push(`• Tech: ${org.technology_names.slice(0, 8).join(", ")}`);
+      if (Array.isArray(org.funding_events) && org.funding_events[0]) {
+        const f = org.funding_events[0];
+        const amt = f.amount ? `$${(f.amount / 1_000_000).toFixed(1)}M` : "";
+        lines.push(`• Latest round: ${f.type || "funding"} ${amt} ${f.date || ""}`.trim());
+      }
+    }
+    if (person) {
+      if (person.title)                lines.push(`• Contact: ${person.name} — ${person.title}`);
+      if (person.seniority)            lines.push(`• Seniority: ${person.seniority}`);
+      if (person.previous_employment?.[0]?.end_date) {
+        const days = Math.round((Date.now() - new Date(person.previous_employment[0].end_date).getTime()) / 86400000);
+        if (days < 180) lines.push(`• Recently joined (${days}d) from ${person.previous_employment[0].title} @ ${person.previous_employment[0].organization_name}`);
+      }
+    }
+    return lines.join("\n");
+  } catch { return ""; }
+}
+
 async function getRAGContext(query: string, module: string): Promise<string> {
   if (!query || query.trim().length < 2) return "";
   try {
@@ -32,9 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       topic,
     } = req.body;
 
-    // Fetch RAG context if industry or product specified
+    // Fetch RAG context + Apollo firmographics in parallel
     const ragTarget = industry || productSlug || "";
-    const ragCtx = ragTarget ? await getRAGContext(ragTarget, "market-intent") : "";
+    const apolloTargetDomain = (req.body?.companyDomain || "").toString();
+    const apolloTargetName = (req.body?.companyName || "").toString();
+    const [ragCtx, apolloCtx] = await Promise.all([
+      ragTarget ? getRAGContext(ragTarget, "market-intent") : Promise.resolve(""),
+      apolloBrief({ domain: apolloTargetDomain, companyName: apolloTargetName }),
+    ]);
 
     const systemPrompt = `You are the Antimatter AI Sales Intelligence Engine. Generate deep, actionable market intelligence for enterprise sales teams. You MUST respond with valid JSON only — no markdown, no preamble.
 
@@ -54,7 +109,7 @@ ${analysisType ? `ANALYSIS TYPE: ${analysisType}` : ""}
 ${timeHorizon ? `TIME HORIZON: ${timeHorizon}` : "90 days"}
 ${topic ? `TOPIC: ${topic}` : ""}
 ${customQuery ? `CUSTOM QUERY: ${customQuery}` : ""}
-${ragCtx ? `BACKGROUND INTELLIGENCE:\n${ragCtx}\n` : ""}
+${ragCtx ? `BACKGROUND INTELLIGENCE:\n${ragCtx}\n` : ""}${apolloCtx ? `LIVE FIRMOGRAPHIC SIGNAL:${apolloCtx}\n` : ""}
 
 Return ONLY this JSON structure (no markdown):
 {

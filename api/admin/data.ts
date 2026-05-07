@@ -49,7 +49,7 @@ const PROVIDERS = [
   { name: "Hume EVI",          keyVar: "HUME_API_KEY",       used_by: ["atom-leadgen","voice"] },
   { name: "Twilio",            keyVar: "TWILIO_ACCOUNT_SID", used_by: ["atom-leadgen"] },
   { name: "Pinecone",          keyVar: "PINECONE_API_KEY",   used_by: ["warbook","embeddings"] },
-  { name: "Apollo",            keyVar: "APOLLO_API_KEY",     used_by: ["prospects","warbook"] },
+  { name: "Apollo",            keyVar: "APOLLO_API_KEY",     used_by: ["prospects","warbook","voice","pitch","objection","campaign","market"] },
   { name: "People Data Labs",  keyVar: "PDL_API_KEY",        used_by: ["prospects","warbook"] },
   { name: "Supabase",          keyVar: "SUPABASE_URL",       used_by: ["all"] },
   { name: "Stripe",            keyVar: "STRIPE_SECRET_KEY",  used_by: ["billing"] },
