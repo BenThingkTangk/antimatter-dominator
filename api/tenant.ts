@@ -24,7 +24,7 @@ const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY); // for admin actions
 
 const RESEND_API_KEY = clean(process.env.RESEND_API_KEY);
-const RESEND_FROM = clean(process.env.RESEND_FROM) || "ATOM <hello@atom.atomsalesdominator.com>";
+const RESEND_FROM = clean(process.env.RESEND_FROM) || "ATOM <hello@atomsalesdominator.com>";
 
 // ── Inlined Resend send + brand HTML (Vercel nft tracing breaks sibling _lib imports) ──
 interface EmailInput { to: string; subject: string; html: string; text?: string; replyTo?: string }
