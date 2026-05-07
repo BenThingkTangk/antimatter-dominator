@@ -350,11 +350,11 @@ function TextAnalyzerTab() {
                 {/* Linguistic Cues */}
                 {result.linguisticCues && (
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <MiniBar label="Passive Voice" value={result.linguisticCues.passiveVoice} color="#a2a3e9" />
+                    <MiniBar label="Passive Voice" value={result.linguisticCues.passiveVoice} color="#00e6d3" />
                     <MiniBar label="Distancing" value={result.linguisticCues.distancingLanguage} color="var(--color-error)" />
                     <MiniBar label="Over-Certainty" value={result.linguisticCues.overCertainty} color="#fbbf24" />
                     <MiniBar label="Non-Answer" value={result.linguisticCues.nonAnswerRatio} color="var(--color-error)" />
-                    <MiniBar label="Filler Words" value={result.linguisticCues.fillerWords} color="#a2a3e9" />
+                    <MiniBar label="Filler Words" value={result.linguisticCues.fillerWords} color="#00e6d3" />
                   </div>
                 )}
               </div>

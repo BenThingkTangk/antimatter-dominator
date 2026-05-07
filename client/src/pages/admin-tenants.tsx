@@ -159,7 +159,7 @@ export default function AdminTenants() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen p-6 md:p-10" style={{ background: "#0a0a0c", color: "#f6f6fd" }}>
+    <div className="min-h-screen p-6 md:p-10" style={{ background: "#0a0a0c", color: "var(--color-text)" }}>
       <div className="max-w-6xl mx-auto">
         <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -167,7 +167,7 @@ export default function AdminTenants() {
               <Sparkles size={28} style={{ color: "var(--brand-primary, var(--color-error))" }} />
               Tenants
             </h1>
-            <p className="mt-2 text-sm" style={{ color: "rgba(246,246,253,0.55)" }}>
+            <p className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
               Spin up a white-labeled ΔTOM Sales Dominator deployment in 30 seconds. Each tenant gets their own subdomain, brand, and per-seat billing.
             </p>
           </div>
@@ -199,7 +199,7 @@ export default function AdminTenants() {
                 placeholder="Paste ADMIN_API_KEY"
                 onBlur={(e) => saveAdminKey(e.target.value)}
                 className="mt-2 w-full px-3 py-2 rounded-md text-sm outline-none"
-                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.15)", color: "#f6f6fd" }}
+                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
               />
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function AdminTenants() {
         {showNew && (
           <section
             className="rounded-2xl p-6 mb-8"
-            style={{ background: "rgba(246,246,253,0.03)", border: "1px solid rgba(246,246,253,0.08)" }}
+            style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Customer name">
@@ -217,7 +217,7 @@ export default function AdminTenants() {
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Acme Corp"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.12)", color: "#f6f6fd" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Subdomain slug">
@@ -226,11 +226,11 @@ export default function AdminTenants() {
                     value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     placeholder="acme"
                     className="flex-1 px-3 py-2 rounded-md text-sm outline-none"
-                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.12)", color: "#f6f6fd" }}
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
                   />
                   <span
                     className="px-3 py-2 rounded-md text-xs flex items-center"
-                    style={{ background: "rgba(246,246,253,0.05)", color: "rgba(246,246,253,0.6)" }}
+                    style={{ background: "var(--color-text-faint)", color: "var(--color-text-muted)" }}
                   >
                     .atomdominator.com
                   </span>
@@ -241,7 +241,7 @@ export default function AdminTenants() {
                   value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://acme.com/logo.svg"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.12)", color: "#f6f6fd" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Admin email">
@@ -250,14 +250,14 @@ export default function AdminTenants() {
                   type="email"
                   placeholder="ops@acme.com"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.12)", color: "#f6f6fd" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Plan">
                 <select
                   value={plan} onChange={(e) => setPlan(e.target.value)}
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(246,246,253,0.12)", color: "#f6f6fd" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
                 >
                   {PLAN_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
@@ -272,8 +272,8 @@ export default function AdminTenants() {
                       className="rounded-md flex items-center gap-1 px-1.5 py-1 text-[10px]"
                       style={{
                         background: "rgba(0,0,0,0.4)",
-                        border: primaryHex === p.primary ? `1.5px solid ${p.primary}` : "1px solid rgba(246,246,253,0.12)",
-                        color: "rgba(246,246,253,0.8)",
+                        border: primaryHex === p.primary ? `1.5px solid ${p.primary}` : "1px solid var(--color-text-faint)",
+                        color: "var(--color-text)",
                       }}
                     >
                       <span className="w-3 h-3 rounded-full" style={{ background: p.primary }} />
@@ -293,7 +293,7 @@ export default function AdminTenants() {
               </div>
               <div>
                 <div className="text-base font-semibold">{name || "Your tenant"} <span style={{ color: accentHex }}>·</span> ATOM</div>
-                <div className="text-xs" style={{ color: "rgba(246,246,253,0.55)" }}>{slug ? `${slug}.atomdominator.com` : "subdomain.atomdominator.com"}</div>
+                <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>{slug ? `${slug}.atomdominator.com` : "subdomain.atomdominator.com"}</div>
               </div>
             </div>
 
@@ -330,14 +330,14 @@ export default function AdminTenants() {
 
         {/* Tenant list */}
         <section>
-          <h2 className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.5)" }}>
+          <h2 className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
             Active tenants ({tenants.length})
           </h2>
           {loading ? (
-            <div className="text-sm" style={{ color: "rgba(246,246,253,0.55)" }}>Loading…</div>
+            <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading…</div>
           ) : tenants.length === 0 ? (
-            <div className="rounded-xl p-8 text-center" style={{ background: "rgba(246,246,253,0.03)", border: "1px solid rgba(246,246,253,0.08)" }}>
-              <p className="text-sm" style={{ color: "rgba(246,246,253,0.55)" }}>
+            <div className="rounded-xl p-8 text-center" style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}>
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
                 No tenants yet. Click "New tenant" to spin up your first.
               </p>
             </div>
@@ -347,14 +347,14 @@ export default function AdminTenants() {
                 <div
                   key={t.slug}
                   className="rounded-xl p-4 flex items-center gap-4 flex-wrap"
-                  style={{ background: "rgba(246,246,253,0.03)", border: "1px solid rgba(246,246,253,0.08)" }}
+                  style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}
                 >
                   <div className="rounded-full w-10 h-10 flex items-center justify-center text-xs font-bold" style={{ background: t.primary_hex, color: "white", boxShadow: `0 0 10px ${t.primary_hex}66` }}>
                     {t.name?.[0] || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-base truncate">{t.name}</div>
-                    <div className="text-xs flex flex-wrap items-center gap-2" style={{ color: "rgba(246,246,253,0.55)" }}>
+                    <div className="text-xs flex flex-wrap items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
                       <a href={`https://${t.slug}.atomdominator.com`} target="_blank" rel="noopener" className="hover:underline flex items-center gap-1">
                         {t.slug}.atomdominator.com <ExternalLink size={11} />
                       </a>
@@ -368,7 +368,7 @@ export default function AdminTenants() {
                     className="p-2 rounded-md hover:bg-white/5"
                     title="Delete tenant"
                   >
-                    <Trash2 size={14} style={{ color: "rgba(246,246,253,0.5)" }} />
+                    <Trash2 size={14} style={{ color: "var(--color-text-muted)" }} />
                   </button>
                 </div>
               ))}
@@ -383,7 +383,7 @@ export default function AdminTenants() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-wider mb-1.5 block" style={{ color: "rgba(246,246,253,0.5)" }}>{label}</span>
+      <span className="text-xs uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-text-muted)" }}>{label}</span>
       {children}
     </label>
   );

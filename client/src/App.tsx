@@ -35,10 +35,14 @@ import MobileApp from "./mobile/MobileApp";
 function isPhoneClass(): boolean {
   if (typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";
-  const touch = matchMedia("(pointer: coarse)").matches;
-  const narrow = window.innerWidth <= 820;
+  // Strict iPhone/Android-phone UA detection. Tablets, narrow desktop windows,
+  // and macOS with touchpads must never trigger the mobile shell.
   const iphoneLike = /iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  return (touch && narrow) || iphoneLike;
+  if (!iphoneLike) return false;
+  // Plus very narrow viewport so a phone in landscape stays on desktop only
+  // when the user has explicitly rotated wide.
+  const narrow = window.innerWidth <= 600;
+  return narrow;
 }
 
 /**
@@ -60,13 +64,15 @@ const MOBILE_ROUTE_MAP: Record<string, string> = {
 };
 
 /**
- * MobileGate — on first paint, if this is a phone AND the URL is at the
- * root, redirect to /m/home. Also rewrites legacy desktop paths to their
- * mobile equivalents so navigate("/pitch?…") inside an embedded module
- * still routes the user to /m/pitch?… instead of bouncing them home.
+ * MobileGate — runs ONCE on first paint. If the device is a phone AND the
+ * user has not pinned the desktop view, route to the mobile experience.
+ *
+ * Critically, this does NOT re-run on subsequent route changes — that bug
+ * would bounce desktop users to /m/* whenever a momentary viewport check
+ * tripped (devtools open, browser zoom, touchpad reporting touch, etc.).
  */
 function MobileGate() {
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   useEffect(() => {
     const url = new URL(window.location.href);
     const forceDesktop = url.searchParams.get("desktop") === "1";
@@ -74,30 +80,28 @@ function MobileGate() {
       try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
       return;
     }
+    // Once a session is pinned to desktop, stay there forever.
     let stickDesktop = false;
     try { stickDesktop = sessionStorage.getItem("m_force_desktop") === "1"; } catch {}
     if (stickDesktop) return;
 
     // Already inside mobile? Nothing to do.
-    if (location.startsWith("/m")) return;
+    const initialPath = window.location.hash.replace(/^#/, "").split("?")[0] || "/";
+    if (initialPath.startsWith("/m")) return;
 
-    // Rewrite legacy desktop paths to their mobile equivalent, preserving
-    // any query string. Wouter's hash location strips the search part —
-    // so we read it directly from window.location.hash.
     if (isPhoneClass()) {
-      // Look up base path (without query) in the rewrite table.
-      const [basePath] = location.split("?");
-      const target = MOBILE_ROUTE_MAP[basePath];
+      const target = MOBILE_ROUTE_MAP[initialPath];
       const rawHash = window.location.hash || "";
       const queryIdx = rawHash.indexOf("?");
       const queryStr = queryIdx >= 0 ? rawHash.slice(queryIdx) : "";
-      if (target) {
-        navigate(target + queryStr);
-      } else {
-        navigate("/m/home");
-      }
+      navigate((target || "/m/home") + queryStr);
+    } else {
+      // Pin desktop for the rest of the session — guarantees no later
+      // re-detection ever flips the user mid-flow.
+      try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
     }
-  }, [location, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
