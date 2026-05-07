@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   Shield, MessageSquareWarning, TrendingUp,
-  Radar, ChevronLeft, ChevronRight, Moon, Sun, PhoneCall, Megaphone, Brain,
+  Radar, ChevronLeft, ChevronRight, PhoneCall, Megaphone, Brain,
   Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -64,14 +64,16 @@ function AtomLockup({ markSize = 36 }: { markSize?: number }) {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  // Theme is locked dark-first per brand bible — no toggle, no state.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const session = useSessionContext();
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
+    document.documentElement.classList.add("dark");
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.style.colorScheme = "dark";
+  }, []);
 
   useEffect(() => { setMobileOpen(false); }, [location]);
 
@@ -191,8 +193,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-xs font-medium truncate" style={{ color: "var(--color-text)" }}>
                     {session.user.fullName || session.user.email}
                   </p>
-                  <p className="text-[10px] truncate" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)" }}>
-                    {session.tenant?.name || ""}
+                  <p className="text-[10px] truncate" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
+                    ATOM
                   </p>
                 </div>
               )}
@@ -242,16 +244,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </p>
           </div>
         )}
-        <Button
-          variant="ghost" size="sm"
-          className="w-full justify-start hover:bg-white/[0.03]"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-          onClick={() => setIsDark(!isDark)}
-          data-testid="button-theme-toggle"
-        >
-          {isDark ? <Sun className="w-4 h-4 mr-2 shrink-0" /> : <Moon className="w-4 h-4 mr-2 shrink-0" />}
-          {(!collapsed || isMobile) && (isDark ? "Light Mode" : "Dark Mode")}
-        </Button>
+        {/* Light/Dark toggle removed — ΔTOM is dark-first per the brand bible. */}
         {!isMobile && (
           <Button
             variant="ghost" size="sm"

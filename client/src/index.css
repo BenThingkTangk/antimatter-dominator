@@ -156,8 +156,10 @@
    "soft mineral white" — quieter teal, charcoal text
    ═══════════════════════════════════════════════════════════════════════════ */
 
-:root:not(.dark),
-[data-theme="light"] {
+/* Light mode permanently disabled — ΔTOM is dark-first per the brand bible.
+   Selector below is a dead match (.never-light is never set) so this rule
+   block is preserved as a reference but cannot apply at runtime. */
+[data-theme="never-light"] {
   --color-bg:            #f3f5f2;
   --color-bg-2:          #e9eeee;
   --color-surface:       #fbfcf9;
