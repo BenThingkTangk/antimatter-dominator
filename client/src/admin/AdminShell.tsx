@@ -9,7 +9,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import {
-  Shield, Activity, Users, Building2, CreditCard, Plug, KeyRound, BarChart3,
+  Shield, Activity, Users, Building2, CreditCard, Plug, KeyRound, BarChart3, Mail,
   HeartPulse,
 } from "lucide-react";
 import { ATOM_TEAL, ATOM_MUTED, EmptyState } from "./charts";
@@ -20,6 +20,7 @@ const TABS = [
   { id: "compliance",   label: "TCPA Compliance", icon: Shield },
   { id: "team",         label: "Team",           icon: Users },
   { id: "tenants",      label: "Tenants",        icon: Building2 },
+  { id: "emails",       label: "Email Log",      icon: Mail },
   { id: "billing",      label: "Billing",        icon: CreditCard },
   { id: "integrations", label: "Integrations",   icon: Plug },
   { id: "apikeys",      label: "API Keys",       icon: KeyRound },
@@ -30,6 +31,7 @@ const TabSystem       = lazy(() => import("./tabs/System"));
 const TabCompliance   = lazy(() => import("./tabs/Compliance"));
 const TabTeam         = lazy(() => import("./tabs/Team"));
 const TabTenants      = lazy(() => import("./tabs/Tenants"));
+const TabEmailLog     = lazy(() => import("./tabs/EmailLog"));
 const TabBilling      = lazy(() => import("./tabs/Billing"));
 const TabIntegrations = lazy(() => import("./tabs/Integrations"));
 const TabApiKeys      = lazy(() => import("./tabs/ApiKeys"));
@@ -78,6 +80,7 @@ export default function AdminShell() {
       case "compliance":   return <TabCompliance />;
       case "team":         return <TabTeam />;
       case "tenants":      return <TabTenants />;
+      case "emails":       return <TabEmailLog />;
       case "billing":      return <TabBilling />;
       case "integrations": return <TabIntegrations />;
       case "apikeys":      return <TabApiKeys />;
