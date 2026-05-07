@@ -101,7 +101,7 @@ export default function Tenants() {
       {/* ── Manage Tenants — CRUD panel ───────────────────────────────────────── */}
       <ManageTenantsPanel />
 
-      <ChartCard title="Tenant health" subtitle="Sorted by 30d dial activity">
+      <SectionCard title="Tenant health" subtitle="Sorted by 30d dial activity">
         {!data?.tenantHealth?.length ? <EmptyState /> : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {data.tenantHealth.map((t) => (
@@ -124,7 +124,41 @@ export default function Tenants() {
             ))}
           </div>
         )}
-      </ChartCard>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ─── SectionCard: identical visual to ChartCard but height grows with content ───
+function SectionCard({ title, subtitle, action, children }: {
+  title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, rgba(15,22,27,0.92), rgba(10,16,20,0.92))",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 16,
+      padding: 18,
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between",
+        alignItems: "flex-start", marginBottom: 14,
+        gap: 12, flexWrap: "wrap",
+      }}>
+        <div>
+          <div style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: ATOM_MUTED,
+            marginBottom: 4,
+          }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 13, color: "var(--color-text)" }}>{subtitle}</div>}
+        </div>
+        {action}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }
@@ -180,7 +214,7 @@ function ManageTenantsPanel() {
   useEffect(() => { refresh(); }, []);
 
   return (
-    <ChartCard
+    <SectionCard
       title="Manage tenants"
       subtitle="Create, edit, or revoke tenant workspaces · backed by /api/tenant"
     >
@@ -235,7 +269,7 @@ function ManageTenantsPanel() {
           )
         )}
       </div>
-    </ChartCard>
+    </SectionCard>
   );
 }
 
