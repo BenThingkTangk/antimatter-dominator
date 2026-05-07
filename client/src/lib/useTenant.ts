@@ -41,13 +41,30 @@ const DEFAULT_TENANT: Tenant = {
 
 const SESSION_KEY = "atom_tenant_v1";
 
+// Convert any hex (#RRGGBB) to a hex with alpha multiplier so we can build
+// the soft "glow" companion to the primary brand color.
+function hexWithAlpha(hex: string, a: number): string {
+  if (!hex || !hex.startsWith("#") || hex.length < 7) return hex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
 function applyTheme(t: Tenant) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  // Set BOTH the brand-* aliases (used by some legacy code) AND the actual
+  // --color-primary / --color-primary-2 / --color-primary-glow variables that
+  // the entire app reads from. Without this second set, brand colors don't
+  // propagate — the app stays default ATOM teal.
   root.style.setProperty("--brand-primary", t.primary_hex);
   root.style.setProperty("--brand-accent", t.accent_hex);
-  // Update document title
-  if (t.name && t.name !== "AntimatterAI") {
+  root.style.setProperty("--color-primary", t.primary_hex);
+  root.style.setProperty("--color-primary-2", t.accent_hex || t.primary_hex);
+  root.style.setProperty("--color-primary-glow", hexWithAlpha(t.primary_hex, 0.32));
+  // Document title reflects tenant name
+  if (t.name) {
     document.title = `${t.name} — ATOM Sales Dominator`;
   }
 }

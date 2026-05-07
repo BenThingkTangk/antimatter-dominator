@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTenant } from "@/lib/useTenant";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Megaphone, Brain,
@@ -68,6 +69,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const session = useSessionContext();
+  const { tenant } = useTenant();
+  const isCustomBrand = !!tenant?.slug && tenant.slug !== "antimatter" && tenant.name !== "AntimatterAI";
+  const tenantLogo = isCustomBrand && tenant.logo_url ? tenant.logo_url : null;
 
   // Detect preview mode — super admin viewing a tenant via ?tenant=<slug>
   const previewSlug = (() => {
@@ -121,28 +125,57 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         style={{ background: "var(--color-primary)" }}
       />
 
-      {/* Logo — ATOM canonical lockup (animated atomic orbit + AT[O]M wordmark) */}
+      {/* Logo — tenant-branded when present, otherwise ATOM canonical lockup */}
       <div className="flex items-center gap-3 px-4 h-16 border-b shrink-0" style={{ borderColor: "var(--color-border)" }}>
         {!isMobile && collapsed ? (
-          <div className="w-9 h-9 flex items-center justify-center shrink-0">
-            <AtomLogo size={26} />
+          <div className="w-9 h-9 flex items-center justify-center shrink-0 overflow-hidden">
+            {tenantLogo ? (
+              <img src={tenantLogo} alt={tenant.name} className="w-full h-full object-contain" />
+            ) : (
+              <AtomLogo size={26} />
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="shrink-0"><AtomLogo size={32} /></div>
+            <div className="shrink-0" style={{ width: 32, height: 32 }}>
+              {tenantLogo ? (
+                <img src={tenantLogo} alt={tenant.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              ) : (
+                <AtomLogo size={32} />
+              )}
+            </div>
             <div className="min-w-0 flex-1">
-              <h1
-                className="atom-wordmark text-lg leading-none truncate"
-                style={{ color: "var(--color-text)" }}
-              >
-                ΔT<span>O</span>M
-              </h1>
-              <p
-                className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
-                style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
-              >
-                Sales Dominator
-              </p>
+              {isCustomBrand ? (
+                <>
+                  <h1
+                    className="text-base font-bold leading-tight truncate"
+                    style={{ color: "var(--color-text)", fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+                  >
+                    {tenant.name}
+                  </h1>
+                  <p
+                    className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
+                    style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+                  >
+                    Powered by ΔTOM
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1
+                    className="atom-wordmark text-lg leading-none truncate"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    ΔT<span>O</span>M
+                  </h1>
+                  <p
+                    className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
+                    style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+                  >
+                    Sales Dominator
+                  </p>
+                </>
+              )}
             </div>
             {isMobile && (
               <button onClick={() => setMobileOpen(false)} className="ml-auto shrink-0 w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: "var(--color-text-muted)" }} aria-label="Close menu">
