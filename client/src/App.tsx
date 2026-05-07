@@ -64,29 +64,53 @@ const MOBILE_ROUTE_MAP: Record<string, string> = {
   "/admin/tenants":        "/m/admin",
 };
 
+// Module-level guard — even if React StrictMode or HMR remounts MobileGate
+// twice, the redirect can fire AT MOST once per page load.
+let __mobileGateRan = false;
+
+function readPin(): boolean {
+  try {
+    if (localStorage.getItem("atom_pin_desktop") === "1") return true;
+    if (sessionStorage.getItem("m_force_desktop") === "1") return true;
+  } catch {}
+  return false;
+}
+function writePin() {
+  try { localStorage.setItem("atom_pin_desktop", "1"); } catch {}
+  try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
+}
+function clearPin() {
+  try { localStorage.removeItem("atom_pin_desktop"); } catch {}
+  try { sessionStorage.removeItem("m_force_desktop"); } catch {}
+}
+
+// Expose a console escape hatch so anyone bouncing in error can run
+// `__atomDesktop()` from devtools and instantly recover — no rebuild needed.
+if (typeof window !== "undefined") {
+  (window as any).__atomDesktop = () => { writePin(); window.location.hash = "#/"; window.location.reload(); };
+  (window as any).__atomMobile  = () => { clearPin();  window.location.hash = "#/m/home"; window.location.reload(); };
+}
+
 /**
- * MobileGate — runs ONCE on first paint. If the device is a phone AND the
- * user has not pinned the desktop view, route to the mobile experience.
- *
- * Critically, this does NOT re-run on subsequent route changes — that bug
- * would bounce desktop users to /m/* whenever a momentary viewport check
- * tripped (devtools open, browser zoom, touchpad reporting touch, etc.).
+ * MobileGate — runs ONCE per page load (module-level guard, empty deps).
+ * If the device is a true phone AND the user has not pinned desktop,
+ * route to /m/*. Otherwise pin desktop forever in localStorage so even
+ * a fresh tab on the same browser stays desktop.
  */
 function MobileGate() {
   const [, navigate] = useLocation();
   useEffect(() => {
+    if (__mobileGateRan) return;
+    __mobileGateRan = true;
+
     const url = new URL(window.location.href);
     const forceDesktop = url.searchParams.get("desktop") === "1";
-    if (forceDesktop) {
-      try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
-      return;
-    }
-    // Once a session is pinned to desktop, stay there forever.
-    let stickDesktop = false;
-    try { stickDesktop = sessionStorage.getItem("m_force_desktop") === "1"; } catch {}
-    if (stickDesktop) return;
+    if (forceDesktop) { writePin(); return; }
+    const forceMobile  = url.searchParams.get("mobile") === "1";
+    if (forceMobile)  { clearPin(); navigate("/m/home"); return; }
 
-    // Already inside mobile? Nothing to do.
+    if (readPin()) return;
+
     const initialPath = window.location.hash.replace(/^#/, "").split("?")[0] || "/";
     if (initialPath.startsWith("/m")) return;
 
@@ -97,9 +121,9 @@ function MobileGate() {
       const queryStr = queryIdx >= 0 ? rawHash.slice(queryIdx) : "";
       navigate((target || "/m/home") + queryStr);
     } else {
-      // Pin desktop for the rest of the session — guarantees no later
-      // re-detection ever flips the user mid-flow.
-      try { sessionStorage.setItem("m_force_desktop", "1"); } catch {}
+      // True desktop — pin it forever so no bundle (current or stale,
+      // current tab or future tab) ever flips them again.
+      writePin();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
