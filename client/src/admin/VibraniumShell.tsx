@@ -9,7 +9,7 @@
  * sub-modules) to keep the bundle clean. Uses identical chart primitives,
  * color tokens, and tab-strip chrome as the existing admin layer.
  */
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   Map, Mic, Cpu, Phone, Layers, Crosshair, TrendingUp, KeyRound,
@@ -584,12 +584,49 @@ const COMP_TABLE = [
   { company: "ATOM",       arr: "Pre-GA",  round: "Seed",              pricing: "From $299/mo",  notes: "Voice-first AI, open-weights, Vibranium stack" },
 ];
 
+// Normalize API competitor shape → table shape (the API returns
+// arr_estimate_usd as a number and pricing as an object, but the table
+// renders strings only). Without this, React throws "Objects are not
+// valid as a React child" the moment data arrives and the whole tab
+// tree crashes — leaving the screen black.
+function normalizeCompetitor(c: any) {
+  if (!c) return null;
+  if (typeof c.company === "string" && typeof c.arr === "string") return c; // already in table shape
+  const fmt = (n: number | null | undefined) => {
+    if (n === null || n === undefined) return "undisclosed";
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(0)}M`;
+    if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n}`;
+  };
+  const priceStr = (() => {
+    const p = c.pricing;
+    if (!p || typeof p !== "object") return String(p ?? "—");
+    const unit = c.pricing_unit || "";
+    const tiers = [p.starter, p.growth, p.enterprise].filter((v) => v !== null && v !== undefined);
+    if (!tiers.length) return "—";
+    const first = tiers[0];
+    const last  = tiers[tiers.length - 1];
+    if (first === last) return `${typeof first === "number" ? `$${first}` : first}${unit}`;
+    return `${typeof first === "number" ? `$${first}` : first}–${typeof last === "number" ? `$${last}` : last}${unit}`;
+  })();
+  return {
+    company: c.name || c.company || "Unknown",
+    arr: fmt(c.arr_estimate_usd),
+    round: c.last_round || c.round || "—",
+    pricing: priceStr,
+    notes: c.notes || "",
+  };
+}
+
 function TabCompetitive() {
-  const { data, isLoading, error } = useAdminQuery(
+  const { data, isLoading, error } = useAdminQuery<any>(
     ["vibranium", "competitive"],
     "/api/vibranium/competitive",
     { refetchInterval: 6 * 60 * 60 * 1000 }
   );
+  const rows = ((data?.competitors as any[]) || COMP_TABLE)
+    .map(normalizeCompetitor)
+    .filter(Boolean) as any[];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -671,7 +708,7 @@ function TabCompetitive() {
               </tr>
             </thead>
             <tbody>
-              {(data?.competitors ?? COMP_TABLE).map((row: any) => (
+              {rows.map((row: any) => (
                 <tr key={row.company}>
                   <td style={{ ...TD_STYLE, fontWeight: 700, color: row.company === "ATOM" ? ATOM_TEAL : ATOM_TEXT }}>{row.company}</td>
                   <td style={{ ...TD_STYLE, fontFamily: "var(--font-mono)" }}>{row.arr}</td>
@@ -857,6 +894,15 @@ export default function VibraniumShell() {
     }
   };
 
+  // Wrap each tab in an error boundary so a render crash inside one panel
+  // never blanks the whole console + tab strip. The user can always switch
+  // back to a different tab even if the current one threw.
+  const Body = () => (
+    <TabErrorBoundary key={tab} tab={tab}>
+      {renderBody()}
+    </TabErrorBoundary>
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18, paddingBottom: 80 }}>
       {/* Header */}
@@ -945,10 +991,55 @@ export default function VibraniumShell() {
           </p>
         </div>
       ) : (
-        renderBody()
+        <Body />
       )}
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-tab error boundary — keeps tab strip alive when a panel throws
+// ─────────────────────────────────────────────────────────────────────────────
+class TabErrorBoundary extends React.Component<
+  { children: React.ReactNode; tab: string },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: any) {
+    // eslint-disable-next-line no-console
+    console.error("[VibraniumShell] tab crashed:", this.props.tab, error, info);
+  }
+  componentDidUpdate(prev: { tab: string }) {
+    if (prev.tab !== this.props.tab && this.state.error) this.setState({ error: null });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          padding: 24, borderRadius: 14,
+          background: "linear-gradient(180deg, rgba(255,107,139,0.06), rgba(255,107,139,0.02))",
+          border: "1px solid rgba(255,107,139,0.32)",
+          fontFamily: "var(--font-body)", color: "var(--color-text)",
+        }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#ff6b8b", marginBottom: 6 }}>
+            Tab error · {this.props.tab}
+          </div>
+          <p style={{ margin: "0 0 12px 0", color: "var(--color-text-muted)" }}>
+            This panel hit a runtime error. The tab strip is still live — pick another tab, or reload to retry.
+          </p>
+          <pre style={{
+            margin: 0, padding: 12, borderRadius: 8,
+            background: "rgba(0,0,0,0.32)", color: "#ffd166",
+            fontFamily: "var(--font-mono)", fontSize: 11,
+            whiteSpace: "pre-wrap", wordBreak: "break-word",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>{this.state.error?.message || String(this.state.error)}</pre>
+        </div>
+      );
+    }
+    return this.props.children as any;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
