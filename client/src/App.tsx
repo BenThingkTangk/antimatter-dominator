@@ -47,10 +47,9 @@ function isPhoneClass(): boolean {
 }
 
 /**
- * Map a desktop route → mobile route. Used by the cross-module action
- * buttons inside the desktop pages (e.g. "Build Pitch from This"
- * navigates to /pitch?context=… — we rewrite to /m/pitch?context=… so
- * the click stays inside the mobile experience).
+ * Map a desktop route → mobile route. Only consulted on the FIRST PAINT
+ * of a page load when the device is detected as a phone. Never used to
+ * rewrite navigations once the app is already mounted on desktop.
  */
 const MOBILE_ROUTE_MAP: Record<string, string> = {
   "/pitch":                "/m/pitch",
@@ -60,7 +59,7 @@ const MOBILE_ROUTE_MAP: Record<string, string> = {
   "/company-intelligence": "/m/warbook",
   "/war-room":             "/m/war-room",
   "/atom-leadgen":         "/m/dial",
-  "/atom-campaign":        "/m/chat",          // no dedicated /m/campaign route yet
+  "/atom-campaign":        "/m/chat",
   "/admin/tenants":        "/m/admin",
 };
 
@@ -112,14 +111,21 @@ function MobileGate() {
     if (readPin()) return;
 
     const initialPath = window.location.hash.replace(/^#/, "").split("?")[0] || "/";
-    if (initialPath.startsWith("/m")) return;
+    // Same trap as AppRouter — must match the /m group exactly, not /market.
+    if (initialPath === "/m" || initialPath.startsWith("/m/")) return;
 
     if (isPhoneClass()) {
-      const target = MOBILE_ROUTE_MAP[initialPath];
-      const rawHash = window.location.hash || "";
-      const queryIdx = rawHash.indexOf("?");
-      const queryStr = queryIdx >= 0 ? rawHash.slice(queryIdx) : "";
-      navigate((target || "/m/home") + queryStr);
+      // Phone detected on first paint and not yet pinned to either side.
+      // Only redirect from the EXACT root "/" — never silently rewrite a
+      // user-typed module URL like /market into /m/market. This way clicks
+      // from the desktop sidebar (/market, /pitch, etc.) can never bounce
+      // mid-session, and a phone user landing on root still gets sent home.
+      if (initialPath === "/" || initialPath === "") {
+        const rawHash = window.location.hash || "";
+        const queryIdx = rawHash.indexOf("?");
+        const queryStr = queryIdx >= 0 ? rawHash.slice(queryIdx) : "";
+        navigate("/m/home" + queryStr);
+      }
     } else {
       // True desktop — pin it forever so no bundle (current or stale,
       // current tab or future tab) ever flips them again.
@@ -167,7 +173,10 @@ function AppRouter() {
   useTenant();
   const [location] = useLocation();
 
-  if (location.startsWith("/m")) {
+  // Match the mobile route group exactly — "/m", "/m/", or "/m/<anything>".
+  // Never use startsWith("/m") here because it also matches "/market"
+  // (which is why Market Intent kept bouncing into the mobile shell).
+  if (location === "/m" || location.startsWith("/m/")) {
     return <MobileApp />;
   }
 
