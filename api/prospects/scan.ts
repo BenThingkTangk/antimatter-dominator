@@ -85,11 +85,36 @@ function geoToApolloFilters(geo: string | undefined): {
   }
 
   if (geo === "EU") {
-    const euCountries = ["Germany", "France", "Netherlands", "Sweden", "Spain", "Italy", "Belgium", "Poland", "Denmark", "Austria"];
+    const euCountries = ["Germany", "France", "Netherlands", "Sweden", "Spain", "Italy", "Belgium", "Poland", "Denmark", "Austria", "Ireland"];
     return { personLocations: euCountries, organizationLocations: euCountries };
   }
   if (geo === "UK") return { personLocations: ["United Kingdom"], organizationLocations: ["United Kingdom"] };
   if (geo === "Canada") return { personLocations: ["Canada"], organizationLocations: ["Canada"] };
+
+  if (geo === "APAC") {
+    const apac = ["Australia", "Japan", "Singapore", "India", "South Korea", "Hong Kong", "New Zealand"];
+    return { personLocations: apac, organizationLocations: apac };
+  }
+  if (geo === "Latin America") {
+    const latam = ["Brazil", "Mexico", "Argentina", "Chile", "Colombia", "Peru", "Uruguay"];
+    return { personLocations: latam, organizationLocations: latam };
+  }
+  if (geo === "Middle East") {
+    const me = ["Israel", "United Arab Emirates", "Saudi Arabia", "Qatar", "Bahrain"];
+    return { personLocations: me, organizationLocations: me };
+  }
+
+  // Single-country values that pass straight through to Apollo
+  const passThroughCountries = [
+    "Australia", "India", "Japan", "Singapore", "South Korea",
+    "France", "Germany", "Ireland", "Italy", "Netherlands", "Spain", "Sweden",
+    "Argentina", "Brazil", "Chile", "Colombia", "Mexico",
+    "Israel", "Saudi Arabia", "UAE",
+  ];
+  if (passThroughCountries.includes(geo)) {
+    const v = geo === "UAE" ? "United Arab Emirates" : geo;
+    return { personLocations: [v], organizationLocations: [v] };
+  }
 
   return {};
 }
@@ -115,8 +140,36 @@ function employeeSizeToApolloRangeStr(size: string | undefined): string | null {
 
 function industryToApolloTags(industry: string | undefined): string[] {
   if (!industry || industry === "All Industries") return [];
-  // Apollo accepts partial keyword tags — just pass the industry string lowercased
-  return [industry.toLowerCase()];
+  const i = industry.toLowerCase();
+  // Map our high-level UI industries to multiple Apollo keyword tags so we don't
+  // get narrowed to ~14 orgs by an over-literal single-tag match.
+  const map: Record<string, string[]> = {
+    "technology & saas":             ["saas", "software", "information technology", "computer software"],
+    "healthcare & life sciences":     ["healthcare", "hospital & health care", "medical devices", "life sciences", "biotechnology"],
+    "financial services & banking":   ["financial services", "banking", "investment banking", "capital markets"],
+    "real estate & proptech":         ["real estate", "commercial real estate", "proptech"],
+    "manufacturing":                  ["manufacturing", "industrial automation", "machinery", "electrical/electronic manufacturing", "mechanical or industrial engineering", "plastics", "chemicals"],
+    "retail & e-commerce":            ["retail", "e-commerce", "consumer goods", "apparel & fashion"],
+    "insurance":                      ["insurance"],
+    "defense & government":           ["defense & space", "government administration", "military", "public safety"],
+    "energy & utilities":             ["oil & energy", "renewables & environment", "utilities", "electric power"],
+    "education & edtech":             ["education management", "higher education", "e-learning", "edtech"],
+    "transportation & logistics":     ["logistics & supply chain", "transportation/trucking/railroad", "warehousing", "package/freight delivery"],
+    "media & entertainment":          ["media production", "entertainment", "broadcast media", "online media"],
+    "telecommunications":             ["telecommunications", "wireless"],
+    "legal services":                 ["law practice", "legal services"],
+    "construction & engineering":     ["construction", "civil engineering", "architecture & planning", "building materials"],
+    "agriculture & food tech":        ["farming", "agriculture", "food & beverages", "food production"],
+    "hospitality & travel":           ["hospitality", "leisure, travel & tourism", "restaurants", "hotels"],
+    "non-profit & ngo":               ["non-profit organization management", "civic & social organization", "international affairs"],
+    "automotive":                     ["automotive"],
+    "aerospace":                      ["aviation & aerospace", "airlines/aviation"],
+    "cybersecurity":                  ["computer & network security", "cybersecurity"],
+    "biotech & pharma":               ["biotechnology", "pharmaceuticals", "medical devices"],
+  };
+  const expanded = map[i];
+  if (expanded && expanded.length) return expanded;
+  return [i];
 }
 
 // ─── Apollo primary search — returns people + their organizations ─────────────
@@ -701,21 +754,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       keywords: filters.keywords,
     }));
 
-    // Apollo paginated fetch — fan out 3 pages of 100 in parallel for ~300 people,
-    // ensuring we surface enough distinct orgs after grouping (was 14, now 60–100).
+    // Apollo paginated fetch — fan out 5 pages of 100 in parallel for ~500 people,
+    // ensuring we surface enough distinct orgs after grouping (was 14, now 80–150+).
     const requestedMax = Math.max(25, Math.min(150, Number((filters as any).maxResults) || 100));
-    const pageCount = requestedMax >= 80 ? 3 : requestedMax >= 40 ? 2 : 1;
+    const pageCount = requestedMax >= 100 ? 5 : requestedMax >= 60 ? 4 : requestedMax >= 40 ? 3 : 2;
     const pageResults = await Promise.all(
       Array.from({ length: pageCount }, (_, i) =>
         searchApolloProspects(filters, geoFilters, employeeSizeRangeStr, 100, i + 1)
       )
     );
-    const apolloPeople = pageResults.flat();
+    let apolloPeople = pageResults.flat();
     console.log(`[scan] Apollo returned ${apolloPeople.length} people across ${pageCount} pages`);
 
     // ── STEP 2: Group people by organization to get distinct companies ────────
-    const orgs = groupPeopleByOrg(apolloPeople);
+    let orgs = groupPeopleByOrg(apolloPeople);
     console.log(`[scan] Grouped into ${orgs.length} organizations`);
+
+    // ── STEP 2b: Backfill — if too few orgs, retry with relaxed industry tag
+    //  (single broad tag) and merge results to get more distinct companies.
+    if (orgs.length < Math.min(40, Math.floor(requestedMax * 0.4)) && filters.industry && filters.industry !== "All Industries") {
+      console.log(`[scan] Only ${orgs.length} orgs — retrying with relaxed industry tag`);
+      const relaxed: ScanFilters = { ...filters, industry: "" as any };
+      const retryPages = await Promise.all([1, 2, 3].map((p) =>
+        searchApolloProspects(relaxed, geoFilters, employeeSizeRangeStr, 100, p)
+      ));
+      const retryPeople = retryPages.flat();
+      apolloPeople = [...apolloPeople, ...retryPeople];
+      orgs = groupPeopleByOrg(apolloPeople);
+      console.log(`[scan] After backfill: ${apolloPeople.length} people, ${orgs.length} orgs`);
+    }
+
+    // ── STEP 2c: Backfill — if still thin AND no employee size filter ever fired,
+    //  drop the size filter and retry once more.
+    if (orgs.length < Math.min(25, Math.floor(requestedMax * 0.25)) && employeeSizeRangeStr) {
+      console.log(`[scan] Still ${orgs.length} orgs — retrying without employee size filter`);
+      const retry2 = await searchApolloProspects(filters, geoFilters, null, 100, 1);
+      apolloPeople = [...apolloPeople, ...retry2];
+      orgs = groupPeopleByOrg(apolloPeople);
+      console.log(`[scan] After size-relaxed backfill: ${orgs.length} orgs`);
+    }
 
     // Filter out excluded companies
     const excludeSet = new Set((filters.excludeCompanies || []).map((c) => c.toLowerCase()));

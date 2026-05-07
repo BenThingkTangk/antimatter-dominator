@@ -20,6 +20,7 @@ import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { ATOM_PRODUCTS_INCL_ALL, resolveProductLabel, isCustom } from "@/lib/atom-products";
+import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 
 // ─── HVT Flag Button ───────────────────────────────────────────────────────────
 function HVTFlagButton({ companyName, industry, signal }: { companyName: string; industry?: string; signal?: string }) {
@@ -743,6 +744,9 @@ export default function MarketIntent() {
                   </div>
                 </div>
 
+                {/* ATOM Premium Signals (Sonar Pro · CB Insights, PitchBook, Bloomberg, SEC, etc.) */}
+                <PremiumSignalsBlock industry={selectedIndustry} />
+
                 {/* Tab Navigator */}
                 <div className="flex gap-1.5 overflow-x-auto tabs-scroll pb-1">
                   {OUTPUT_TABS.map(tab => (
@@ -902,3 +906,92 @@ export default function MarketIntent() {
     </div>
   );
 }
+
+// ─── PremiumSignalsBlock ──────────────────────────────────────────────────────
+// Pulls premium-source signals (CB Insights, PitchBook, Bloomberg, TechCrunch,
+// SEC, Crunchbase, G2, Gartner) for the chosen industry from /api/signals/discover
+// (Sonar Pro · search_domain_filter). Renders the top 6 with category chips,
+// recency, impact, and source-domain link. Cached 6h.
+function PremiumSignalsBlock({ industry }: { industry: string }) {
+  const target = industry || "B2B SaaS";
+  const { data, isLoading, isError, refetch } = useSignals({ industry: target });
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/70">⚡ ATOM Premium Signals · Sonar Pro</span>
+          <span className="text-[9px] text-white/30 font-mono animate-pulse">scanning…</span>
+        </div>
+        <div className="h-16 bg-white/[0.03] rounded-md animate-pulse" />
+      </div>
+    );
+  }
+
+  if (isError || !data || !data.signals?.length) {
+    return null;
+  }
+
+  const top = [...data.signals].sort((a, b) => b.impact - a.impact).slice(0, 6);
+
+  return (
+    <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80 shrink-0">⚡ ATOM Premium Signals · Sonar Pro</span>
+          <span className="text-[9px] text-white/40 font-mono shrink-0">{data.sourceCount || 0} sources · score {data.atomScore}/100</span>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="text-[10px] text-emerald-400/70 hover:text-emerald-300 font-mono"
+        >
+          ↻ refresh
+        </button>
+      </div>
+
+      {data.topNarrative && (
+        <p className="text-xs text-white/55 leading-relaxed mb-3 italic">{data.topNarrative}</p>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {top.map((s: DiscoveredSignal) => (
+          <a
+            key={s.id}
+            href={s.url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group rounded-lg border border-white/[0.07] hover:border-emerald-500/[0.30] bg-white/[0.02] hover:bg-white/[0.04] p-3 transition-all"
+          >
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: signalCategoryColor(s.category) }}
+              />
+              <span
+                className="text-[9px] font-mono uppercase tracking-wider"
+                style={{ color: signalCategoryColor(s.category) }}
+              >
+                {s.category}
+              </span>
+              <span className="text-[9px] text-white/30 font-mono ml-auto">
+                {s.recencyDays >= 0 ? `${s.recencyDays}d` : "—"} · impact {s.impact}/10
+              </span>
+            </div>
+            <p className="text-xs text-white/80 leading-snug font-medium line-clamp-2 mb-1 group-hover:text-white">
+              {s.headline}
+            </p>
+            {s.summary && (
+              <p className="text-[10px] text-white/45 leading-relaxed line-clamp-2 mb-1.5">
+                {s.summary}
+              </p>
+            )}
+            {s.source && (
+              <span className="text-[9px] text-emerald-400/60 font-mono">{s.source}</span>
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+

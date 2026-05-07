@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { type Prospect, type Contact } from "@/lib/store";
+import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +85,62 @@ const INDUSTRIES = [
   "Cybersecurity",
   "Biotech & Pharma",
 ];
+
+// ─── IndustrySignalsPanel ────────────────────────────────────────────────────
+// Pulls premium-source signals (CB Insights, PitchBook, Bloomberg, TechCrunch,
+// SEC, Crunchbase, G2, Gartner) for the chosen industry. Surfaced above the
+// prospect list so the user sees the macro context the scoring leans on, plus
+// can copy a top headline as a keyword/pain-point input on the next scan.
+function IndustrySignalsPanel({ industry }: { industry: string }) {
+  if (!industry || industry === "All Industries") return null;
+  const { data, isLoading } = useSignals({ industry });
+  if (isLoading) {
+    return (
+      <div className="rounded-xl bg-black/40 border border-violet-500/[0.18] p-3 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse shrink-0" />
+        <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400/70">⚡ Industry Signal Scan · Sonar Pro</span>
+        <span className="text-[10px] text-white/30 font-mono animate-pulse">scanning…</span>
+      </div>
+    );
+  }
+  if (!data || !data.signals?.length) return null;
+  const top = [...data.signals].sort((a, b) => b.impact - a.impact).slice(0, 4);
+  return (
+    <div className="rounded-xl bg-black/40 backdrop-blur-md border border-violet-500/[0.18] p-3">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400/80">⚡ Industry Signal Scan · Sonar Pro</span>
+        <span className="text-[9px] text-white/40 font-mono">{data.sourceCount || 0} sources · score {data.atomScore}/100</span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {top.map((s: DiscoveredSignal) => (
+          <a
+            key={s.id}
+            href={s.url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors"
+            title={s.summary}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
+              style={{ background: signalCategoryColor(s.category) }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-white/75 leading-snug truncate group-hover:text-white">{s.headline}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[8px] uppercase font-mono" style={{ color: signalCategoryColor(s.category) }}>{s.category}</span>
+                <span className="text-[8px] text-white/30 font-mono">·</span>
+                <span className="text-[8px] text-white/35 font-mono">{s.recencyDays >= 0 ? `${s.recencyDays}d` : "recent"}</span>
+                <span className="text-[8px] text-white/30 font-mono">·</span>
+                <span className="text-[8px] text-violet-400/60 font-mono truncate">{s.source}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Alphabetized by group: top-level regions first, then US sub-regions,
 // then states within the US, then countries within each external region.
@@ -1241,6 +1298,11 @@ export default function ProspectEngine() {
               </div>
             )}
           </div>
+
+          {/* Industry-level Premium Signals (informs ICP scoring + keyword guidance) */}
+          <IndustrySignalsPanel
+            industry={(view === "history-view" && historyEntry ? historyEntry.filters : currentFilters).industry}
+          />
 
           {/* Prospect Cards */}
           {paginated.length === 0 ? (

@@ -3,6 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { loadDeals, onWarRoomEvent, type Deal } from "@/lib/warroom-store";
+import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1848,16 +1849,17 @@ export default function AtomCampaign() {
                           )}
                         </div>
 
-                        {/* Buying Signals (first 2) */}
+                        {/* Buying Signals + Premium Sonar Signal (first 1-2) */}
                         <div className="min-w-0 space-y-0.5">
-                          {t.buyingSignals.slice(0, 2).map((sig, idx) => (
+                          <TargetSignalChip company={t.companyName} domain={t.domain} />
+                          {t.buyingSignals.slice(0, 1).map((sig, idx) => (
                             <div key={idx} className="flex items-center gap-1">
                               <Zap className="w-2.5 h-2.5 text-amber-400 shrink-0" />
                               <span className="text-[9px] text-white/55 truncate leading-tight">{sig}</span>
                             </div>
                           ))}
                           {t.buyingSignals.length === 0 && (
-                            <span className="text-[9px] text-white/15 font-mono">—</span>
+                            <span className="text-[9px] text-white/15 font-mono">premium signals only</span>
                           )}
                         </div>
 
@@ -2111,6 +2113,38 @@ export default function AtomCampaign() {
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── TargetSignalChip ───────────────────────────────────────────────────
+// Pulls top premium-source signal from /api/signals/discover (Sonar Pro,
+// premium domain filter) for each campaign target row. Renders a tiny
+// category-colored chip with truncated headline. Cached 6h client + server.
+function TargetSignalChip({ company, domain }: { company: string; domain?: string }) {
+  const { data, isLoading } = useSignals({ company, domain });
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse shrink-0" />
+        <span className="text-[9px] text-white/30 font-mono leading-tight">scanning premium…</span>
+      </div>
+    );
+  }
+  const top: DiscoveredSignal | undefined = data?.signals?.[0];
+  if (!top) return null;
+  return (
+    <div className="flex items-center gap-1" title={`${top.headline} — ${top.source}`}>
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: signalCategoryColor(top.category) }}
+      />
+      <span
+        className="text-[9px] truncate leading-tight"
+        style={{ color: signalCategoryColor(top.category) }}
+      >
+        {top.category.toUpperCase()}·{top.headline}
+      </span>
     </div>
   );
 }
