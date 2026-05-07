@@ -1,8 +1,11 @@
 /**
- * MobileChat — full-screen ATOM chat (Sonar / Sonar Pro).
+ * MobileChat — full-screen ΔTOM chat.
  *
- * Calls the existing /api/atom-chat endpoint. Persists session id so chat
- * memory (pgvector recall) stays coherent across tabs.
+ * Calls /api/atom-chat with the correct payload shape:
+ *   { message, history: [{role, content}], sessionId, context }
+ *
+ * Surfacing copy is intentionally free of LLM/vendor mentions. No "Perplexity",
+ * "Sonar", "GPT", etc. The system stack is an implementation detail.
  */
 import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, ExternalLink, Loader2 } from "lucide-react";
@@ -55,16 +58,31 @@ export default function MobileChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: getSessionId(),
+          message: trimmed,
           context: "general",
-          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          // Trim history to last 6 so context stays focused + cheap.
+          history: next.slice(-7, -1).map((m) => ({ role: m.role, content: m.content })),
+          sessionId: getSessionId(),
         }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        const err = await res.text().catch(() => `${res.status}`);
+        throw new Error(err.slice(0, 240));
+      }
       const data = await res.json();
-      setMessages([...next, { role: "assistant", content: data.content || "", citations: data.citations || [] }]);
+      setMessages([
+        ...next,
+        {
+          role: "assistant",
+          content: data.content || data.message || "",
+          citations: data.citations || [],
+        },
+      ]);
     } catch (e: any) {
-      setMessages([...next, { role: "assistant", content: `Something glitched. ${e?.message || e}` }]);
+      setMessages([
+        ...next,
+        { role: "assistant", content: `ΔTOM couldn't finish that request. ${e?.message || ""}`.trim() },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -78,7 +96,7 @@ export default function MobileChat() {
             <Sparkles size={22} style={{ color: "#00e6d3", marginBottom: 8 }} />
             <div className="m-card-title">What's on your mind?</div>
             <div className="m-text-muted" style={{ fontSize: 14, marginTop: 6 }}>
-              Powered by Perplexity Sonar + Sonar Pro. Ask anything — markets, accounts, objections, pitches.
+              Ask anything — markets, accounts, objections, pitches.
             </div>
             <div className="m-stack" style={{ marginTop: 14 }}>
               {STARTERS.map((s) => (
@@ -96,7 +114,7 @@ export default function MobileChat() {
             background: m.role === "user" ? "rgba(0,230,211,0.04)" : undefined,
           }}>
             <div className={`m-bubble-label${m.role === "assistant" ? " is-atom" : ""}`}>
-              {m.role === "assistant" ? "ATOM" : "You"}
+              {m.role === "assistant" ? "ΔTOM" : "You"}
             </div>
             <div className="m-bubble" style={{ marginTop: 6 }}>{m.content}</div>
             {m.citations && m.citations.length > 0 && (

@@ -5,7 +5,7 @@
  * Uses wouter hash routing so tab links work cleanly (#/m/home, #/m/dial …).
  */
 import { Link, useLocation } from "wouter";
-import { Home, PhoneCall, Users, MessageSquare, Settings as SettingsIcon, Moon } from "lucide-react";
+import { Home, PhoneCall, Users, MessageSquare, Settings as SettingsIcon } from "lucide-react";
 import { AtomOrbit } from "./AtomOrbit";
 import { useTenant } from "../lib/useTenant";
 
@@ -35,11 +35,7 @@ export function MobileShell({ children, title, right }: { children: React.ReactN
               {tenant.name}
             </span>
           ) : null}
-          {right ?? (
-            <Link href="/m/settings" className="m-icon-btn" aria-label="Settings">
-              <Moon size={18} />
-            </Link>
-          )}
+          {right}
         </div>
       </div>
 

@@ -1,18 +1,20 @@
 /**
- * MobileSettings — voice/model preferences, tenant info, install prompt.
+ * MobileSettings — tenant info, appearance, install prompt, stack.
  *
- * Includes the "Open admin" link for tenant superusers and an Install
- * Home Screen prompt that uses the deferred beforeinstallprompt event.
+ * Stack rows use the Nirmata internal naming convention (never vendor names):
+ *   PiQ       = voice runtime
+ *   NirmX-UFO = LLM ensemble
+ *   SiQ       = embeddings / retrieval engine
+ *   XiQ       = vector store
  */
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Moon, Sun, Building2, Download, ExternalLink, Activity } from "lucide-react";
+import { Building2, Download, ExternalLink, Activity } from "lucide-react";
 import { MobileShell } from "../MobileShell";
 import { useTenant } from "../../lib/useTenant";
 
 export default function MobileSettings() {
   const { tenant } = useTenant();
-  const [dark, setDark] = useState(true);
   const [installEvent, setInstallEvent] = useState<any>(null);
   const [haptic, setHaptic] = useState<boolean>(() => {
     try { return localStorage.getItem("m_haptic") !== "0"; } catch { return true; }
@@ -25,8 +27,10 @@ export default function MobileSettings() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+    // ΔTOM mobile is dark-first per brand spec. We lock the class here so a
+    // stray desktop toggle never flips the mobile surface to light.
+    document.documentElement.classList.add("dark");
+  }, []);
 
   useEffect(() => {
     try { localStorage.setItem("m_haptic", haptic ? "1" : "0"); } catch {}
@@ -71,20 +75,6 @@ export default function MobileSettings() {
           <div className="m-card-eyebrow">Appearance</div>
           <div className="m-row-btw" style={{ marginTop: 12 }}>
             <span className="m-row" style={{ gap: 10 }}>
-              {dark ? <Moon size={18} className="m-text-muted" /> : <Sun size={18} className="m-text-muted" />}
-              <span>Dark mode</span>
-            </span>
-            <button
-              className="m-btn"
-              style={{ width: 64, minHeight: 32, padding: 0, background: dark ? "#00e6d3" : "rgba(255,255,255,0.08)", color: dark ? "#041413" : "#9ca8ad", border: "none" }}
-              onClick={() => setDark((v) => !v)}
-              aria-pressed={dark}
-            >
-              {dark ? "ON" : "OFF"}
-            </button>
-          </div>
-          <div className="m-row-btw" style={{ marginTop: 12 }}>
-            <span className="m-row" style={{ gap: 10 }}>
               <Activity size={18} className="m-text-muted" />
               <span>Haptic feedback</span>
             </span>
@@ -101,7 +91,7 @@ export default function MobileSettings() {
         {/* Install prompt */}
         {installEvent && (
           <div className="m-card m-card-glow">
-            <div className="m-card-eyebrow">Install ATOM</div>
+            <div className="m-card-eyebrow">Install ΔTOM</div>
             <div className="m-card-title" style={{ fontSize: 18, marginTop: 6 }}>Add to home screen</div>
             <div className="m-text-muted" style={{ fontSize: 13, marginTop: 6 }}>
               Launches without a browser bar. Faster and feels native.
@@ -112,19 +102,19 @@ export default function MobileSettings() {
           </div>
         )}
 
-        {/* Stack info */}
+        {/* Stack — Nirmata internal names only */}
         <div className="m-card">
           <div className="m-card-eyebrow">Stack</div>
           <div className="m-stack" style={{ marginTop: 12, fontSize: 14 }}>
-            <div className="m-row-btw"><span className="m-text-muted">Voice</span><span className="m-mono">Hume EVI</span></div>
-            <div className="m-row-btw"><span className="m-text-muted">LLM ensemble</span><span className="m-mono">Claude · GPT-5 · Sonar</span></div>
-            <div className="m-row-btw"><span className="m-text-muted">Embeddings</span><span className="m-mono">pplx-embed-v1-0.6b</span></div>
-            <div className="m-row-btw"><span className="m-text-muted">Vector store</span><span className="m-mono">Pinecone serverless</span></div>
+            <div className="m-row-btw"><span className="m-text-muted">Voice</span><span className="m-mono">PiQ</span></div>
+            <div className="m-row-btw"><span className="m-text-muted">LLM ensemble</span><span className="m-mono">NirmX-UFO</span></div>
+            <div className="m-row-btw"><span className="m-text-muted">Retrieval</span><span className="m-mono">SiQ</span></div>
+            <div className="m-row-btw"><span className="m-text-muted">Vector store</span><span className="m-mono">XiQ</span></div>
           </div>
         </div>
 
         {/* Switch to desktop */}
-        <a className="m-row" href="#/" style={{ justifyContent: "center", gap: 6, color: "#00a7ff", fontSize: 14, padding: 12 }}>
+        <a className="m-row" href="#/?desktop=1" style={{ justifyContent: "center", gap: 6, color: "#00a7ff", fontSize: 14, padding: 12 }}>
           <ExternalLink size={14} /> Switch to desktop view
         </a>
       </div>

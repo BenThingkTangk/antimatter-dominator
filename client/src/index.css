@@ -1011,3 +1011,58 @@
   margin: 14px 0;
 }
 
+/* ─── Module host ──────────────────────────────────────────────────────────
+   When a desktop page is mounted inside the mobile shell, it inherits a
+   single-column flow regardless of how it was authored (multi-col grids,
+   sidebars, etc.). This is a defensive collapse — the page logic stays
+   identical, but visually it always behaves on a phone. */
+.atom-mobile-root .m-module-host {
+  width: 100%;
+}
+.atom-mobile-root .m-module-host > * {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.atom-mobile-root .m-module-host .grid {
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+.atom-mobile-root .m-module-host .container,
+.atom-mobile-root .m-module-host [class*="max-w-"] {
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.atom-mobile-root .m-module-host .flex.gap-6,
+.atom-mobile-root .m-module-host .flex.gap-8,
+.atom-mobile-root .m-module-host .flex.gap-10 {
+  flex-direction: column;
+}
+/* Hide page-level back/header chrome that duplicates the mobile shell */
+.atom-mobile-root .m-module-host h1.text-xl,
+.atom-mobile-root .m-module-host h1.text-2xl {
+  font-size: 22px;
+  line-height: 1.15;
+}
+/* Many desktop modules use sticky/absolute positioning that breaks under
+   the mobile fixed top bar — cancel it inside the host. */
+.atom-mobile-root .m-module-host .sticky,
+.atom-mobile-root .m-module-host .fixed {
+  position: relative !important;
+  top: 0 !important;
+}
+/* Module pages routinely use heavy left/right padding for desktop margins.
+   Knock those down so they don't fight our 20px scroll padding. */
+.atom-mobile-root .m-module-host .p-6,
+.atom-mobile-root .m-module-host .p-8,
+.atom-mobile-root .m-module-host .px-6,
+.atom-mobile-root .m-module-host .px-8 {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+.atom-mobile-root .m-module-host button {
+  min-height: 40px;
+}
+
