@@ -33,8 +33,18 @@ async function sendEmail(input: EmailInput): Promise<EmailResult> {
         to: [input.to],
         subject: input.subject,
         html: input.html,
-        text: input.text,
-        reply_to: input.replyTo,
+        // Plain-text fallback materially improves Gmail / ProofPoint trust;
+        // strip-tags fallback keeps it readable when not provided explicitly.
+        text: input.text || input.html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim(),
+        reply_to: input.replyTo || "hello@atomsalesdominator.com",
+        // List-Unsubscribe + List-Unsubscribe-Post are part of Gmail's
+        // bulk-sender requirements (Feb 2024) and significantly reduce spam
+        // flagging on transactional + lifecycle email.
+        headers: {
+          "List-Unsubscribe": "<mailto:unsubscribe@atomsalesdominator.com>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          "X-Entity-Ref-ID": "atom-transactional-" + Date.now(),
+        },
       }),
     });
     const j: any = await r.json().catch(() => ({}));

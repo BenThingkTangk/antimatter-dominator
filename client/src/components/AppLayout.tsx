@@ -69,6 +69,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const session = useSessionContext();
 
+  // Detect preview mode — super admin viewing a tenant via ?tenant=<slug>
+  const previewSlug = (() => {
+    try {
+      const url = new URL(window.location.href);
+      return url.searchParams.get("tenant") || url.searchParams.get("tenantSlug") || null;
+    } catch {}
+    return null;
+  })();
+
   useEffect(() => {
     document.documentElement.classList.add("dark");
     document.documentElement.setAttribute("data-theme", "dark");
@@ -285,6 +294,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         )}
 
         <div className="flex-1 flex flex-col overflow-hidden">
+          {previewSlug && (
+            <div
+              className="flex items-center justify-between gap-3 px-4 py-2.5 border-b shrink-0"
+              style={{
+                background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
+                borderColor: "color-mix(in oklab, var(--color-primary) 32%, transparent)",
+                color: "#0c1014",
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="text-[10px] font-mono uppercase tracking-[0.18em] px-2 py-0.5 rounded-full"
+                  style={{ background: "#0c1014", color: "var(--color-primary)" }}
+                >Preview as tenant</span>
+                <span className="text-sm font-bold truncate" style={{ color: "#0c1014" }}>
+                  Viewing as <code style={{ fontFamily: "var(--font-mono)" }}>{previewSlug}</code> · they would see this exactly
+                </span>
+              </div>
+              <a
+                href="#/admin?tab=tenants"
+                className="text-xs font-mono font-bold underline"
+                style={{ color: "#0c1014" }}
+              >
+                Exit preview →
+              </a>
+            </div>
+          )}
           <header className="flex md:hidden items-center gap-3 h-14 px-4 border-b shrink-0" style={{ background: "var(--color-bg-2)", borderColor: "var(--color-border)" }}>
             <button onClick={() => setMobileOpen(true)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5" style={{ color: "var(--color-text-muted)" }} aria-label="Open menu" data-testid="button-mobile-menu">
               <Menu className="w-5 h-5" />

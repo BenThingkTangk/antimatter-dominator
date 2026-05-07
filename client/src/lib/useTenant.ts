@@ -68,17 +68,40 @@ export function useTenant() {
     applyTheme(tenant);
 
     let cancelled = false;
-    const host =
-      typeof window !== "undefined" ? window.location.hostname : "localhost";
-    fetch(`/api/tenant?host=${encodeURIComponent(host)}`)
+    // Allow ?tenant=<slug> URL override so admins can preview a tenant's
+    // branded view ("View as tenant") from the Tenants admin tab.
+    const previewSlug = (() => {
+      try {
+        const url = new URL(window.location.href);
+        const fromQuery = url.searchParams.get("tenant") || url.searchParams.get("tenantSlug");
+        if (fromQuery) return fromQuery;
+        // Also check the hash query string (HashRouter)
+        const hashQ = window.location.hash.split("?")[1];
+        if (hashQ) {
+          const h = new URLSearchParams(hashQ);
+          return h.get("tenant") || h.get("tenantSlug") || null;
+        }
+      } catch {}
+      return null;
+    })();
+
+    const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+    const url = previewSlug
+      ? `/api/tenant?slug=${encodeURIComponent(previewSlug)}`
+      : `/api/tenant?host=${encodeURIComponent(host)}`;
+
+    fetch(url)
       .then((r) => r.json())
       .then((t: Tenant) => {
         if (cancelled) return;
         setTenant(t);
         applyTheme(t);
-        try {
-          sessionStorage.setItem(SESSION_KEY, JSON.stringify(t));
-        } catch {}
+        // Don't cache preview overrides — admins switch frequently.
+        if (!previewSlug) {
+          try {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(t));
+          } catch {}
+        }
       })
       .catch(() => {
         // Stay on cached / default — multi-tenant is graceful-degrade.

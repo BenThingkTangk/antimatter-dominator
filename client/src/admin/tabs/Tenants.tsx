@@ -10,7 +10,7 @@
  * Auth: X-Admin-Key (auto-attached by adminFetch via localStorage).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Building2, TrendingUp, DollarSign, AlertTriangle, Plus, Pencil, Trash2, X, Check, Loader2, ExternalLink, Upload, Image as ImageIcon } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, AlertTriangle, Plus, Pencil, Trash2, X, Check, Loader2, ExternalLink, Upload, Image as ImageIcon, Eye, BarChart3 } from "lucide-react";
 import { adminFetch, useAdminQuery } from "../useAdminApi";
 import {
   KpiCard, ChartCard, AreaStack, DonutMix, BarStack,
@@ -275,20 +275,40 @@ function ManageTenantsPanel() {
 
 function TenantRowCard({ tenant, onEdit }: { tenant: TenantRow; onEdit: () => void }) {
   const swatch = tenant.primary_hex || "#06b6d4";
+  const hasLogo = !!tenant.logo_url;
+  // "View as tenant" — opens the actual app in a new tab with the tenant's
+  // brand colors / logo / name applied via the ?tenant=<slug> URL override
+  // implemented in client/src/lib/useTenant.ts.
+  const previewUrl = `/?tenant=${encodeURIComponent(tenant.slug)}#/pitch`;
+  // "Open analytics" — the operator-side detail dashboard for this tenant.
+  const analyticsUrl = `#/admin/t/${tenant.slug}`;
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "auto 1fr auto auto",
-      gap: 12, alignItems: "center",
+      gridTemplateColumns: "auto 1fr auto auto auto",
+      gap: 10, alignItems: "center",
       padding: "10px 14px", borderRadius: 10,
       background: "rgba(255,255,255,0.02)",
       border: "1px solid rgba(255,255,255,0.06)",
     }}>
+      {/* Brand swatch / logo thumbnail */}
       <div style={{
-        width: 28, height: 28, borderRadius: 6,
-        background: swatch, opacity: 0.85,
-      }} />
-      <div>
+        width: 36, height: 36, borderRadius: 8,
+        background: hasLogo ? "rgba(255,255,255,0.04)" : swatch,
+        border: "1px solid rgba(255,255,255,0.06)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, overflow: "hidden",
+        opacity: hasLogo ? 1 : 0.85,
+      }}>
+        {hasLogo ? (
+          <img
+            src={tenant.logo_url || ""}
+            alt={`${tenant.name} logo`}
+            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 4 }}
+          />
+        ) : null}
+      </div>
+      <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ fontWeight: 700, color: "var(--color-text)" }}>{tenant.name}</span>
           <span style={{
@@ -305,7 +325,26 @@ function TenantRowCard({ tenant, onEdit }: { tenant: TenantRow; onEdit: () => vo
         </div>
       </div>
       <a
-        href={`#/admin/t/${tenant.slug}`}
+        href={previewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open the tenant's branded app in a new tab"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 12px", borderRadius: 8,
+          fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700,
+          color: "#0c1014",
+          background: ATOM_TEAL,
+          border: `1px solid ${ATOM_TEAL}`,
+          boxShadow: `0 0 18px color-mix(in oklab, ${ATOM_TEAL} 22%, transparent)`,
+          textDecoration: "none",
+        }}
+      >
+        <Eye size={12} /> View as tenant
+      </a>
+      <a
+        href={analyticsUrl}
+        title="Operator analytics for this tenant"
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           padding: "6px 10px", borderRadius: 8,
@@ -315,7 +354,7 @@ function TenantRowCard({ tenant, onEdit }: { tenant: TenantRow; onEdit: () => vo
           textDecoration: "none",
         }}
       >
-        <ExternalLink size={12} /> open
+        <BarChart3 size={12} /> analytics
       </a>
       <button onClick={onEdit} style={btnGhost}>
         <Pencil size={12} /> edit
