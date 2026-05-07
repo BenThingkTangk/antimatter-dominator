@@ -14,6 +14,7 @@ import AtomCampaign from "./pages/atom-campaign";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
 import AdminTenants from "./pages/admin-tenants";
+import BillingPage from "./pages/billing";
 import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
 import VibraniumShell from "./admin/VibraniumShell";
@@ -156,6 +157,7 @@ function AuthenticatedRoutes() {
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
         <Route path="/admin/tenants" component={AdminTenants} />
+        <Route path="/billing" component={BillingPage} />
         <Route path="/admin/hq" component={HqShell} />
         <Route path="/admin/vibranium-ga" component={VibraniumShell} />
         <Route path="/admin/t/:slug" component={TenantDetailShell} />

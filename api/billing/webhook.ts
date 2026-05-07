@@ -1,10 +1,15 @@
 /**
  * POST /api/billing/webhook
+ *
  * Handles Stripe webhook events:
- *   - customer.subscription.updated
- *   - invoice.payment_failed
- *   - customer.subscription.deleted
- * Updates tenants.subscription_status and tenants.stripe_subscription_id.
+ *   - checkout.session.completed       → first persistence (plan, seats, sub id, customer id)
+ *   - customer.subscription.created    → mirror of above
+ *   - customer.subscription.updated    → status / seat / plan changes
+ *   - invoice.payment_failed           → mark past_due
+ *   - customer.subscription.deleted    → mark canceled + flip kill_switch
+ *
+ * Updates tenants table: subscription_status, stripe_subscription_id, plan,
+ * seats, trial_ends_at, kill_switch.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -41,6 +46,36 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+function isoFromUnix(s: number | null | undefined): string | null {
+  return typeof s === "number" ? new Date(s * 1000).toISOString() : null;
+}
+
+// Heuristic plan inference from a Stripe price's product name.
+function inferPlanFromPrice(price: any): string | null {
+  const name = (price?.product?.name || price?.nickname || "").toLowerCase();
+  if (name.includes("starter")) return "starter";
+  if (name.includes("growth")) return "growth";
+  if (name.includes("advisory")) return "advisory";
+  if (name.includes("enterprise")) return "enterprise";
+  return null;
+}
+
+async function patchTenantByCustomer(customerId: string, patch: Record<string, any>) {
+  if (!customerId) return;
+  await sb(`tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+async function patchTenantById(tenantId: string, patch: Record<string, any>) {
+  if (!tenantId) return;
+  await sb(`tenants?id=eq.${encodeURIComponent(tenantId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -65,46 +100,88 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const type = event.type as string;
-    const obj = event.data?.object;
+    const obj = event.data?.object as any;
 
-    if (type === "customer.subscription.updated") {
+    // ── checkout.session.completed ─────────────────────────────────────────────
+    if (type === "checkout.session.completed") {
       const customerId = obj.customer as string;
-      const status = obj.status as string; // active, past_due, canceled, trialing, etc.
-      const subscriptionId = obj.id as string;
+      const subscriptionId = obj.subscription as string;
+      const tenantId = obj.metadata?.tenant_id as string | undefined;
+      const planMeta = obj.metadata?.plan as string | undefined;
+      const seatsMeta = Number(obj.metadata?.seats || 1);
 
-      // Map Stripe status to our subscription_status
-      let subscriptionStatus = status;
-      if (status === "active") subscriptionStatus = "active";
-      else if (status === "past_due") subscriptionStatus = "past_due";
-      else if (status === "canceled") subscriptionStatus = "canceled";
-      else if (status === "trialing") subscriptionStatus = "trialing";
+      let trialEnd: string | null = null;
+      let status = "active";
+      let plan = planMeta || null;
+      let seats = seatsMeta || 1;
 
-      await sb(`tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          subscription_status: subscriptionStatus,
-          stripe_subscription_id: subscriptionId,
-          kill_switch: status === "past_due" || status === "canceled",
-        }),
-      });
+      if (subscriptionId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["items.data.price.product"] });
+          status = sub.status;
+          trialEnd = isoFromUnix(sub.trial_end);
+          const item = sub.items?.data?.[0];
+          if (item?.quantity) seats = item.quantity;
+          if (!plan && item?.price) plan = inferPlanFromPrice(item.price);
+        } catch (e: any) {
+          console.warn("[webhook] retrieve sub failed:", e?.message);
+        }
+      }
+
+      const patch: Record<string, any> = {
+        stripe_subscription_id: subscriptionId || null,
+        subscription_status: status,
+        kill_switch: false,
+      };
+      if (plan) patch.plan = plan;
+      if (seats) patch.seats = seats;
+      if (trialEnd) patch.trial_ends_at = trialEnd;
+
+      if (tenantId) await patchTenantById(tenantId, patch);
+      else if (customerId) await patchTenantByCustomer(customerId, patch);
     }
 
+    // ── customer.subscription.created / updated ────────────────────────────────
+    if (type === "customer.subscription.created" || type === "customer.subscription.updated") {
+      const customerId = obj.customer as string;
+      const status = obj.status as string;
+      const subscriptionId = obj.id as string;
+      const trialEnd = isoFromUnix(obj.trial_end);
+      const item = obj.items?.data?.[0];
+      const seats = item?.quantity || 1;
+
+      // Re-fetch with expanded product to infer plan
+      let plan: string | null = null;
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["items.data.price.product"] });
+        const it = sub.items?.data?.[0];
+        if (it?.price) plan = inferPlanFromPrice(it.price);
+      } catch {}
+
+      const patch: Record<string, any> = {
+        subscription_status: status,
+        stripe_subscription_id: subscriptionId,
+        kill_switch: status === "past_due" || status === "canceled" || status === "unpaid",
+        seats,
+      };
+      if (trialEnd) patch.trial_ends_at = trialEnd;
+      if (plan) patch.plan = plan;
+
+      await patchTenantByCustomer(customerId, patch);
+    }
+
+    // ── invoice.payment_failed ─────────────────────────────────────────────────
     if (type === "invoice.payment_failed") {
       const customerId = obj.customer as string;
-      await sb(`tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ subscription_status: "past_due" }),
-      });
+      await patchTenantByCustomer(customerId, { subscription_status: "past_due" });
     }
 
+    // ── customer.subscription.deleted ──────────────────────────────────────────
     if (type === "customer.subscription.deleted") {
       const customerId = obj.customer as string;
-      await sb(`tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          subscription_status: "canceled",
-          kill_switch: true,
-        }),
+      await patchTenantByCustomer(customerId, {
+        subscription_status: "canceled",
+        kill_switch: true,
       });
     }
 

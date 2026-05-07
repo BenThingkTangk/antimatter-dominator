@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Megaphone, Brain,
-  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // All standard items
   dynamicNavItems.push(...navItems);
 
-  // ATOM System Control below WarBook for admins/superAdmins
+  // Billing & Plan — visible to admins (tenant owners) and superAdmins
+  if (session.role === "admin" || session.isSuperAdmin) {
+    dynamicNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
+  }
+
+  // ATOM System Control below for admins/superAdmins
   if (session.role === "admin" || session.isSuperAdmin) {
     dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ATOM System Control" });
   }

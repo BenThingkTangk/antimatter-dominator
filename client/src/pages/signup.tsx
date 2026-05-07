@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 
 const PLANS = [
-  { key: "trial", name: "Trial", price: "$0", period: "14 days", desc: "Auto-rolls to Starter on day 15 — cancel anytime", highlight: true },
-  { key: "starter", name: "Starter", price: "$99", period: "/mo", desc: "5 seats · 500 dials/mo" },
-  { key: "growth", name: "Growth", price: "$299", period: "/mo", desc: "15 seats · 2,000 dials/mo" },
-  { key: "advisory", name: "Advisory", price: "$799", period: "/mo", desc: "50 seats · 10,000 dials/mo" },
-  { key: "enterprise", name: "Enterprise", price: "$1,999", period: "/mo", desc: "Unlimited seats · Unlimited dials" },
+  { key: "trial",      name: "Trial",      price: "$0",   period: "14 days",   desc: "Pick a paid plan with trial on the next page — cancel anytime", highlight: true },
+  { key: "starter",    name: "Starter",    price: "$99",  period: "/seat/mo", desc: "Min 5 seats · 500 dials/mo · 14-day free trial" },
+  { key: "growth",     name: "Growth",     price: "$199", period: "/seat/mo", desc: "Min 15 seats · 2,000 dials/mo · 14-day free trial" },
+  { key: "advisory",   name: "Advisory",   price: "$499", period: "/seat/mo", desc: "Min 50 seats · 10,000 dials/mo · 14-day free trial" },
+  { key: "enterprise", name: "Enterprise", price: "$999", period: "/seat/mo", desc: "Custom seats · Unlimited dials · Hume + Twilio sub-account" },
 ];
 
 function PasswordStrength({ password }: { password: string }) {
@@ -67,23 +67,11 @@ export default function SignupPage() {
         return;
       }
 
-      // If non-trial plan, redirect to Stripe checkout
-      if (plan !== "trial" && data.redirectTo?.startsWith("/api/billing")) {
-        const checkoutRes = await fetch("/api/billing/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ plan }),
-        });
-        const checkoutData = await checkoutRes.json();
-        if (checkoutData.checkoutUrl) {
-          window.location.href = checkoutData.checkoutUrl;
-          return;
-        }
-      }
-
-      // Default: redirect to app
-      window.location.hash = "#/pitch";
+      // Always send the new tenant to the in-app Billing page so they can
+      // pick a plan, choose seats, and start a 14-day free trial — even if
+      // they originally clicked "Trial" (which is just a label for the paid
+      // plan + 14-day Stripe trial). They can also skip and start exploring.
+      window.location.hash = "#/billing";
       window.location.reload();
     } catch {
       setError("Network error — please try again");

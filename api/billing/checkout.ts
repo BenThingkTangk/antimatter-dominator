@@ -1,7 +1,16 @@
 /**
  * POST /api/billing/checkout
- * Body: { plan }
- * Returns Stripe Checkout Session URL, or null if Stripe not configured.
+ * Body: { plan: "starter"|"growth"|"advisory"|"enterprise", seats?: number, withTrial?: boolean }
+ *
+ * Creates a Stripe Checkout Session for the current tenant. Honors:
+ *  • Per-seat pricing — `seats` becomes Stripe line-item quantity (defaults to 1).
+ *  • 14-day free trial — `withTrial=true` (default) attaches `subscription_data.trial_period_days = 14`.
+ *  • Optional Stripe Price IDs — if env vars STRIPE_PRICE_<PLAN> are set, the checkout
+ *    uses those prices (recommended for production). Otherwise falls back to inline
+ *    price_data (current behavior, useful for test mode).
+ *  • Tax + promotion codes — both enabled.
+ *
+ * Returns: { checkoutUrl } or { checkoutUrl: null, message } if Stripe not configured.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -36,12 +45,25 @@ function parseCookies(header: string | undefined): Record<string, string> {
   return out;
 }
 
-const PLAN_PRICES: Record<string, number> = {
-  starter: 9900,
-  growth: 29900,
-  advisory: 79900,
-  enterprise: 199900,
+// Per-seat monthly pricing (cents) — falls back to these when no Stripe Price ID env var is set.
+const PER_SEAT_PRICES: Record<string, number> = {
+  starter: 9900,    // $99 / seat / mo  · base 5 seats included in plan caps
+  growth: 19900,    // $199 / seat / mo · base 15 seats
+  advisory: 49900,  // $499 / seat / mo · base 50 seats
+  enterprise: 99900,// $999 / seat / mo · custom
 };
+
+const PLAN_LABELS: Record<string, string> = {
+  starter: "ATOM Starter",
+  growth: "ATOM Growth",
+  advisory: "ATOM Advisory",
+  enterprise: "ATOM Enterprise",
+};
+
+function priceIdForPlan(plan: string): string {
+  const k = `STRIPE_PRICE_${plan.toUpperCase()}`;
+  return clean(process.env[k]);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
@@ -55,17 +77,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!STRIPE_SECRET_KEY) {
       return res.status(200).json({
         checkoutUrl: null,
-        message: "Stripe not configured — running in dev mode",
+        message: "Stripe not configured — set STRIPE_SECRET_KEY in Vercel env to enable checkout.",
       });
     }
 
     const body = req.body || {};
     const plan = String(body.plan || "").toLowerCase();
-    if (!PLAN_PRICES[plan]) {
-      return res.status(400).json({ error: `Invalid plan. Choose one of: ${Object.keys(PLAN_PRICES).join(", ")}` });
+    const seats = Math.max(1, Math.min(500, Number(body.seats) || 1));
+    const withTrial = body.withTrial !== false; // default true
+    if (!PER_SEAT_PRICES[plan]) {
+      return res.status(400).json({ error: `Invalid plan. Choose one of: ${Object.keys(PER_SEAT_PRICES).join(", ")}` });
     }
 
-    // Get current user from session
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies["atom_session"];
     if (!token) return res.status(401).json({ error: "Not authenticated" });
@@ -76,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const session = Array.isArray(sessions) ? sessions[0] : null;
     if (!session) return res.status(401).json({ error: "Session expired" });
 
-    const tenants = await sb(`tenants?id=eq.${session.tenant_id}&select=id,slug,name,owner_email,stripe_customer_id`);
+    const tenants = await sb(`tenants?id=eq.${session.tenant_id}&select=id,slug,name,owner_email,stripe_customer_id,stripe_subscription_id`);
     const tenant = Array.isArray(tenants) ? tenants[0] : null;
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
@@ -99,25 +122,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
+
+    // Build line item — prefer real Stripe Price IDs in production, fallback to inline price_data
+    const priceId = priceIdForPlan(plan);
+    const lineItem: any = priceId
+      ? { price: priceId, quantity: seats }
+      : {
+          price_data: {
+            currency: "usd",
+            unit_amount: PER_SEAT_PRICES[plan],
+            recurring: { interval: "month" },
+            product_data: {
+              name: `${PLAN_LABELS[plan]} — per seat`,
+            },
+          },
+          quantity: seats,
+        };
+
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: PLAN_PRICES[plan],
-            recurring: { interval: "month" },
-            product_data: {
-              name: `ATOM ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${origin}/#/?checkout=success`,
-      cancel_url: `${origin}/#/?checkout=cancel`,
-      metadata: { tenant_id: tenant.id, plan },
+      line_items: [lineItem],
+      allow_promotion_codes: true,
+      automatic_tax: { enabled: true },
+      customer_update: { address: "auto", name: "auto" },
+      billing_address_collection: "auto",
+      subscription_data: {
+        ...(withTrial ? { trial_period_days: 14 } : {}),
+        metadata: { tenant_id: tenant.id, tenant_slug: tenant.slug, plan, seats: String(seats) },
+      },
+      success_url: `${origin}/#/billing?checkout=success`,
+      cancel_url: `${origin}/#/billing?checkout=cancel`,
+      metadata: { tenant_id: tenant.id, tenant_slug: tenant.slug, plan, seats: String(seats), with_trial: String(withTrial) },
     });
 
     return res.status(200).json({ checkoutUrl: checkoutSession.url });
