@@ -1,12 +1,19 @@
 /**
  * Admin → Tenants
  *
- * Cross-tenant overview — growth, MRR stack, churn risk, power-user counts.
+ * Cross-tenant overview (KPIs, MRR stack, growth, plan mix, health) PLUS a
+ * full Manage Tenants panel — create / edit / soft-delete tenants. Backed by
+ * /api/tenant (action: create | update | delete | list) which has been part
+ * of the platform since the original Platinum sprint but was never surfaced
+ * in the admin UI.
+ *
+ * Auth: X-Admin-Key (auto-attached by adminFetch via localStorage).
  */
-import { Building2, TrendingUp, DollarSign, AlertTriangle } from "lucide-react";
-import { useAdminQuery } from "../useAdminApi";
+import { useEffect, useMemo, useState } from "react";
+import { Building2, TrendingUp, DollarSign, AlertTriangle, Plus, Pencil, Trash2, X, Check, Loader2, ExternalLink } from "lucide-react";
+import { adminFetch, useAdminQuery } from "../useAdminApi";
 import {
-  KpiCard, ChartCard, AreaStack, DonutMix, LineSpark, BarStack,
+  KpiCard, ChartCard, AreaStack, DonutMix, BarStack,
   ATOM_TEAL, ATOM_TEAL_2, ATOM_PURPLE, ATOM_AMBER, ATOM_GREEN, ATOM_MUTED, EmptyState,
 } from "../charts";
 
@@ -21,6 +28,25 @@ interface TenantsData {
     kill_switch: boolean; compliance_blocks_30d: number;
   }[];
 }
+
+interface TenantRow {
+  id?: string;
+  slug: string;
+  name: string;
+  logo_url?: string | null;
+  primary_hex?: string | null;
+  accent_hex?: string | null;
+  plan?: string | null;
+  admin_email?: string | null;
+  hume_config_id?: string | null;
+  twilio_subaccount_sid?: string | null;
+  created_at?: string;
+  subscription_status?: string;
+  trial_ends_at?: string | null;
+  deleted_at?: string | null;
+}
+
+const PLAN_OPTIONS = ["trial", "starter", "growth", "advisory", "enterprise"];
 
 function money(cents: number) {
   if (cents >= 100_000_00) return `$${(cents / 100_000_00).toFixed(1)}M`;
@@ -71,6 +97,9 @@ export default function Tenants() {
           ]}
         />
       </ChartCard>
+
+      {/* ── Manage Tenants — CRUD panel ───────────────────────────────────────── */}
+      <ManageTenantsPanel />
 
       <ChartCard title="Tenant health" subtitle="Sorted by 30d dial activity">
         {!data?.tenantHealth?.length ? <EmptyState /> : (
@@ -126,3 +155,368 @@ function StatusPill({ status, trial }: { status: string; trial: string | null })
     </div>
   );
 }
+
+// ─── Manage Tenants Panel ──────────────────────────────────────────────────────
+
+function ManageTenantsPanel() {
+  const [tenants, setTenants] = useState<TenantRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+
+  async function refresh() {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await adminFetch("/api/tenant", { method: "POST", body: JSON.stringify({ action: "list" }) });
+      setTenants(r?.tenants || []);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tenants");
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { refresh(); }, []);
+
+  return (
+    <ChartCard
+      title="Manage tenants"
+      subtitle="Create, edit, or revoke tenant workspaces · backed by /api/tenant"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_MUTED }}>
+            {loading ? "Loading…" : `${tenants.length} tenant${tenants.length === 1 ? "" : "s"}`}
+            {error && <span style={{ color: "#ff6b8b", marginLeft: 12 }}>· {error}</span>}
+          </span>
+          <button
+            onClick={() => { setShowCreate(true); setEditingSlug(null); }}
+            style={btnPrimary}
+          >
+            <Plus size={14} /> New tenant
+          </button>
+        </div>
+
+        {showCreate && (
+          <TenantForm
+            mode="create"
+            onCancel={() => setShowCreate(false)}
+            onSaved={() => { setShowCreate(false); refresh(); }}
+          />
+        )}
+
+        {tenants.length === 0 && !loading && !showCreate && (
+          <div style={{
+            padding: "28px 14px", textAlign: "center",
+            color: ATOM_MUTED, fontSize: 13, fontFamily: "var(--font-mono)",
+            border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 10,
+          }}>
+            No tenants yet. Click "New tenant" to provision one.
+          </div>
+        )}
+
+        {tenants.map((t) =>
+          editingSlug === t.slug ? (
+            <TenantForm
+              key={t.slug}
+              mode="edit"
+              initial={t}
+              onCancel={() => setEditingSlug(null)}
+              onSaved={() => { setEditingSlug(null); refresh(); }}
+              onDeleted={() => { setEditingSlug(null); refresh(); }}
+            />
+          ) : (
+            <TenantRowCard
+              key={t.slug}
+              tenant={t}
+              onEdit={() => setEditingSlug(t.slug)}
+            />
+          )
+        )}
+      </div>
+    </ChartCard>
+  );
+}
+
+function TenantRowCard({ tenant, onEdit }: { tenant: TenantRow; onEdit: () => void }) {
+  const swatch = tenant.primary_hex || "#06b6d4";
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "auto 1fr auto auto",
+      gap: 12, alignItems: "center",
+      padding: "10px 14px", borderRadius: 10,
+      background: "rgba(255,255,255,0.02)",
+      border: "1px solid rgba(255,255,255,0.06)",
+    }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 6,
+        background: swatch, opacity: 0.85,
+      }} />
+      <div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 700, color: "var(--color-text)" }}>{tenant.name}</span>
+          <span style={{
+            padding: "1px 8px", borderRadius: 999,
+            background: "rgba(255,255,255,0.04)",
+            fontFamily: "var(--font-mono)", fontSize: 9,
+            letterSpacing: "0.10em", textTransform: "uppercase",
+            color: ATOM_TEAL_2, border: "1px solid rgba(34,211,238,0.18)",
+          }}>{tenant.plan || "trial"}</span>
+        </div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_MUTED, marginTop: 2 }}>
+          {tenant.slug}
+          {tenant.admin_email && <> · {tenant.admin_email}</>}
+        </div>
+      </div>
+      <a
+        href={`#/admin/t/${tenant.slug}`}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 10px", borderRadius: 8,
+          fontFamily: "var(--font-mono)", fontSize: 11,
+          color: ATOM_TEAL, background: "rgba(34,211,238,0.06)",
+          border: "1px solid rgba(34,211,238,0.18)",
+          textDecoration: "none",
+        }}
+      >
+        <ExternalLink size={12} /> open
+      </a>
+      <button onClick={onEdit} style={btnGhost}>
+        <Pencil size={12} /> edit
+      </button>
+    </div>
+  );
+}
+
+function TenantForm({
+  mode, initial, onCancel, onSaved, onDeleted,
+}: {
+  mode: "create" | "edit";
+  initial?: TenantRow;
+  onCancel: () => void;
+  onSaved: () => void;
+  onDeleted?: () => void;
+}) {
+  const [slug, setSlug] = useState(initial?.slug || "");
+  const [name, setName] = useState(initial?.name || "");
+  const [plan, setPlan] = useState(initial?.plan || "trial");
+  const [primary_hex, setPrimary] = useState(initial?.primary_hex || "#06b6d4");
+  const [accent_hex, setAccent] = useState(initial?.accent_hex || "#a78bfa");
+  const [logo_url, setLogo] = useState(initial?.logo_url || "");
+  const [admin_email, setAdminEmail] = useState(initial?.admin_email || "");
+  const [hume_config_id, setHume] = useState(initial?.hume_config_id || "");
+  const [twilio_subaccount_sid, setTwilio] = useState(initial?.twilio_subaccount_sid || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>("");
+
+  const canSubmit = useMemo(() =>
+    slug.trim().length >= 2 && /^[a-z0-9-]+$/.test(slug) && name.trim().length >= 2,
+  [slug, name]);
+
+  async function submit() {
+    setErr("");
+    setBusy(true);
+    try {
+      const payload = {
+        action: mode === "create" ? "create" : "update",
+        slug: slug.trim().toLowerCase(),
+        name: name.trim(),
+        plan,
+        primary_hex,
+        accent_hex,
+        logo_url: logo_url.trim() || null,
+        admin_email: admin_email.trim() || null,
+        hume_config_id: hume_config_id.trim() || null,
+        twilio_subaccount_sid: twilio_subaccount_sid.trim() || null,
+      };
+      await adminFetch("/api/tenant", { method: "POST", body: JSON.stringify(payload) });
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.message || "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!initial?.slug) return;
+    if (!confirm(`Soft-delete tenant "${initial.slug}"? Their data is preserved but the workspace becomes inaccessible.`)) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await adminFetch("/api/tenant", { method: "POST", body: JSON.stringify({ action: "delete", slug: initial.slug }) });
+      onDeleted?.();
+    } catch (e: any) {
+      setErr(e?.message || "Delete failed");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 12,
+      padding: "16px", borderRadius: 12,
+      background: "rgba(34,211,238,0.03)",
+      border: "1px solid rgba(34,211,238,0.20)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: 11,
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          color: ATOM_TEAL,
+        }}>
+          {mode === "create" ? "New tenant" : `Edit · ${initial?.slug}`}
+        </span>
+        <button onClick={onCancel} style={btnGhost}><X size={12} /> cancel</button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+        <Field label="Slug" hint="lowercase, alphanum + dashes (used in URL)">
+          <input
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            disabled={mode === "edit"}
+            placeholder="acme"
+            style={input}
+          />
+        </Field>
+        <Field label="Display name">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Corp" style={input} />
+        </Field>
+        <Field label="Plan">
+          <select value={plan} onChange={(e) => setPlan(e.target.value)} style={input}>
+            {PLAN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+        <Field label="Admin email">
+          <input value={admin_email} onChange={(e) => setAdminEmail(e.target.value)} placeholder="founder@acme.com" style={input} />
+        </Field>
+        <Field label="Primary color">
+          <ColorInput value={primary_hex} onChange={setPrimary} />
+        </Field>
+        <Field label="Accent color">
+          <ColorInput value={accent_hex} onChange={setAccent} />
+        </Field>
+        <Field label="Logo URL">
+          <input value={logo_url || ""} onChange={(e) => setLogo(e.target.value)} placeholder="/logo-acme.svg" style={input} />
+        </Field>
+        <Field label="Hume config ID" hint="optional · per-tenant voice persona">
+          <input value={hume_config_id || ""} onChange={(e) => setHume(e.target.value)} placeholder="hume_..." style={input} />
+        </Field>
+        <Field label="Twilio subaccount SID" hint="optional · per-tenant call routing">
+          <input value={twilio_subaccount_sid || ""} onChange={(e) => setTwilio(e.target.value)} placeholder="AC..." style={input} />
+        </Field>
+      </div>
+
+      {err && (
+        <div style={{
+          padding: "8px 12px", borderRadius: 8,
+          background: "rgba(255,107,139,0.06)", color: "#ff6b8b",
+          fontFamily: "var(--font-mono)", fontSize: 11,
+          border: "1px solid rgba(255,107,139,0.20)",
+        }}>{err}</div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <div>
+          {mode === "edit" && (
+            <button onClick={handleDelete} disabled={busy} style={{
+              ...btnGhost,
+              color: "#ff6b8b",
+              borderColor: "rgba(255,107,139,0.25)",
+              background: "rgba(255,107,139,0.05)",
+            }}>
+              <Trash2 size={12} /> Soft-delete
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onCancel} style={btnGhost}>Cancel</button>
+          <button onClick={submit} disabled={!canSubmit || busy} style={{
+            ...btnPrimary,
+            opacity: !canSubmit || busy ? 0.5 : 1,
+            cursor: !canSubmit || busy ? "not-allowed" : "pointer",
+          }}>
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            {mode === "create" ? "Create tenant" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={{
+        fontFamily: "var(--font-mono)", fontSize: 9,
+        letterSpacing: "0.12em", textTransform: "uppercase",
+        color: ATOM_MUTED,
+      }}>{label}</span>
+      {children}
+      {hint && (
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.30)" }}>{hint}</span>
+      )}
+    </div>
+  );
+}
+
+function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: 38, height: 32, borderRadius: 6,
+          background: "transparent", border: "1px solid rgba(255,255,255,0.10)",
+          padding: 0, cursor: "pointer",
+        }}
+      />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="#06b6d4"
+        style={{ ...input, flex: 1 }}
+      />
+    </div>
+  );
+}
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: 8,
+  background: "rgba(255,255,255,0.03)",
+  color: "var(--color-text)",
+  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  border: "1px solid rgba(255,255,255,0.08)",
+  outline: "none",
+};
+
+const btnPrimary: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 6,
+  padding: "8px 14px", borderRadius: 10,
+  background: `color-mix(in oklab, ${ATOM_TEAL} 12%, transparent)`,
+  color: ATOM_TEAL,
+  border: `1px solid color-mix(in oklab, ${ATOM_TEAL} 32%, transparent)`,
+  boxShadow: `0 0 18px color-mix(in oklab, ${ATOM_TEAL} 14%, transparent)`,
+  fontFamily: "var(--font-mono)", fontSize: 11,
+  fontWeight: 700, cursor: "pointer",
+  letterSpacing: "0.06em",
+};
+
+const btnGhost: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 6,
+  padding: "6px 12px", borderRadius: 8,
+  background: "rgba(255,255,255,0.03)",
+  color: "var(--color-text)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  fontFamily: "var(--font-mono)", fontSize: 11,
+  cursor: "pointer",
+};
