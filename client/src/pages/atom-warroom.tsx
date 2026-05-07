@@ -271,10 +271,16 @@ const intentLabel = (s: string) => (s || "unknown").replace(/_/g, " ").replace(/
 const phraseColor = (c: string) => c === "red" ? "bg-rose-500/20 border-rose-500/30 text-rose-300" : c === "amber" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-300";
 const strengthColor = (s: string) => s === "strong" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : s === "moderate" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-white/5 text-white/40 border-white/10";
 
+// Primary action button — tinted glass + teal hairline per the brand bible.
+// Was a flat saturated fill which violated 'energy belongs in small,
+// precise bursts'. Now a quiet luxury treatment: ~10% teal tint, soft glow,
+// teal text. Reads as a clear primary CTA without screaming at the user.
 const CRIMSON_BTN_STYLE = {
-  background: "linear-gradient(93.92deg, var(--color-primary) -13.51%, var(--color-primary) 40.91%, var(--color-primary) 113.69%)",
-  boxShadow: "0 0 15px color-mix(in oklab, var(--color-primary) 12%, transparent), inset 0 0 2px rgba(255,255,255,0.3)",
-  color: "#fff",
+  background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
+  border: "1px solid color-mix(in oklab, var(--color-primary) 32%, transparent)",
+  boxShadow: "0 0 18px color-mix(in oklab, var(--color-primary) 14%, transparent)",
+  color: "var(--color-primary)",
+  fontWeight: 700 as const,
 };
 
 function stageLabel(s: DealStage): string {
