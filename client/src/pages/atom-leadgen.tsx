@@ -282,7 +282,7 @@ function EmotionBar({ name, value }: { name: string; value: number }) {
       <span className="w-24 text-xs capitalize" style={{ color: "var(--color-text-muted)" }}>
         {name}
       </span>
-      <div className="flex-1 h-2 rounded-full" style={{ background: "var(--color-text-faint)" }}>
+      <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }}>
         <div
           className="h-2 rounded-full"
           style={{
@@ -420,7 +420,7 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
                 color: "var(--color-text)",
               }
             : {
-                background: "var(--color-text-faint)",
+                background: "rgba(255,255,255,0.04)",
                 color: "var(--color-text)",
               }
         }
@@ -456,12 +456,12 @@ function PulsingDot() {
 function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
   const idx = entry.id;
   return (
-    <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid var(--color-text-faint)" }}>
+    <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
       {/* Gauges */}
       <div className="grid grid-cols-2 gap-4">
         <div
           className="rounded-xl p-4 flex flex-col items-center"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "var(--color-text-muted)" }}>
             Sentiment
@@ -470,7 +470,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
         </div>
         <div
           className="rounded-xl p-4 flex flex-col items-center"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "var(--color-text-muted)" }}>
             Buyer Intent
@@ -482,7 +482,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
       {/* Emotion Bars */}
       <div
         className="rounded-xl p-4"
-        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
       >
         <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "var(--color-text-muted)" }}>
           Emotion Analysis
@@ -498,7 +498,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
           className="rounded-xl p-4"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "var(--color-text-muted)" }}>
             Call Stage
@@ -507,7 +507,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
         </div>
         <div
           className="rounded-xl p-4"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
             Sentiment Timeline
@@ -573,8 +573,8 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
     <div
       className="rounded-xl p-4 cursor-pointer transition-all duration-200"
       style={{
-        background: "var(--color-text-faint)",
-        border: `1px solid ${isExpanded ? "#696aac" : "var(--color-text-faint)"}`,
+        background: "rgba(255,255,255,0.04)",
+        border: `1px solid ${isExpanded ? "var(--color-primary)" : "rgba(255,255,255,0.08)"}`,
         borderLeft: `3px solid ${borderColor}`,
         boxShadow: isExpanded ? "0 0 16px rgba(105,106,172,0.15)" : "none",
       }}
@@ -1177,7 +1177,7 @@ export default function ATOMLeadGen() {
               background: viewMode === "history" ? "rgba(105,106,172,0.2)" : "transparent",
               border: viewMode === "history"
                 ? "1px solid #696aac"
-                : "1px solid var(--color-text-faint)",
+                : "1px solid rgba(255,255,255,0.08)",
               color: viewMode === "history" ? "#00e6d3" : "var(--color-text-muted)",
               cursor: "pointer",
               boxShadow: viewMode === "history" ? "0 0 12px rgba(105,106,172,0.2)" : "none",
@@ -1218,8 +1218,8 @@ export default function ATOMLeadGen() {
                 onChange={(e) => setHistorySearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
                 style={{
-                  background: "var(--color-text-faint)",
-                  border: "1px solid var(--color-text-faint)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                   color: "var(--color-text)",
                 }}
               />
@@ -1230,8 +1230,8 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-12 text-center"
                 style={{
-                  background: "var(--color-text-faint)",
-                  border: "1px solid var(--color-text-faint)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <Clock size={32} className="mx-auto mb-3" style={{ color: "var(--color-text-faint)" }} />
@@ -1243,8 +1243,8 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-10 text-center"
                 style={{
-                  background: "var(--color-text-faint)",
-                  border: "1px solid var(--color-text-faint)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -1277,8 +1277,8 @@ export default function ATOMLeadGen() {
             <div
               className="rounded-2xl p-6"
               style={{
-                background: "var(--color-text-faint)",
-                border: "1px solid var(--color-text-faint)",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
               }}
             >
               <div
@@ -1302,8 +1302,8 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "var(--color-text-faint)",
-                      border: "1px solid var(--color-text-faint)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       color: "var(--color-text)",
                     }}
                   />
@@ -1322,8 +1322,8 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "var(--color-text-faint)",
-                      border: "1px solid var(--color-text-faint)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       color: "var(--color-text)",
                     }}
                   />
@@ -1342,8 +1342,8 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "var(--color-text-faint)",
-                      border: "1px solid var(--color-text-faint)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       color: "var(--color-text)",
                     }}
                   />
@@ -1362,8 +1362,8 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "var(--color-text-faint)",
-                      border: "1px solid var(--color-text-faint)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       color: "var(--color-text)",
                     }}
                   />
@@ -1397,8 +1397,8 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "var(--color-text-faint)",
-                      border: "1px solid var(--color-text-faint)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       color: "var(--color-text)",
                       fontFamily: "var(--font-mono)",
                       fontVariantNumeric: "tabular-nums",
@@ -1466,7 +1466,7 @@ export default function ATOMLeadGen() {
                       <span
                         className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full"
                         style={{
-                          background: "var(--color-text-faint)",
+                          background: "rgba(255,255,255,0.04)",
                           color: "var(--color-text-muted)",
                           border: "1px solid var(--color-border)",
                           fontFamily: "var(--font-mono)",
@@ -1518,8 +1518,8 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-6 space-y-6"
                 style={{
-                  background: "var(--color-text-faint)",
-                  border: "1px solid var(--color-text-faint)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <div
@@ -1533,7 +1533,7 @@ export default function ATOMLeadGen() {
                 <div className="grid grid-cols-2 gap-4">
                   <div
                     className="rounded-xl p-4 flex flex-col items-center"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-2 self-start"
@@ -1545,7 +1545,7 @@ export default function ATOMLeadGen() {
                   </div>
                   <div
                     className="rounded-xl p-4 flex flex-col items-center"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-2 self-start"
@@ -1560,7 +1560,7 @@ export default function ATOMLeadGen() {
                 {/* ── Row 2: Emotion Bars ── */}
                 <div
                   className="rounded-xl p-4"
-                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
                 >
                   <div
                     className="text-xs uppercase tracking-wider mb-4"
@@ -1579,7 +1579,7 @@ export default function ATOMLeadGen() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div
                     className="rounded-xl p-4"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-4"
@@ -1591,7 +1591,7 @@ export default function ATOMLeadGen() {
                   </div>
                   <div
                     className="rounded-xl p-4"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-text-faint)" }}
+                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-3"
@@ -1666,7 +1666,7 @@ export default function ATOMLeadGen() {
                         {Object.entries(warroom.deception as Record<string, number>).map(([k, v]) => (
                           <div key={k} className="flex items-center gap-3 text-[11px]">
                             <span className="w-32 capitalize opacity-80">{k.replace(/Pct|Probability/g, "").replace(/([A-Z])/g, " $1").trim()}</span>
-                            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-text-faint)" }}>
+                            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
                               <div style={{ width: `${v}%`, height: "100%", background: v > 60 ? "var(--color-error)" : v > 30 ? "var(--color-primary-2)" : "#4ade80" }} />
                             </div>
                             <span className="w-8 text-right opacity-70">{v}</span>
@@ -1813,8 +1813,8 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-6"
                 style={{
-                  background: "var(--color-text-faint)",
-                  border: "1px solid var(--color-text-faint)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <div

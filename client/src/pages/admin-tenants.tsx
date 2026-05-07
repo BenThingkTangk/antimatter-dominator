@@ -199,7 +199,7 @@ export default function AdminTenants() {
                 placeholder="Paste ADMIN_API_KEY"
                 onBlur={(e) => saveAdminKey(e.target.value)}
                 className="mt-2 w-full px-3 py-2 rounded-md text-sm outline-none"
-                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
               />
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function AdminTenants() {
         {showNew && (
           <section
             className="rounded-2xl p-6 mb-8"
-            style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Customer name">
@@ -217,7 +217,7 @@ export default function AdminTenants() {
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Acme Corp"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Subdomain slug">
@@ -226,11 +226,11 @@ export default function AdminTenants() {
                     value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     placeholder="acme"
                     className="flex-1 px-3 py-2 rounded-md text-sm outline-none"
-                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
                   />
                   <span
                     className="px-3 py-2 rounded-md text-xs flex items-center"
-                    style={{ background: "var(--color-text-faint)", color: "var(--color-text-muted)" }}
+                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--color-text-muted)" }}
                   >
                     .atomdominator.com
                   </span>
@@ -241,7 +241,7 @@ export default function AdminTenants() {
                   value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://acme.com/logo.svg"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Admin email">
@@ -250,14 +250,14 @@ export default function AdminTenants() {
                   type="email"
                   placeholder="ops@acme.com"
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
                 />
               </Field>
               <Field label="Plan">
                 <select
                   value={plan} onChange={(e) => setPlan(e.target.value)}
                   className="w-full px-3 py-2 rounded-md text-sm outline-none"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid var(--color-text-faint)", color: "var(--color-text)" }}
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)" }}
                 >
                   {PLAN_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
@@ -272,7 +272,7 @@ export default function AdminTenants() {
                       className="rounded-md flex items-center gap-1 px-1.5 py-1 text-[10px]"
                       style={{
                         background: "rgba(0,0,0,0.4)",
-                        border: primaryHex === p.primary ? `1.5px solid ${p.primary}` : "1px solid var(--color-text-faint)",
+                        border: primaryHex === p.primary ? `1.5px solid ${p.primary}` : "1px solid rgba(255,255,255,0.08)",
                         color: "var(--color-text)",
                       }}
                     >
@@ -336,7 +336,7 @@ export default function AdminTenants() {
           {loading ? (
             <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>Loading…</div>
           ) : tenants.length === 0 ? (
-            <div className="rounded-xl p-8 text-center" style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}>
+            <div className="rounded-xl p-8 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
                 No tenants yet. Click "New tenant" to spin up your first.
               </p>
@@ -347,7 +347,7 @@ export default function AdminTenants() {
                 <div
                   key={t.slug}
                   className="rounded-xl p-4 flex items-center gap-4 flex-wrap"
-                  style={{ background: "var(--color-text-faint)", border: "1px solid var(--color-text-faint)" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                 >
                   <div className="rounded-full w-10 h-10 flex items-center justify-center text-xs font-bold" style={{ background: t.primary_hex, color: "white", boxShadow: `0 0 10px ${t.primary_hex}66` }}>
                     {t.name?.[0] || "?"}
