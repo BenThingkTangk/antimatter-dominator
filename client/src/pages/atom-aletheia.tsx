@@ -324,7 +324,7 @@ function TextAnalyzerTab() {
             <div className="absolute inset-0 rounded-full border-2 border-violet-400/30" />
             <div className="absolute inset-0 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
           </div>
-          <span className="text-[13px] text-violet-400/80 font-mono">ATOM Aletheia scanning for deception patterns, hedging, evasion signals...</span>
+          <span className="text-[13px] text-violet-400/80 font-mono">ΔTOM Aletheia scanning for deception patterns, hedging, evasion signals...</span>
         </div>
       )}
 
@@ -659,7 +659,7 @@ export default function AtomAletheia() {
             <Eye size={20} className="text-violet-400" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-[#f6f6fd] leading-tight">ATOM Aletheia</h1>
+            <h1 className="text-lg font-bold text-[#f6f6fd] leading-tight">ΔTOM Aletheia</h1>
             <p className="text-[12px] text-white/30">Truth & Intent Engine</p>
           </div>
         </div>

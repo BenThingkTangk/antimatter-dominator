@@ -168,7 +168,7 @@ export default function AdminTenants() {
               Tenants
             </h1>
             <p className="mt-2 text-sm" style={{ color: "rgba(246,246,253,0.55)" }}>
-              Spin up a white-labeled ATOM Sales Dominator deployment in 30 seconds. Each tenant gets their own subdomain, brand, and per-seat billing.
+              Spin up a white-labeled ΔTOM Sales Dominator deployment in 30 seconds. Each tenant gets their own subdomain, brand, and per-seat billing.
             </p>
           </div>
           <button

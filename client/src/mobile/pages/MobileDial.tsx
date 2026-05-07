@@ -157,7 +157,7 @@ export default function MobileDial() {
                 onClick={handleDial}
                 disabled={!leadPhone || (isCustom(product) && !customText.trim())}
               >
-                <PhoneCall size={18} /> Dial with ATOM
+                <PhoneCall size={18} /> Dial with ΔTOM
               </button>
             </div>
           </div>

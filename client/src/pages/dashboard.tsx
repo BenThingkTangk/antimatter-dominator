@@ -304,7 +304,7 @@ export default function Dashboard() {
             <Cpu size={20} color="#696aac" />
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.3px" }}>ATOM Command Center</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.3px" }}>ΔTOM Command Center</h1>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               System Health · API Status · Performance Metrics
             </p>

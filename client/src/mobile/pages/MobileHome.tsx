@@ -77,7 +77,7 @@ export default function MobileHome() {
                   <PhoneCall size={18} />
                 </span>
                 <span style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontWeight: 700 }}>Dial with ATOM</span>
+                  <span style={{ fontWeight: 700 }}>Dial with ΔTOM</span>
                   <span className="m-text-muted" style={{ fontSize: 13 }}>Steve Jobs voice · Hume EVI · 264ms</span>
                 </span>
               </span>
@@ -107,7 +107,7 @@ export default function MobileHome() {
                   <MessageSquare size={18} />
                 </span>
                 <span style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontWeight: 700 }}>Ask ATOM</span>
+                  <span style={{ fontWeight: 700 }}>Ask ΔTOM</span>
                   <span className="m-text-muted" style={{ fontSize: 13 }}>Sonar · Sonar Pro · live citations</span>
                 </span>
               </span>

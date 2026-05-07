@@ -465,7 +465,7 @@ export default function MarketIntent() {
           <Shield className="w-5 h-5 text-emerald-400" />
         </div>
         <div className="flex-1">
-          <h1 className="text-xl font-semibold text-white">ATOM Market Intent</h1>
+          <h1 className="text-xl font-semibold text-white">ΔTOM Market Intent</h1>
           <p className="text-sm text-white/40">AI-powered market intelligence and buying signal detection</p>
         </div>
         <div className="flex items-center gap-2">

@@ -477,7 +477,7 @@ export default function AtomSonar() {
                 <Radar size={18} className="text-cyan-400" style={{ animation: "sonarPulse 2.5s ease-in-out infinite" }} />
               </div>
               <div>
-                <h1 className="text-[15px] font-bold text-[#f6f6fd] leading-tight">ATOM Sonar</h1>
+                <h1 className="text-[15px] font-bold text-[#f6f6fd] leading-tight">ΔTOM Sonar</h1>
                 <div className="flex items-center gap-1.5 text-[11px] text-white/30 mt-0.5">
                   <span>Company Intelligence</span>
                   <ArrowRight size={10} />
@@ -756,7 +756,7 @@ export default function AtomSonar() {
                       className="w-2 h-2 rounded-full"
                       style={{ background: "#a78bfa", animation: "sonarPulse 2s ease-in-out infinite" }}
                     />
-                    <MonoLabel>ATOM Voice Intelligence</MonoLabel>
+                    <MonoLabel>ΔTOM Voice Intelligence</MonoLabel>
                   </div>
                   <span
                     className="text-[10px] px-2 py-0.5 rounded-full font-mono uppercase"
@@ -800,7 +800,7 @@ export default function AtomSonar() {
                     <Radio size={12} className="text-violet-400" />
                   </div>
                   <WaveformAnimation />
-                  <span className="text-[10px] text-white/25 font-mono uppercase tracking-wider">ATOM Voice Active</span>
+                  <span className="text-[10px] text-white/25 font-mono uppercase tracking-wider">ΔTOM Voice Active</span>
                 </div>
 
                 {/* Call script */}
@@ -921,7 +921,7 @@ export default function AtomSonar() {
                 {/* Pitch angles */}
                 {wb?.battlePlan?.pitchAngles && wb.battlePlan.pitchAngles.length > 0 && (
                   <div className="space-y-2 pt-1">
-                    <MonoLabel>ATOM Pitch Angles</MonoLabel>
+                    <MonoLabel>ΔTOM Pitch Angles</MonoLabel>
                     <ul className="space-y-1.5">
                       {wb.battlePlan.pitchAngles.slice(0, 3).map((angle, i) => (
                         <li key={i} className="flex items-start gap-2 text-[11px] text-white/40">

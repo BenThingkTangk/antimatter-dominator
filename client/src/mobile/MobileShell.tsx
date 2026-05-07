@@ -27,7 +27,7 @@ export function MobileShell({ children, title, right }: { children: React.ReactN
       <div className="m-topbar">
         <div className="m-topbar-title">
           <AtomOrbit size={30} />
-          {title ? <span>{title}</span> : <span>AT<span className="m-o">O</span>M</span>}
+          {title ? <span>{title}</span> : <span>ΔT<span className="m-o">O</span>M</span>}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {tenant?.name && tenant.name !== "AntimatterAI" ? (

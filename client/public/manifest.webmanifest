@@ -1,7 +1,7 @@
 {
-  "name": "ATOM — AntimatterAI",
-  "short_name": "ATOM",
-  "description": "AI sales dominator — Hume EVI voice, Perplexity Sonar, GPT-5 ensemble.",
+  "name": "ΔTOM — AntimatterAI",
+  "short_name": "ΔTOM",
+  "description": "ΔTOM routes live intent into action. Hume EVI voice, Perplexity Sonar, GPT-5 ensemble.",
   "start_url": "/#/m/home",
   "scope": "/",
   "display": "standalone",
@@ -15,8 +15,8 @@
     { "src": "/icon.svg",     "sizes": "any",     "type": "image/svg+xml", "purpose": "any" }
   ],
   "shortcuts": [
-    { "name": "Dial with ATOM", "short_name": "Dial", "url": "/#/m/dial" },
+    { "name": "Dial with ΔTOM", "short_name": "Dial", "url": "/#/m/dial" },
     { "name": "Lead queue",     "short_name": "Leads", "url": "/#/m/leads" },
-    { "name": "Ask ATOM",       "short_name": "Chat",  "url": "/#/m/chat" }
+    { "name": "Ask ΔTOM",       "short_name": "Chat",  "url": "/#/m/chat" }
   ]
 }

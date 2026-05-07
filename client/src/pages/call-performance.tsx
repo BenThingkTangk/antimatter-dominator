@@ -259,7 +259,7 @@ export default function CallPerformance() {
             <Activity className="w-5 h-5 text-violet-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">ATOM Call Performance</h1>
+            <h1 className="text-xl font-bold">ΔTOM Call Performance</h1>
             <p className="text-sm text-muted-foreground">Live bridge monitoring</p>
           </div>
           {bridge && (
@@ -609,7 +609,7 @@ export default function CallPerformance() {
                     <th className="text-right text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">Turns</th>
                     <th className="text-center text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">Pre-warm</th>
                     <th className="text-right text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">EVI Latency</th>
-                    <th className="text-right text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">ATOM Tools</th>
+                    <th className="text-right text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">ΔTOM Tools</th>
                     <th className="text-right text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">Sentiment</th>
                     <th className="text-center text-muted-foreground font-medium px-4 py-3 whitespace-nowrap">Errors</th>
                   </tr>

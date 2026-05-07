@@ -961,8 +961,8 @@ export default function CompanyIntelligence() {
               <Brain size={20} className="text-violet-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[#f6f6fd] leading-tight">ATOM WarBook</h1>
-              <p className="text-[12px] text-white/30">ATOM Deep Intelligence Engine</p>
+              <h1 className="text-lg font-bold text-[#f6f6fd] leading-tight">ΔTOM WarBook</h1>
+              <p className="text-[12px] text-white/30">ΔTOM Deep Intelligence Engine</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)} className="gap-1.5 text-[12px] border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 bg-transparent" data-testid="button-history">

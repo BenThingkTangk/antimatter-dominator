@@ -27,7 +27,7 @@ function getSessionId(): string {
 }
 
 const STARTERS = [
-  "What can ATOM do for me?",
+  "What can ΔTOM do for me?",
   "Build me a one-page brief on Akamai",
   "Sharpen my opener for a CTO",
   "What buying signals appeared this week?",
@@ -71,7 +71,7 @@ export default function MobileChat() {
   }
 
   return (
-    <MobileShell title="Ask ATOM">
+    <MobileShell title="Ask ΔTOM">
       <div className="m-stack-lg">
         {messages.length === 0 && (
           <div className="m-card m-card-glow">
@@ -117,7 +117,7 @@ export default function MobileChat() {
           <div className="m-card">
             <div className="m-row" style={{ gap: 10 }}>
               <Loader2 size={16} className="animate-spin" style={{ color: "#00e6d3" }} />
-              <span className="m-text-muted" style={{ fontSize: 14 }}>ATOM is thinking…</span>
+              <span className="m-text-muted" style={{ fontSize: 14 }}>ΔTOM is thinking…</span>
             </div>
           </div>
         )}

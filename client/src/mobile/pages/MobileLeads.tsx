@@ -176,7 +176,7 @@ export default function MobileLeads() {
         <div className="m-card">
           <div className="m-card-eyebrow">Tip</div>
           <div style={{ fontSize: 14, marginTop: 6, lineHeight: 1.5 }}>
-            Swipe <span style={{ color: "#00e6d3" }}>left</span> to dial with ATOM. Swipe <span style={{ color: "#ff6b8b" }}>right</span> to snooze. Tap a card for details.
+            Swipe <span style={{ color: "#00e6d3" }}>left</span> to dial with ΔTOM. Swipe <span style={{ color: "#ff6b8b" }}>right</span> to snooze. Tap a card for details.
           </div>
         </div>
       </div>

@@ -11,14 +11,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface NavItem { href: string; icon: any; label: string; }
 
 const navItems: NavItem[] = [
-  { href: "/war-room", icon: Swords, label: "ATOM War Room" },
-  { href: "/pitch", icon: TrendingUp, label: "ATOM Pitch" },
-  { href: "/objections", icon: MessageSquareWarning, label: "ATOM Objection Handler" },
-  { href: "/market", icon: Shield, label: "ATOM Market Intent" },
-  { href: "/prospects", icon: Radar, label: "ATOM Prospect" },
-  { href: "/atom-leadgen", icon: PhoneCall, label: "ATOM Lead Gen" },
-  { href: "/atom-campaign", icon: Megaphone, label: "ATOM Campaign" },
-  { href: "/company-intelligence", icon: Brain, label: "ATOM WarBook" },
+  { href: "/war-room", icon: Swords, label: "ΔTOM War Room" },
+  { href: "/pitch", icon: TrendingUp, label: "ΔTOM Pitch" },
+  { href: "/objections", icon: MessageSquareWarning, label: "ΔTOM Objection Handler" },
+  { href: "/market", icon: Shield, label: "ΔTOM Market Intent" },
+  { href: "/prospects", icon: Radar, label: "ΔTOM Prospect" },
+  { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Lead Gen" },
+  { href: "/atom-campaign", icon: Megaphone, label: "ΔTOM Campaign" },
+  { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
 
 // ATOM canonical logo — v2.0 Cinematic Systems Edition
@@ -55,7 +55,7 @@ function AtomLockup({ markSize = 36 }: { markSize?: number }) {
   return (
     <a href="/" className="atom-logo" aria-label="ATOM home" style={{ ['--logo-size' as any]: `${markSize}px` }}>
       <AtomLogo size={markSize} />
-      <span className="atom-wordmark">AT<span>O</span>M</span>
+      <span className="atom-wordmark">ΔT<span>O</span>M</span>
     </a>
   );
 }
@@ -99,7 +99,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 className="atom-wordmark text-lg leading-none truncate"
                 style={{ color: "var(--color-text)" }}
               >
-                AT<span>O</span>M
+                ΔT<span>O</span>M
               </h1>
               <p
                 className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
@@ -158,7 +158,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
             <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-              ATOM · Nirmata Holdings · © 2026
+              ΔTOM · Nirmata Holdings · © 2026
             </p>
           </div>
         )}
@@ -215,7 +215,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-2">
                 <AtomLogo size={22} />
                 <span className="atom-wordmark text-sm leading-none" style={{ color: "var(--color-text)" }}>
-                  AT<span>O</span>M
+                  ΔT<span>O</span>M
                 </span>
               </div>
             </div>

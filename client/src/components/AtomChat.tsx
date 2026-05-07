@@ -162,7 +162,7 @@ export default function AtomChat() {
       {/* Floating launcher — always present, bottom-right */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Ask ATOM"
+        aria-label="Ask ΔTOM"
         className="fixed bottom-6 right-6 z-50 rounded-full flex items-center justify-center transition-all"
         style={{
           width: 56, height: 56,
@@ -201,7 +201,7 @@ export default function AtomChat() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="atom-wordmark text-base leading-tight" style={{ letterSpacing: "-0.02em", color: "var(--color-text)" }}>
-                Ask ATOM
+                Ask ΔTOM
               </div>
               <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
                 {context === "general" ? "Powered by Perplexity Sonar" : `${context} mode`}

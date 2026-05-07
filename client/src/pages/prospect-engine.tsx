@@ -381,7 +381,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
         <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{seniorityLabel}</span>
         {contact.department && <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{contact.department}</span>}
         <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-white/5 text-white/30 border border-white/[0.06]">{confidence}% confidence</span>
-        <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">ATOM Verified</span>
+        <span className="inline-flex text-[9px] font-mono px-1.5 py-0 h-4 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">ΔTOM Verified</span>
       </div>
     </div>
   );
@@ -1163,7 +1163,7 @@ export default function ProspectEngine() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
             <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
-            <span className="text-sm text-violet-400/70">ATOM Intelligence scanning...</span>
+            <span className="text-sm text-violet-400/70">ΔTOM Intelligence scanning...</span>
           </div>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>

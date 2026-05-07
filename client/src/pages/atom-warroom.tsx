@@ -2154,7 +2154,7 @@ export default function AtomWarRoom() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-bold text-[#f6f6fd]">ATOM War Room</span>
+                  <span className="text-[14px] font-bold text-[#f6f6fd]">ΔTOM War Room</span>
                   <span className="text-[9px] font-mono px-2 py-0.5 rounded-full" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", color: "var(--color-primary)", border: "1px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>Von Clausewitz Engine</span>
                 </div>
               </div>

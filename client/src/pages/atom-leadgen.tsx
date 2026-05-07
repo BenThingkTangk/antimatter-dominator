@@ -1433,7 +1433,7 @@ export default function ATOMLeadGen() {
                     {callStatus === "dialing" ? (
                       <><Loader2 size={16} className="animate-spin" />Connecting…</>
                     ) : (
-                      <><PhoneCall size={16} />Dial with ATOM</>
+                      <><PhoneCall size={16} />Dial with ΔTOM</>
                     )}
                   </button>
                   <HVTFlagButton companyName={companyName} contactName={contactName} phone={phone} />

@@ -199,7 +199,7 @@ function LiveCallInterface({ companyName, contactName, productName }: {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Line open — waiting for pickup…</span>
                   </div>
-                  <span className="text-[10px] opacity-70">ATOM stays silent until the prospect says “hello”</span>
+                  <span className="text-[10px] opacity-70">ΔTOM stays silent until the prospect says “hello”</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
