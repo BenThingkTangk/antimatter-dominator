@@ -10,7 +10,7 @@
  * Auth: X-Admin-Key (auto-attached by adminFetch via localStorage).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Building2, TrendingUp, DollarSign, AlertTriangle, Plus, Pencil, Trash2, X, Check, Loader2, ExternalLink } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, AlertTriangle, Plus, Pencil, Trash2, X, Check, Loader2, ExternalLink, Upload, Image as ImageIcon } from "lucide-react";
 import { adminFetch, useAdminQuery } from "../useAdminApi";
 import {
   KpiCard, ChartCard, AreaStack, DonutMix, BarStack,
@@ -324,6 +324,20 @@ function TenantRowCard({ tenant, onEdit }: { tenant: TenantRow; onEdit: () => vo
   );
 }
 
+// Auto-derive a URL-safe slug from the company name. Examples:
+//   "Thingk Tangk"      → "thingk-tangk"
+//   "Bob & Co."          → "bob-co"
+//   "3M"                 → "3m"
+function deriveSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 function TenantForm({
   mode, initial, onCancel, onSaved, onDeleted,
 }: {
@@ -333,37 +347,58 @@ function TenantForm({
   onSaved: () => void;
   onDeleted?: () => void;
 }) {
-  const [slug, setSlug] = useState(initial?.slug || "");
   const [name, setName] = useState(initial?.name || "");
   const [plan, setPlan] = useState(initial?.plan || "trial");
   const [primary_hex, setPrimary] = useState(initial?.primary_hex || "#06b6d4");
   const [accent_hex, setAccent] = useState(initial?.accent_hex || "#a78bfa");
   const [logo_url, setLogo] = useState(initial?.logo_url || "");
   const [admin_email, setAdminEmail] = useState(initial?.admin_email || "");
-  const [hume_config_id, setHume] = useState(initial?.hume_config_id || "");
-  const [twilio_subaccount_sid, setTwilio] = useState(initial?.twilio_subaccount_sid || "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>("");
+  const [logoErr, setLogoErr] = useState<string>("");
+
+  const slug = useMemo(
+    () => mode === "edit" ? (initial?.slug || "") : deriveSlug(name),
+    [name, mode, initial?.slug]
+  );
 
   const canSubmit = useMemo(() =>
-    slug.trim().length >= 2 && /^[a-z0-9-]+$/.test(slug) && name.trim().length >= 2,
-  [slug, name]);
+    name.trim().length >= 2 && slug.length >= 2,
+  [name, slug]);
+
+  function handleLogoFile(file: File) {
+    setLogoErr("");
+    if (!file) return;
+    if (!/^image\//.test(file.type)) {
+      setLogoErr("Please choose an image file (PNG, JPG, SVG, WebP).");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      setLogoErr(`Image is ${Math.round(file.size / 1024)}KB — please use a logo under 500KB.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = String(e.target?.result || "");
+      setLogo(dataUrl);
+    };
+    reader.onerror = () => setLogoErr("Couldn't read that file. Try a different image.");
+    reader.readAsDataURL(file);
+  }
 
   async function submit() {
     setErr("");
     setBusy(true);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         action: mode === "create" ? "create" : "update",
-        slug: slug.trim().toLowerCase(),
+        slug,
         name: name.trim(),
         plan,
         primary_hex,
         accent_hex,
-        logo_url: logo_url.trim() || null,
+        logo_url: logo_url || null,
         admin_email: admin_email.trim() || null,
-        hume_config_id: hume_config_id.trim() || null,
-        twilio_subaccount_sid: twilio_subaccount_sid.trim() || null,
       };
       await adminFetch("/api/tenant", { method: "POST", body: JSON.stringify(payload) });
       onSaved();
@@ -390,8 +425,8 @@ function TenantForm({
 
   return (
     <div style={{
-      display: "flex", flexDirection: "column", gap: 12,
-      padding: "16px", borderRadius: 12,
+      display: "flex", flexDirection: "column", gap: 14,
+      padding: "18px", borderRadius: 12,
       background: "rgba(34,211,238,0.03)",
       border: "1px solid rgba(34,211,238,0.20)",
     }}>
@@ -406,26 +441,17 @@ function TenantForm({
         <button onClick={onCancel} style={btnGhost}><X size={12} /> cancel</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-        <Field label="Slug" hint="lowercase, alphanum + dashes (used in URL)">
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            disabled={mode === "edit"}
-            placeholder="acme"
-            style={input}
-          />
-        </Field>
-        <Field label="Display name">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Corp" style={input} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+        <Field label="Company name" hint={mode === "create" && name ? `URL slug: ${slug || "…"}` : undefined}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Corp" style={input} autoFocus={mode === "create"} />
         </Field>
         <Field label="Plan">
           <select value={plan} onChange={(e) => setPlan(e.target.value)} style={input}>
             {PLAN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </Field>
-        <Field label="Admin email">
-          <input value={admin_email} onChange={(e) => setAdminEmail(e.target.value)} placeholder="founder@acme.com" style={input} />
+        <Field label="Admin email" hint="They'll receive a sign-up invite">
+          <input value={admin_email} onChange={(e) => setAdminEmail(e.target.value)} placeholder="founder@acme.com" style={input} type="email" />
         </Field>
         <Field label="Primary color">
           <ColorInput value={primary_hex} onChange={setPrimary} />
@@ -433,15 +459,9 @@ function TenantForm({
         <Field label="Accent color">
           <ColorInput value={accent_hex} onChange={setAccent} />
         </Field>
-        <Field label="Logo URL">
-          <input value={logo_url || ""} onChange={(e) => setLogo(e.target.value)} placeholder="/logo-acme.svg" style={input} />
-        </Field>
-        <Field label="Hume config ID" hint="optional · per-tenant voice persona">
-          <input value={hume_config_id || ""} onChange={(e) => setHume(e.target.value)} placeholder="hume_..." style={input} />
-        </Field>
-        <Field label="Twilio subaccount SID" hint="optional · per-tenant call routing">
-          <input value={twilio_subaccount_sid || ""} onChange={(e) => setTwilio(e.target.value)} placeholder="AC..." style={input} />
-        </Field>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <LogoUploader value={logo_url} onChange={setLogo} onFile={handleLogoFile} error={logoErr} />
+        </div>
       </div>
 
       {err && (
@@ -554,3 +574,112 @@ const btnGhost: React.CSSProperties = {
   fontFamily: "var(--font-mono)", fontSize: 11,
   cursor: "pointer",
 };
+
+// ─── LogoUploader ──────────────────────────────────────────────────────────────
+// File-picker + drag-drop logo input. Stores the uploaded image as a data URL
+// (so it survives one round-trip through /api/tenant without needing S3). The
+// preview rounds, sizes, and optionally clears.
+function LogoUploader({
+  value, onChange, onFile, error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onFile: (file: File) => void;
+  error?: string;
+}) {
+  const inputId = "tenant-logo-input";
+  const has = !!value;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{
+        fontFamily: "var(--font-mono)", fontSize: 9,
+        letterSpacing: "0.12em", textTransform: "uppercase",
+        color: ATOM_MUTED,
+      }}>Company logo</span>
+      <label
+        htmlFor={inputId}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const f = e.dataTransfer?.files?.[0];
+          if (f) onFile(f);
+        }}
+        style={{
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "12px 14px", borderRadius: 10,
+          background: "rgba(255,255,255,0.025)",
+          border: "1px dashed rgba(255,255,255,0.14)",
+          cursor: "pointer",
+          minHeight: 64,
+        }}
+      >
+        <div style={{
+          width: 48, height: 48, borderRadius: 8,
+          background: has ? "rgba(255,255,255,0.04)" : "rgba(34,211,238,0.06)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, overflow: "hidden",
+        }}>
+          {has ? (
+            <img
+              src={value}
+              alt="logo preview"
+              style={{ width: "100%", height: "100%", objectFit: "contain", padding: 4 }}
+            />
+          ) : (
+            <ImageIcon size={20} style={{ color: ATOM_TEAL }} />
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: "var(--color-text)", fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
+            {has ? "Logo selected" : "Click to upload or drop a file"}
+          </div>
+          <div style={{ color: ATOM_MUTED, fontSize: 11, fontFamily: "var(--font-mono)" }}>
+            PNG, JPG, SVG, or WebP · up to 500KB
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); document.getElementById(inputId)?.click(); }}
+            style={{
+              ...btnGhost,
+              borderColor: "rgba(34,211,238,0.25)",
+              color: ATOM_TEAL,
+              background: "rgba(34,211,238,0.05)",
+            }}
+          >
+            <Upload size={12} /> {has ? "Replace" : "Upload"}
+          </button>
+          {has && (
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange(""); }}
+              style={btnGhost}
+            >
+              <X size={12} /> Remove
+            </button>
+          )}
+        </div>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onFile(f);
+            // reset so picking the same file again still triggers
+            e.currentTarget.value = "";
+          }}
+        />
+      </label>
+      {error && (
+        <span style={{
+          color: "#ff6b8b", fontSize: 11, fontFamily: "var(--font-mono)",
+        }}>{error}</span>
+      )}
+    </div>
+  );
+}
