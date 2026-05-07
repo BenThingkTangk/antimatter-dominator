@@ -107,13 +107,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // All standard items
   dynamicNavItems.push(...navItems);
 
-  // Billing & Plan — visible to admins (tenant owners) and superAdmins
-  if (session.role === "admin" || session.isSuperAdmin) {
+  // Billing & Plan + ATOM System Control are SUPER-ADMIN ONLY — tenants only
+  // see the eight product modules (War Room, Pitch, Objection Handler, Market
+  // Intent, Prospect, Dial, Campaign, WarBook). Tenant-admin role does NOT
+  // grant access to platform-level surfaces.
+  if (session.isSuperAdmin) {
     dynamicNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
-  }
-
-  // ATOM System Control below for admins/superAdmins
-  if (session.role === "admin" || session.isSuperAdmin) {
     dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ATOM System Control" });
   }
 

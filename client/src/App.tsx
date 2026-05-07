@@ -20,6 +20,21 @@ import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
 import VibraniumShell from "./admin/VibraniumShell";
 import TenantDetailShell from "./admin/TenantDetailShell";
+import { useSessionContext } from "./auth/AuthGate";
+
+// Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
+// Billing & Plan, ATOM System Control). Even if they type the URL directly,
+// they're bounced to the default product module.
+function SuperAdminOnly({ children }: { children: React.ReactNode }) {
+  const session = useSessionContext();
+  if (!session.isSuperAdmin) {
+    if (typeof window !== "undefined") {
+      window.location.hash = "#/pitch";
+    }
+    return null;
+  }
+  return <>{children}</>;
+}
 import NotFound from "./pages/not-found";
 import LoginPage from "./pages/login";
 import SignupPage from "./pages/signup";
@@ -157,12 +172,12 @@ function AuthenticatedRoutes() {
         <Route path="/atom-campaign" component={AtomCampaign} />
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
-        <Route path="/admin/tenants" component={AdminTenants} />
-        <Route path="/billing" component={BillingPage} />
-        <Route path="/admin/hq" component={HqShell} />
-        <Route path="/admin/vibranium-ga" component={VibraniumShell} />
-        <Route path="/admin/t/:slug" component={TenantDetailShell} />
-        <Route path="/admin" component={AdminShell} />
+        <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
+        <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>
+        <Route path="/admin/hq">{() => <SuperAdminOnly><HqShell /></SuperAdminOnly>}</Route>
+        <Route path="/admin/vibranium-ga">{() => <SuperAdminOnly><VibraniumShell /></SuperAdminOnly>}</Route>
+        <Route path="/admin/t/:slug">{(params) => <SuperAdminOnly><TenantDetailShell params={params as any} /></SuperAdminOnly>}</Route>
+        <Route path="/admin">{() => <SuperAdminOnly><AdminShell /></SuperAdminOnly>}</Route>
         <Route component={NotFound} />
       </Switch>
       {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
