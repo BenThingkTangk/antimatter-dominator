@@ -7,6 +7,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { sendEmail, brandedEmail } from "../_email";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -135,6 +136,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       "Set-Cookie",
       `atom_session=${token}; HttpOnly; Secure; Path=/; Max-Age=604800; SameSite=Lax`
     );
+
+    // Welcome email — fire-and-forget; never blocks signup.
+    const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
+    sendEmail({
+      to: email,
+      subject: `Welcome to ΔTOM — your AI sales operating system is live`,
+      html: brandedEmail({
+        preheader: `Your ${tenant.name} workspace is provisioned. Pick a plan and start your 14-day free trial.`,
+        heading: `Welcome aboard, ${fullName.split(" ")[0]}`,
+        body: `
+          <p>Your <strong style="color:#e8e8ea">${tenant.name}</strong> workspace is live on ΔTOM (ATOM Sales Dominator) — the AI sales operating system from AntimatterAI.</p>
+          <p>You're signed in as <strong style="color:#e8e8ea">admin</strong>. Next step: pick a plan, choose your seat count, and start your 14-day free trial. No charge until day 15 — cancel anytime.</p>
+          <ul style="padding-left:18px;margin:14px 0;color:#e8e8ea;">
+            <li>ΔTOM Pitch — brutal, lethal call openers in seconds</li>
+            <li>ΔTOM Dial — voice agents that book meetings while you sleep</li>
+            <li>ΔTOM Campaign — multi-channel orchestration with premium signals</li>
+            <li>ΔTOM Market Intent + War Room — industry intel that pays for itself</li>
+          </ul>
+        `,
+        ctaLabel: "Pick your plan & start trial",
+        ctaUrl: `${origin}/#/billing`,
+        footer: `Your trial doesn't start until you select a paid plan and confirm in Stripe — we never charge a card on signup. Reply to this email any time with questions.`,
+      }),
+      text: `Welcome to ΔTOM. Pick a plan + start your 14-day free trial: ${origin}/#/billing`,
+    }).catch(() => {});
 
     return res.status(201).json({
       tenant: {

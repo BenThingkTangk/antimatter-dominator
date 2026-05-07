@@ -17,6 +17,7 @@
  * via `useTenant()` and applied to a CSS variable theme.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { sendEmail, brandedEmail } from "./_email";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -146,7 +147,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           twilio_subaccount_sid: twilio_subaccount_sid || null,
         }),
       });
-      return res.status(200).json({ ok: true, tenant: inserted?.[0] ?? null });
+      const tenantRow = inserted?.[0] ?? null;
+
+      // If admin_email present, fire a welcome email — fire-and-forget.
+      if (admin_email && tenantRow) {
+        const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
+        sendEmail({
+          to: admin_email,
+          subject: `Your ΔTOM workspace "${name}" is provisioned`,
+          html: brandedEmail({
+            preheader: `Your ${name} workspace is live on ΔTOM. Sign up to access it.`,
+            heading: `${name} is live on ΔTOM`,
+            body: `
+              <p>The Nirmata team just provisioned your <strong style="color:#e8e8ea">${name}</strong> workspace on ΔTOM (ATOM Sales Dominator).</p>
+              <p>Click below to sign up with this email and you'll be auto-linked to your workspace, then you can pick a plan, choose seats, and start your 14-day free trial.</p>
+            `,
+            ctaLabel: "Activate your workspace",
+            ctaUrl: `${origin}/#/signup`,
+            footer: `Slug: <code style="font-family:monospace;color:#00e6d3;">${slug}</code> · Plan: <code style="font-family:monospace;color:#00e6d3;">${plan || "trial"}</code>`,
+          }),
+          text: `Your ΔTOM workspace "${name}" is provisioned. Sign up to access it: ${origin}/#/signup`,
+        }).catch(() => {});
+      }
+
+      return res.status(200).json({ ok: true, tenant: tenantRow });
     }
 
     if (action === "list") {

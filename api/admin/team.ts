@@ -10,6 +10,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
+import { sendEmail, brandedEmail } from "../_email";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -83,8 +84,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           invited_by: invitedBy || null,
         }),
       });
-      const inviteUrl = `${req.headers.origin || "https://atom-dominator-pro.vercel.app"}/#/invite/${token}`;
-      return res.status(201).json({ invite: invite?.[0] || invite, inviteUrl });
+      const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
+      const inviteUrl = `${origin}/#/invite/${token}`;
+
+      // Fire-and-forget email send — never blocks the invite write.
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `You’re invited to ${tenant.name} on ΔTOM`,
+        html: brandedEmail({
+          preheader: `${invitedBy || "Your team"} invited you to ${tenant.name} on ΔTOM — accept your invite to get started.`,
+          heading: `You're invited to ${tenant.name}`,
+          body: `
+            <p>${invitedBy ? `<strong style="color:#e8e8ea">${invitedBy}</strong>` : "Your team"} just invited you to join <strong style="color:#e8e8ea">${tenant.name}</strong> on ΔTOM (ATOM Sales Dominator) as <strong style="color:#e8e8ea">${role}</strong>.</p>
+            <p>Click the button below to accept your invite, set your password, and start running ATOM — the AI sales operating system. The link is single-use and expires in 14 days.</p>
+          `,
+          ctaLabel: "Accept invite & sign in",
+          ctaUrl: inviteUrl,
+          footer: `If you weren't expecting this email, you can safely ignore it. Questions? Just reply to this message.`,
+        }),
+        text: `You've been invited to join ${tenant.name} on ΔTOM as ${role}. Accept here: ${inviteUrl}`,
+        replyTo: invitedBy && /@/.test(invitedBy) ? invitedBy : undefined,
+      });
+      return res.status(201).json({
+        invite: invite?.[0] || invite,
+        inviteUrl,
+        email: { sent: emailResult.ok, id: emailResult.id, error: emailResult.error, skipped: emailResult.skipped },
+      });
     }
 
     if (req.method === "PATCH") {

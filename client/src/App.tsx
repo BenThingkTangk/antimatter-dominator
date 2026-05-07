@@ -15,6 +15,7 @@ import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
 import AdminTenants from "./pages/admin-tenants";
 import BillingPage from "./pages/billing";
+import InviteAcceptPage from "./pages/invite";
 import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
 import VibraniumShell from "./admin/VibraniumShell";
@@ -188,6 +189,7 @@ function AppRouter() {
         {/* Public routes — rendered outside AppLayout */}
         <Route path="/login" component={LoginPage} />
         <Route path="/signup" component={SignupPage} />
+        <Route path="/invite/:token" component={InviteAcceptPage} />
         {/* Landing page at root for unauthenticated users */}
         <Route path="/" component={LandingPage} />
         {/* Everything else goes through authenticated layout */}
