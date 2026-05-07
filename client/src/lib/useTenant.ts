@@ -39,7 +39,9 @@ const DEFAULT_TENANT: Tenant = {
   source: "default",
 };
 
-const SESSION_KEY = "atom_tenant_v1";
+// v2 — bumped to invalidate stale brand caches from before the
+// applyTheme() fix that started actually writing --color-primary.
+const SESSION_KEY = "atom_tenant_v2";
 
 // Convert any hex (#RRGGBB) to a hex with alpha multiplier so we can build
 // the soft "glow" companion to the primary brand color.
