@@ -1010,7 +1010,6 @@ export default function CompanyIntelligence() {
                 onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
                 data-testid="input-company"
               />
-              <span className="absolute left-8 top-1/2 -translate-y-1/2 text-[11px] text-white/15 font-mono pointer-events-none select-none" style={{ display: company ? "none" : undefined }}>COMPANY NAME</span>
             </div>
             <div className="relative flex-1 min-w-[200px] max-w-[300px]">
               <Globe size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Markdown } from "@/mobile/Markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -1433,7 +1434,9 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
                       </button>
                     </div>
                   </div>
-                  <div className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">{activeSectionContent}</div>
+                  <div className="text-[12px] text-white/65 leading-relaxed">
+                    <Markdown text={activeSectionContent} />
+                  </div>
                   {sourcesForSection.length > 0 && (
                     <div className="pt-3 border-t border-white/[0.06]">
                       <MonoLabel>Sources ({sourcesForSection.length})</MonoLabel>

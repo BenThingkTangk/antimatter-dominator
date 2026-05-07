@@ -34,9 +34,28 @@ function isPhoneClass(): boolean {
 }
 
 /**
+ * Map a desktop route → mobile route. Used by the cross-module action
+ * buttons inside the desktop pages (e.g. "Build Pitch from This"
+ * navigates to /pitch?context=… — we rewrite to /m/pitch?context=… so
+ * the click stays inside the mobile experience).
+ */
+const MOBILE_ROUTE_MAP: Record<string, string> = {
+  "/pitch":                "/m/pitch",
+  "/objections":           "/m/objections",
+  "/market":               "/m/market",
+  "/prospects":            "/m/prospects",
+  "/company-intelligence": "/m/warbook",
+  "/war-room":             "/m/war-room",
+  "/atom-leadgen":         "/m/dial",
+  "/atom-campaign":        "/m/chat",          // no dedicated /m/campaign route yet
+  "/admin/tenants":        "/m/admin",
+};
+
+/**
  * MobileGate — on first paint, if this is a phone AND the URL is at the
- * root, redirect to /m/home. Users can still get to desktop via
- * "?desktop=1" or by hitting a non-mobile route directly.
+ * root, redirect to /m/home. Also rewrites legacy desktop paths to their
+ * mobile equivalents so navigate("/pitch?…") inside an embedded module
+ * still routes the user to /m/pitch?… instead of bouncing them home.
  */
 function MobileGate() {
   const [location, navigate] = useLocation();
@@ -50,8 +69,26 @@ function MobileGate() {
     let stickDesktop = false;
     try { stickDesktop = sessionStorage.getItem("m_force_desktop") === "1"; } catch {}
     if (stickDesktop) return;
+
+    // Already inside mobile? Nothing to do.
     if (location.startsWith("/m")) return;
-    if (isPhoneClass()) navigate("/m/home");
+
+    // Rewrite legacy desktop paths to their mobile equivalent, preserving
+    // any query string. Wouter’s hash location strips the search part —
+    // so we read it directly from window.location.hash.
+    if (isPhoneClass()) {
+      // Look up base path (without query) in the rewrite table.
+      const [basePath] = location.split("?");
+      const target = MOBILE_ROUTE_MAP[basePath];
+      const rawHash = window.location.hash || "";
+      const queryIdx = rawHash.indexOf("?");
+      const queryStr = queryIdx >= 0 ? rawHash.slice(queryIdx) : "";
+      if (target) {
+        navigate(target + queryStr);
+      } else {
+        navigate("/m/home");
+      }
+    }
   }, [location, navigate]);
   return null;
 }

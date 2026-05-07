@@ -1046,12 +1046,29 @@
   font-size: 22px;
   line-height: 1.15;
 }
-/* Many desktop modules use sticky/absolute positioning that breaks under
-   the mobile fixed top bar — cancel it inside the host. */
-.atom-mobile-root .m-module-host .sticky,
-.atom-mobile-root .m-module-host .fixed {
+/* Sticky page-level chrome inside a module collides with the mobile top bar
+   — cancel sticky positioning. Don't touch .fixed here, because the desktop
+   pages use it for off-canvas drawers and modals that must stay positioned. */
+.atom-mobile-root .m-module-host .sticky {
   position: relative !important;
   top: 0 !important;
+}
+
+/* Off-canvas history drawers on Prospect / WarBook are 384px wide and translate
+   off-screen via translate-x-full when closed. The width-clamp earlier forced
+   max-width:100% on every child which made the closed-state translate land
+   partly inside the viewport — leaving a visible purple-clock sliver on the
+   right edge. Suppress drawer overflow so closed drawers stay invisible. */
+.atom-mobile-root .m-module-host .fixed.top-0.right-0 {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  pointer-events: none;
+}
+.atom-mobile-root .m-module-host .fixed.top-0.right-0.translate-x-0 {
+  pointer-events: auto;
+}
+.atom-mobile-root .m-module-host .fixed.inset-0 {
+  z-index: 39 !important;
 }
 /* Module pages routinely use heavy left/right padding for desktop margins.
    Knock those down so they don't fight our 20px scroll padding. */

@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, ExternalLink, Loader2 } from "lucide-react";
 import { MobileShell } from "../MobileShell";
+import { Markdown } from "../Markdown";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -116,7 +117,11 @@ export default function MobileChat() {
             <div className={`m-bubble-label${m.role === "assistant" ? " is-atom" : ""}`}>
               {m.role === "assistant" ? "ΔTOM" : "You"}
             </div>
-            <div className="m-bubble" style={{ marginTop: 6 }}>{m.content}</div>
+            <div style={{ marginTop: 6 }}>
+              {m.role === "assistant"
+                ? <Markdown text={m.content} />
+                : <div className="m-bubble">{m.content}</div>}
+            </div>
             {m.citations && m.citations.length > 0 && (
               <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                 {m.citations.map((c, j) => (
