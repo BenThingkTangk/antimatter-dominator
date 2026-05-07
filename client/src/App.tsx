@@ -14,8 +14,16 @@ import AtomCampaign from "./pages/atom-campaign";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
 import AdminTenants from "./pages/admin-tenants";
+import AdminShell from "./admin/AdminShell";
+import HqShell from "./admin/HqShell";
+import TenantDetailShell from "./admin/TenantDetailShell";
 import NotFound from "./pages/not-found";
+import LoginPage from "./pages/login";
+import SignupPage from "./pages/signup";
+import LandingPage from "./pages/landing";
 import { useTenant } from "./lib/useTenant";
+import { AuthGate } from "./auth/AuthGate";
+import { useSessionContext } from "./auth/AuthGate";
 import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
 
@@ -74,7 +82,7 @@ function MobileGate() {
     if (location.startsWith("/m")) return;
 
     // Rewrite legacy desktop paths to their mobile equivalent, preserving
-    // any query string. Wouter’s hash location strips the search part —
+    // any query string. Wouter's hash location strips the search part —
     // so we read it directly from window.location.hash.
     if (isPhoneClass()) {
       // Look up base path (without query) in the rewrite table.
@@ -93,6 +101,37 @@ function MobileGate() {
   return null;
 }
 
+/** Authenticated app routes — only shown when logged in (via AuthGate). */
+function AuthenticatedRoutes() {
+  const { user } = useSessionContext();
+
+  return (
+    <AppLayout>
+      <Switch>
+        {/* Authenticated root → redirect to pitch */}
+        <Route path="/">
+          {user ? <Redirect to="/pitch" /> : <LandingPage />}
+        </Route>
+        <Route path="/pitch" component={PitchGenerator} />
+        <Route path="/objections" component={ObjectionHandler} />
+        <Route path="/market" component={MarketIntent} />
+        <Route path="/prospects" component={ProspectEngine} />
+        <Route path="/atom-leadgen" component={AtomLeadGen} />
+        <Route path="/atom-campaign" component={AtomCampaign} />
+        <Route path="/company-intelligence" component={CompanyIntelligence} />
+        <Route path="/war-room" component={AtomWarRoom} />
+        <Route path="/admin/tenants" component={AdminTenants} />
+        <Route path="/admin/hq" component={HqShell} />
+        <Route path="/admin/t/:slug" component={TenantDetailShell} />
+        <Route path="/admin" component={AdminShell} />
+        <Route component={NotFound} />
+      </Switch>
+      {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
+      <AtomChat />
+    </AppLayout>
+  );
+}
+
 function AppRouter() {
   // Resolve tenant on first paint (shared between mobile + desktop).
   useTenant();
@@ -103,23 +142,17 @@ function AppRouter() {
   }
 
   return (
-    <AppLayout>
+    <AuthGate>
       <Switch>
-        <Route path="/"><Redirect to="/pitch" /></Route>
-        <Route path="/pitch" component={PitchGenerator} />
-        <Route path="/objections" component={ObjectionHandler} />
-        <Route path="/market" component={MarketIntent} />
-        <Route path="/prospects" component={ProspectEngine} />
-        <Route path="/atom-leadgen" component={AtomLeadGen} />
-        <Route path="/atom-campaign" component={AtomCampaign} />
-        <Route path="/company-intelligence" component={CompanyIntelligence} />
-        <Route path="/war-room" component={AtomWarRoom} />
-        <Route path="/admin/tenants" component={AdminTenants} />
-        <Route component={NotFound} />
+        {/* Public routes — rendered outside AppLayout */}
+        <Route path="/login" component={LoginPage} />
+        <Route path="/signup" component={SignupPage} />
+        {/* Landing page at root for unauthenticated users */}
+        <Route path="/" component={LandingPage} />
+        {/* Everything else goes through authenticated layout */}
+        <Route>{() => <AuthenticatedRoutes />}</Route>
       </Switch>
-      {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
-      <AtomChat />
-    </AppLayout>
+    </AuthGate>
   );
 }
 

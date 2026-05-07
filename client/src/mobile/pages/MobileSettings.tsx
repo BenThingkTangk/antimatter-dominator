@@ -68,6 +68,9 @@ export default function MobileSettings() {
           <Link href="/m/admin" className="m-btn m-btn-ghost" style={{ marginTop: 14 }}>
             <Building2 size={16} /> Open tenant admin
           </Link>
+          <Link href="/m/admin/hq" className="m-btn m-btn-ghost" style={{ marginTop: 8, color: "#ffd166", borderColor: "rgba(255,209,102,0.32)" }}>
+            <Building2 size={16} /> Nirmata HQ overlord console
+          </Link>
         </div>
 
         {/* Appearance */}

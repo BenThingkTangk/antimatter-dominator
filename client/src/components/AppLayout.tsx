@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { 
-  Shield, MessageSquareWarning, TrendingUp, 
+import {
+  Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, Moon, Sun, PhoneCall, Megaphone, Brain,
-  Menu, X, Swords
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSessionContext } from "../auth/AuthGate";
 
 interface NavItem { href: string; icon: any; label: string; }
 
@@ -65,6 +66,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const session = useSessionContext();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -76,6 +79,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
+
+  // Build dynamic nav items
+  const dynamicNavItems: NavItem[] = [];
+
+  // Nirmata HQ at the very top for superAdmins
+  if (session.isSuperAdmin) {
+    dynamicNavItems.push({ href: "/admin/hq", icon: Crown, label: "Nirmata HQ" });
+  }
+
+  // All standard items
+  dynamicNavItems.push(...navItems);
+
+  // ATOM System Control below WarBook for admins/superAdmins
+  if (session.role === "admin" || session.isSuperAdmin) {
+    dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ATOM System Control" });
+  }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
@@ -119,7 +138,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Flat nav */}
       <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-0.5" style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-        {navItems.map((item) => {
+        {dynamicNavItems.map((item) => {
           const isActive = location === item.href;
           const Icon = item.icon;
           const linkContent = (
@@ -155,6 +174,66 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <div className="relative border-t p-2 space-y-1 shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        {/* User info / auth actions */}
+        {session.user ? (
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-all"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: "color-mix(in oklab, var(--color-primary) 20%, transparent)", color: "var(--color-primary)" }}>
+                {session.user.fullName?.charAt(0)?.toUpperCase() || session.user.email?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+              {(!collapsed || isMobile) && (
+                <div className="min-w-0 text-left flex-1">
+                  <p className="text-xs font-medium truncate" style={{ color: "var(--color-text)" }}>
+                    {session.user.fullName || session.user.email}
+                  </p>
+                  <p className="text-[10px] truncate" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)" }}>
+                    {session.tenant?.name || ""}
+                  </p>
+                </div>
+              )}
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                <div className="absolute bottom-full left-2 right-2 mb-1 z-40 rounded-xl overflow-hidden" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-lg)" }}>
+                  <button className="w-full flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-white/[0.04] transition-all" style={{ color: "var(--color-text-muted)" }}>
+                    <User className="w-3.5 h-3.5" /> Profile
+                  </button>
+                  <button className="w-full flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-white/[0.04] transition-all" style={{ color: "var(--color-text-muted)" }}>
+                    <Settings className="w-3.5 h-3.5" /> Settings
+                  </button>
+                  <div style={{ height: 1, background: "var(--color-border)" }} />
+                  <button
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      await session.logout();
+                      window.location.hash = "#/login";
+                      window.location.reload();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-white/[0.04] transition-all"
+                    style={{ color: "var(--color-error)" }}
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Sign Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <a
+            href="/#/login"
+            className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] rounded-lg hover:bg-white/[0.03] transition-all"
+            style={{ color: "var(--color-primary)" }}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {(!collapsed || isMobile) && <span className="font-medium">Sign In</span>}
+          </a>
+        )}
+
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
             <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
