@@ -31,90 +31,94 @@ const CACHE_TTL_MS = 6 * 3600 * 1000;
 // competitor public docs as of May 2026. Always returned on error so the
 // GA console + voice-stack-v2 site never display an empty matrix.
 // ──────────────────────────────────────────────────────────────────────────
+// Curated from /docs/COMPETITIVE_MATRIX.md — verified May 2026 with primary
+// sources (TechCrunch, Yahoo Finance, Crunchbase, vendor pricing pages,
+// FTC enforcement filings). Numbers update on Sonar refresh; this is the
+// floor so the UI never renders empty even when Sonar is rate-limited.
 const FALLBACK_COMPETITORS = [
   {
     name: "11x.ai (Alice/Mike)",
     url: "https://11x.ai",
-    arr_estimate_usd: 50_000_000,
-    funding_total_usd: 74_000_000,
-    last_round: "Series B · Nov 2024 · Andreessen Horowitz",
-    pricing: { starter: null, growth: 1500, enterprise: "custom" },
-    pricing_unit: "/agent/mo",
+    arr_estimate_usd: 3_000_000,                  // TechCrunch Mar 2025 investigation: real retained ARR ~$3M, not claimed $10M
+    funding_total_usd: 74_000_000,                // Series B led by a16z at $350M valuation
+    last_round: "Series B · Sep 2024 · a16z ($50M @ $350M valuation)",
+    pricing: { starter: 5000, growth: 10000, enterprise: 15000 },
+    pricing_unit: "/mo (annual contract)",
     voice_realism: 6,
     multichannel: 9,
     deception_analytics: 0,
-    enterprise_compliance: 7,
-    notes: "Highest-funded; 'AI SDR' branding; outbound voice + email + LinkedIn. No emotion engine, no Aletheia.",
+    enterprise_compliance: 6,
+    notes: "Highest-funded; 'AI SDR' branding; voice + email + LinkedIn. TechCrunch exposed inflated customer + ARR claims; 79% retention implies ~21% annual churn.",
   },
   {
     name: "Bland AI",
     url: "https://bland.ai",
-    arr_estimate_usd: 30_000_000,
-    funding_total_usd: 65_000_000,
-    last_round: "Series B · Aug 2024 · Scale Venture Partners",
-    pricing: { starter: 0.09, growth: 0.07, enterprise: 0.05 },
+    arr_estimate_usd: 10_000_000,                 // Estimated $5–15M; not publicly disclosed
+    funding_total_usd: 65_000_000,                // $40M Series B + $16M Series A + ~$9M earlier rounds
+    last_round: "Series B · 2024 · Emergence Capital ($40M)",
+    pricing: { starter: 0.14, growth: 0.11, enterprise: 0.09 },
     pricing_unit: "/min",
     voice_realism: 8,
     multichannel: 4,
     deception_analytics: 0,
     enterprise_compliance: 6,
-    notes: "Phone-first, custom voices, low latency. Pure infra play — no built-in CRM/orchestration.",
+    notes: "Phone-first developer infra. Free tier $0.14/min, enterprise $0.11/min + $499/mo. Pure infra — no CRM, no orchestration, no compliance ledger.",
   },
   {
     name: "Synthflow AI",
     url: "https://synthflow.ai",
-    arr_estimate_usd: 12_000_000,
-    funding_total_usd: 7_400_000,
-    last_round: "Seed · 2024 · Atlantic Labs",
+    arr_estimate_usd: 5_000_000,                  // Estimated $3–8M; not publicly disclosed
+    funding_total_usd: 27_400_000,                // $20M Series A (Accel) + ~$7.4M earlier
+    last_round: "Series A · 2024 · Accel ($20M)",
     pricing: { starter: 29, growth: 99, enterprise: 999 },
-    pricing_unit: "/mo",
+    pricing_unit: "/mo + ~$0.13/min",
     voice_realism: 7,
     multichannel: 5,
     deception_analytics: 0,
     enterprise_compliance: 5,
-    notes: "No-code voice agent builder. Strong SMB traction, weaker enterprise / compliance story.",
+    notes: "No-code voice agent builder. Strong SMB traction (G2 reviews positive), weaker enterprise + compliance story.",
   },
   {
     name: "Retell AI",
     url: "https://retellai.com",
-    arr_estimate_usd: 10_000_000,
-    funding_total_usd: 4_600_000,
-    last_round: "Seed · 2024 · YC",
-    pricing: { starter: 0.07, growth: 0.05, enterprise: 0.04 },
-    pricing_unit: "/min",
+    arr_estimate_usd: 50_000_000,                 // GlobeNewswire Apr 2026 — fastest voice-agent ramp on record
+    funding_total_usd: 4_600_000,                 // YC seed; remarkable capital efficiency
+    last_round: "Seed · 2024 · Y Combinator ($4.6M)",
+    pricing: { starter: 0.16, growth: 0.11, enterprise: 0.05 },
+    pricing_unit: "/min (PAYG → contract)",
     voice_realism: 8,
     multichannel: 3,
     deception_analytics: 0,
-    enterprise_compliance: 6,
-    notes: "Developer-first WebSocket voice API. ~600ms turn latency, customizable LLM.",
+    enterprise_compliance: 7,
+    notes: "$50M ARR on $4.6M raised — 11× capital efficiency vs Bland. 3,000+ business customers, 50M calls/mo. Developer-first WebSocket API; no built-in multichannel.",
   },
   {
     name: "Vapi",
     url: "https://vapi.ai",
-    arr_estimate_usd: 18_000_000,
-    funding_total_usd: 25_000_000,
-    last_round: "Series A · Sep 2024 · Bessemer",
-    pricing: { starter: 0.05, growth: 0.05, enterprise: "custom" },
-    pricing_unit: "/min",
+    arr_estimate_usd: 7_000_000,                  // Extruct/Prospeo estimates: ~$4.5–10M
+    funding_total_usd: 20_000_000,                // Series A led by Bessemer
+    last_round: "Series A · 2024 · Bessemer ($20M)",
+    pricing: { starter: 0.30, growth: 0.30, enterprise: 0.05 },
+    pricing_unit: "/min (true all-in $0.30–$0.33)",
     voice_realism: 8,
     multichannel: 4,
     deception_analytics: 0,
     enterprise_compliance: 7,
-    notes: "Voice-AI infra layer used by hundreds of startups. Fastest-growing developer adoption.",
+    notes: "Voice infra layer used by hundreds of startups. Enterprise contracts $40K–$70K/yr. SMS recently shipped — still not full multichannel.",
   },
   {
-    name: "AirAI",
+    name: "Air AI",
     url: "https://air.ai",
-    arr_estimate_usd: 8_000_000,
-    funding_total_usd: null,
-    last_round: "Bootstrapped",
-    pricing: { starter: null, growth: 1000, enterprise: "custom" },
-    pricing_unit: "/agent/mo",
+    arr_estimate_usd: null,                       // Not disclosed; FTC enforcement context
+    funding_total_usd: null,                      // Bootstrapped
+    last_round: "Bootstrapped · FTC ban Mar 2026 ($18M judgment, $50K mandatory)",
+    pricing: { starter: 25000, growth: 50000, enterprise: 100000 },
+    pricing_unit: "license + ~$0.11/min",
     voice_realism: 7,
     multichannel: 3,
     deception_analytics: 0,
-    enterprise_compliance: 5,
-    notes: "Long-tail outbound; viral marketing-led. Quality reports mixed at scale.",
+    enterprise_compliance: 2,
+    notes: "FTC banned Mar 2026 for false earnings claims + TSR violations. BBB complaints volume high. Existential risk for the brand.",
   },
 ];
 

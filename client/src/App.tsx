@@ -16,6 +16,7 @@ import AtomWarRoom from "./pages/atom-warroom";
 import AdminTenants from "./pages/admin-tenants";
 import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
+import VibraniumShell from "./admin/VibraniumShell";
 import TenantDetailShell from "./admin/TenantDetailShell";
 import NotFound from "./pages/not-found";
 import LoginPage from "./pages/login";
@@ -126,6 +127,7 @@ function AuthenticatedRoutes() {
         <Route path="/war-room" component={AtomWarRoom} />
         <Route path="/admin/tenants" component={AdminTenants} />
         <Route path="/admin/hq" component={HqShell} />
+        <Route path="/admin/vibranium-ga" component={VibraniumShell} />
         <Route path="/admin/t/:slug" component={TenantDetailShell} />
         <Route path="/admin" component={AdminShell} />
         <Route component={NotFound} />
