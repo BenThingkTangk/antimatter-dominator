@@ -39,9 +39,11 @@ const DEFAULT_TENANT: Tenant = {
   source: "default",
 };
 
-// v2 — bumped to invalidate stale brand caches from before the
-// applyTheme() fix that started actually writing --color-primary.
-const SESSION_KEY = "atom_tenant_v2";
+// v3 — bumped to invalidate stale RED brand caches from when DEFAULT_TENANT
+// in api/tenant.ts had primary_hex='#ef4444'. Server is now teal #00e6d3 and
+// the antimatter Supabase row is also teal; this just clears any client cache
+// still holding red from before the fix.
+const SESSION_KEY = "atom_tenant_v3";
 
 // Convert any hex (#RRGGBB) to a hex with alpha multiplier so we can build
 // the soft "glow" companion to the primary brand color.

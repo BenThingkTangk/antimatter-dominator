@@ -88,13 +88,16 @@ ${o.footer ? `<tr><td style="padding:0 32px 24px 32px;font-size:11px;line-height
 }
 
 
-// Default tenant (used when no subdomain match — the canonical app)
+// Default tenant — used ONLY when both host slug and Supabase lookup fail.
+// Colors locked to canonical ΔTOM brand spec (Brand Design System v2 —
+// "black titanium, teal plasma, instrument-grade glass"). Primary teal
+// #00e6d3 is the immutable brand identifier per the spec.
 const DEFAULT_TENANT = {
   slug: "antimatter",
   name: "AntimatterAI",
   logo_url: "/logo-atom.svg",
-  primary_hex: "#ef4444",
-  accent_hex: "#06b6d4",
+  primary_hex: "#00e6d3",   // canonical ΔTOM teal plasma
+  accent_hex: "#00a7ff",    // canonical secondary blue
   plan: "enterprise",
   hume_config_id: null as string | null,
   twilio_subaccount_sid: null as string | null,
@@ -145,11 +148,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ─── GET — public tenant lookup ─────────────────────────────────────────────
   if (req.method === "GET") {
     const host = String(req.query.host || req.headers.host || "").toString();
-    const slug = (req.query.slug as string) || slugFromHost(host);
-
-    if (!slug) {
-      return res.status(200).json({ ...DEFAULT_TENANT, source: "default" });
-    }
+    // Canonical app hosts (*.vercel.app, atomdominator.com apex) ALWAYS resolve
+    // to the antimatter Supabase row — not the hardcoded DEFAULT_TENANT — so
+    // brand color / logo edits made in the admin UI take effect on the main
+    // app immediately. This was the source of the persistent red brand bug:
+    // an early DEFAULT_TENANT.primary_hex='#ef4444' kept overriding the DB.
+    const slug = (req.query.slug as string) || slugFromHost(host) || "antimatter";
 
     try {
       const rows = await supabaseQuery(
@@ -162,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         slug: t.slug,
         name: t.name,
-        logo_url: t.logo_url,
+        logo_url: t.logo_url || DEFAULT_TENANT.logo_url,
         primary_hex: t.primary_hex || DEFAULT_TENANT.primary_hex,
         accent_hex: t.accent_hex || DEFAULT_TENANT.accent_hex,
         plan: t.plan || "trial",
