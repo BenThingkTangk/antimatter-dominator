@@ -315,27 +315,34 @@ async function createPerCallConfig(args: {
     .replace(/\{\{\s*product_name\s*\}\}/g,     args.productName     || "our solution")
     .replace(/\{\{\s*prospect_company\s*\}\}/g, args.prospectCompany || "their company")
     .replace(/\{\{\s*company_brief\s*\}\}/g,    args.companyBrief    || "");
-  const renderedPrompt = substitute(master.prompt.text);
-
   // ── Conversational pacing tune-up ─────────────────────────────────────────
-  // User report 2026-05-11: "ATOM barreled into the next line without waiting
-  // after 'not catching you at a bad time?'". Root cause: Hume's default
-  // max_duration on the inactivity timeout is too aggressive (~1.5s) — ATOM
-  // treats a half-beat of silence as turn-end and barges in. We lengthen
-  // inactivity so ATOM holds the floor for the prospect, and we DISABLE the
-  // unsolicited nudge (which prompts ATOM to fill silence proactively — the
-  // exact behavior we don't want on a cold call open).
-  const tunedTimeouts = {
-    ...(master.timeouts || {}),
-    inactivity: {
-      enabled: true,
-      // Wait ~3.2s of silence before ATOM speaks again. Previously ~1.2s.
-      duration_secs: 3.2,
-      ...((master.timeouts && master.timeouts.inactivity && typeof master.timeouts.inactivity === "object") ? {} : {}),
-    },
-  };
-  // Master nudges struct can be either { enabled: bool, ... } or undefined.
-  // Force-disable: ATOM should never auto-prompt itself during a cold call.
+  // User report 2026-05-11: "ATOM barreled into the next line without
+  // waiting after 'not catching you at a bad time?'". Note: Hume's
+  // `timeouts.inactivity.duration_secs` is the “end the call after N
+  // seconds of total silence” knob — not the turn-taking knob — and it
+  // has a hard MINIMUM of 30s on Hume's side (anything lower returns
+  // 400 "too-short timeouts (inactivity)"). The actual fix for ATOM
+  // barging in is to (a) disable the proactive nudge and (b) inject a
+  // pacing rule at the top of the system prompt so the LLM holds the
+  // floor between bursts.
+  const PACING_RULE =
+    "CONVERSATIONAL PACING RULES (highest priority):\n" +
+    "1. After you ask a question, STOP speaking. Wait silently for the\n" +
+    "   prospect to finish their answer. Do NOT continue with your next\n" +
+    "   line until they have spoken AND paused for at least a beat.\n" +
+    "2. Treat short noises (\"uh\", \"hmm\", \"hold on\") as the prospect\n" +
+    "   still thinking. Stay silent until they form a complete reply.\n" +
+    "3. Never stack two questions in a row without giving the prospect\n" +
+    "   a chance to answer the first one.\n" +
+    "4. If the prospect goes quiet for ~3 seconds, ask a soft check-in\n" +
+    "   (\"still with me?\") — do not keep monologuing.\n\n";
+  const renderedPrompt = PACING_RULE + substitute(master.prompt.text);
+
+  // Keep the master's `timeouts` exactly as-is — Hume rejects any
+  // inactivity value below its hard floor (~30s).
+  const tunedTimeouts = master.timeouts;
+  // Force-disable nudges: ATOM should never auto-prompt itself during a
+  // cold call open — the source of the “barreling forward” behavior.
   const tunedNudges = master.nudges
     ? { ...master.nudges, enabled: false }
     : { enabled: false };
