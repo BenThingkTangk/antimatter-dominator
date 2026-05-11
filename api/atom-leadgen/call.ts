@@ -263,6 +263,61 @@ async function twilioCreateCall(to: string, from: string, opts: { twiml?: string
   return data;
 }
 
+// --- Hume per-call config helper ---
+// Hume Twilio integration does NOT propagate query-param variables into the
+// chat's session_settings, so {{first_name}}/{{company_name}}/{{product_name}}
+// placeholders in the master config's prompt stay raw. Fix: clone master,
+// substitute variables into the prompt TEXT, create ephemeral config per call.
+async function createPerCallConfig(args: {
+  masterConfigId: string;
+  firstName: string;
+  companyName: string;
+  productName: string;
+  companyBrief: string;
+  prospectCompany: string;
+}): Promise<string> {
+  const listRes = await fetch(
+    `https://api.hume.ai/v0/evi/configs/${args.masterConfigId}`,
+    { headers: { "X-Hume-Api-Key": HUME_API_KEY } }
+  );
+  if (!listRes.ok) throw new Error(`Hume master config fetch failed: ${listRes.status}`);
+  const listJson: any = await listRes.json();
+  const master = listJson?.configs_page?.[0];
+  if (!master?.prompt?.text) throw new Error("Hume master config has no prompt text");
+  const substitute = (text: string): string => text
+    .replace(/\{\{\s*first_name\s*\}\}/g,       args.firstName       || "there")
+    .replace(/\{\{\s*company_name\s*\}\}/g,     args.companyName     || "AntimatterAI")
+    .replace(/\{\{\s*product_name\s*\}\}/g,     args.productName     || "our solution")
+    .replace(/\{\{\s*prospect_company\s*\}\}/g, args.prospectCompany || "their company")
+    .replace(/\{\{\s*company_brief\s*\}\}/g,    args.companyBrief    || "");
+  const renderedPrompt = substitute(master.prompt.text);
+  const createRes = await fetch("https://api.hume.ai/v0/evi/configs", {
+    method: "POST",
+    headers: { "X-Hume-Api-Key": HUME_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      evi_version: master.evi_version || "3",
+      name: `ATOM call - ${args.firstName} @ ${args.prospectCompany} - ${Date.now()}`,
+      prompt: { text: renderedPrompt },
+      voice: master.voice,
+      language_model: master.language_model,
+      ellm_model: master.ellm_model,
+      tools: master.tools || [],
+      builtin_tools: master.builtin_tools || [],
+      event_messages: master.event_messages,
+      timeouts: master.timeouts,
+      nudges: master.nudges,
+      webhooks: master.webhooks || [],
+    }),
+  });
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    throw new Error(`Hume create-per-call-config failed: ${createRes.status} ${errText.slice(0, 240)}`);
+  }
+  const created: any = await createRes.json();
+  if (!created?.id) throw new Error("Hume create-per-call-config returned no id");
+  return created.id as string;
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -384,33 +439,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // uses this to poll /api/atom-leadgen/chat-events.
     const sessionId = `atom_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
-    const humeTwimlUrl = new URL("https://api.hume.ai/v0/evi/twilio");
-    // Hume template variable mapping (FIXED):
-    //   {{company_name}}     = the company ATOM is pitching FROM (the seller).
-    //                          The Hume system prompt says "You are Adam, a
-    //                          senior rep at {{company_name}}" — so this MUST
-    //                          be the seller's company, NOT the prospect's.
-    //                          We use the 'product / service to pitch' field
-    //                          for this so the rep can dial as any tenant they
-    //                          want (AntimatterAI, Akamai, etc.).
-    //   {{product_name}}     = the specific product/service being pitched.
-    //                          For now this mirrors {{company_name}} since
-    //                          the form has one field for both; future split
-    //                          can add a separate 'product' input.
-    //   {{first_name}}       = prospect's first name.
-    //   {{prospect_company}} = the contact's actual company (informational —
-    //                          surfaces in the call brief).
+    // ──────────────────────────────────────────────────────────────────────
+    // CRITICAL FIX (May 11, 2026): Hume's Twilio integration DOES NOT support
+    // passing dynamic variables via query params. The {{first_name}},
+    // {{company_name}}, etc. placeholders in the master config's prompt stay
+    // unsubstituted, so the LLM sees literal '{{company_name}}' tokens and
+    // either ignores them (dead air, confused turn) or hallucinates a
+    // company name ("Boost Mobile" reported by user).
+    //
+    // Fix: clone the master config and substitute variables into the prompt
+    // TEXT before the call. Hume's /v0/evi/configs API supports per-call
+    // ephemeral configs — we create one, use it, and let Hume garbage-collect.
+    // ──────────────────────────────────────────────────────────────────────
     const sellerCompany = productLabel && productLabel !== "their solution"
       ? productLabel
       : "AntimatterAI";
-    humeTwimlUrl.searchParams.set("config_id",         routedConfig.configId);
-    humeTwimlUrl.searchParams.set("api_key",           HUME_API_KEY);
-    humeTwimlUrl.searchParams.set("custom_session_id", sessionId);
-    humeTwimlUrl.searchParams.set("first_name",        first);
-    humeTwimlUrl.searchParams.set("company_name",      sellerCompany);
-    humeTwimlUrl.searchParams.set("product_name",      sellerCompany);
-    humeTwimlUrl.searchParams.set("prospect_company",  company);
-    humeTwimlUrl.searchParams.set("company_brief",     trimmedBrief);
+
+    const callConfigId = await createPerCallConfig({
+      masterConfigId: routedConfig.configId,
+      firstName: first,
+      companyName: sellerCompany,
+      productName: sellerCompany,
+      companyBrief: trimmedBrief,
+      prospectCompany: company,
+    });
+
+    const humeTwimlUrl = new URL("https://api.hume.ai/v0/evi/twilio");
+    humeTwimlUrl.searchParams.set("config_id", callConfigId);
+    humeTwimlUrl.searchParams.set("api_key",   HUME_API_KEY);
 
     // 3. Place the outbound call.
     const call = await twilioCreateCall(cleanNumber, TWILIO_PHONE_NUMBER, {
