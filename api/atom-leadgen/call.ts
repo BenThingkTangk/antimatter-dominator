@@ -300,6 +300,7 @@ async function createPerCallConfig(args: {
   productName: string;
   companyBrief: string;
   prospectCompany: string;
+  pitchTopic?: string;
 }): Promise<string> {
   const listRes = await fetch(
     `https://api.hume.ai/v0/evi/configs/${args.masterConfigId}`,
@@ -326,16 +327,30 @@ async function createPerCallConfig(args: {
   // pacing rule at the top of the system prompt so the LLM holds the
   // floor between bursts.
   const PACING_RULE =
-    "CONVERSATIONAL PACING RULES (highest priority):\n" +
-    "1. After you ask a question, STOP speaking. Wait silently for the\n" +
-    "   prospect to finish their answer. Do NOT continue with your next\n" +
-    "   line until they have spoken AND paused for at least a beat.\n" +
-    "2. Treat short noises (\"uh\", \"hmm\", \"hold on\") as the prospect\n" +
-    "   still thinking. Stay silent until they form a complete reply.\n" +
-    "3. Never stack two questions in a row without giving the prospect\n" +
-    "   a chance to answer the first one.\n" +
-    "4. If the prospect goes quiet for ~3 seconds, ask a soft check-in\n" +
-    "   (\"still with me?\") — do not keep monologuing.\n\n";
+    "═══ CONVERSATIONAL PACING (overrides everything below) ═══\n" +
+    "You speak in ONE BURST PER TURN. After every burst that ends in a\n" +
+    "question mark you SHUT UP and wait. Period. No exceptions.\n\n" +
+    "FORBIDDEN: stacking two sentences after a question.\n" +
+    "  BAD  → \"Hope I'm not catching you at a bad time? I'll keep it quick.\n" +
+    "          Just wanted to see how you're handling the new HIPAA stuff.\"\n" +
+    "  GOOD → \"Hope I'm not catching you at a bad time?\"  [STOP. wait.]\n\n" +
+    "If you hear ANY noise from the prospect — \"uh\", \"hmm\", \"yeah\",\n" +
+    "\"hold on\", breathing, anything — they are still on their turn. Stay\n" +
+    "silent for at least one full second of dead air before continuing.\n\n" +
+    "If the line is dead for 6+ seconds, ask a soft check-in (\"still with\n" +
+    "me?\"). Never keep monologuing into silence.\n\n" +
+    "═══ OPENING SCRIPT (override any opener below) ═══\n" +
+    "After the prospect's first \"hello\" / \"yeah\" / \"this is X\", you say\n" +
+    "EXACTLY ONE LINE and then STOP:\n\n" +
+    "  \"Hey " + (args.firstName || "there") + ", this is Adam from " +
+    (args.companyName || "AntimatterAI") + " — hope I'm not catching you at\n" +
+    "  a bad time?\"\n\n" +
+    "After that line you say NOTHING until the prospect responds. If they\n" +
+    "say \"yeah, sure\" or \"go ahead\", THEN (and only then) deliver the\n" +
+    "hook in ONE short burst that ends in a question. Examples:\n" +
+    "  \"I'll keep it quick — are you the right person to talk to about " +
+    (args.pitchTopic || "this") + "?\"\n" +
+    "  \"Quick reason for the call — mind if I take thirty seconds?\"\n\n";
   const renderedPrompt = PACING_RULE + substitute(master.prompt.text);
 
   // Keep the master's `timeouts` exactly as-is — Hume rejects any
@@ -359,7 +374,19 @@ async function createPerCallConfig(args: {
       ellm_model: master.ellm_model,
       tools: master.tools || [],
       builtin_tools: master.builtin_tools || [],
-      event_messages: master.event_messages,
+      // ── Kill the 4-second cold-start dead air ─────────────────────────────
+      // Hume's LLM pipeline takes ~3–4 seconds to generate the first turn
+      // from cold. We pre-script the opener as an `on_new_chat` event_message
+      // that fires the instant the connection opens — no LLM round-trip
+      // required, so ATOM responds within Hume's TTS latency (~600ms)
+      // instead of ~4s.
+      event_messages: {
+        ...(master.event_messages || {}),
+        on_new_chat: {
+          enabled: true,
+          text: `Hey ${args.firstName || "there"}, this is Adam from ${args.companyName || "AntimatterAI"} — hope I'm not catching you at a bad time?`,
+        },
+      },
       timeouts: tunedTimeouts,
       nudges: tunedNudges,
       webhooks: master.webhooks || [],
@@ -521,6 +548,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       productName: sellerCompany,
       companyBrief: trimmedBrief,
       prospectCompany: company,
+      pitchTopic: trimmedPitchTopic,
     });
 
     const humeTwimlUrl = new URL("https://api.hume.ai/v0/evi/twilio");

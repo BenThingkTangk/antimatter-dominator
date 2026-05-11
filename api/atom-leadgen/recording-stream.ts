@@ -85,28 +85,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!mp3Url) return res.status(404).json({ error: "no recording" });
 
   try {
-    const upstream = await fetch(mp3Url, { headers: { Authorization: twilioAuthHeader() } });
-    if (!upstream.ok || !upstream.body) {
+    // Always advertise range support so the browser <audio> element can seek.
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+
+    // Forward the browser's Range header upstream to Twilio. Twilio supports
+    // partial content on recordings, so we can pipe their 206 right back.
+    const range = req.headers.range as string | undefined;
+    const upstreamHeaders: Record<string, string> = {
+      Authorization: twilioAuthHeader(),
+    };
+    if (range) upstreamHeaders["Range"] = range;
+
+    const upstream = await fetch(mp3Url, { headers: upstreamHeaders });
+    if (!upstream.ok && upstream.status !== 206) {
       return res.status(upstream.status || 502).json({ error: "upstream failed" });
+    }
+    if (!upstream.body && req.method !== "HEAD") {
+      return res.status(502).json({ error: "upstream empty" });
     }
 
     res.setHeader("Content-Type", upstream.headers.get("content-type") || "audio/mpeg");
     const contentLength = upstream.headers.get("content-length");
     if (contentLength) res.setHeader("Content-Length", contentLength);
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    const contentRange = upstream.headers.get("content-range");
+    if (contentRange) res.setHeader("Content-Range", contentRange);
+
+    // 206 if upstream returned partial content, otherwise 200.
+    res.status(upstream.status === 206 ? 206 : 200);
+
+    if (req.method === "HEAD" || !upstream.body) {
+      res.end();
+      return;
+    }
 
     // Stream bytes through. Vercel Node runtime supports res.write with Buffers.
     const reader = upstream.body.getReader();
-    const pump = async () => {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        res.write(Buffer.from(value));
-      }
-      res.end();
-    };
-    await pump();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      res.write(Buffer.from(value));
+    }
+    res.end();
   } catch (err: any) {
     console.error("recording-stream error:", err);
     if (!res.headersSent) res.status(500).json({ error: err?.message || "failed" });

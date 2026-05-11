@@ -119,7 +119,8 @@ interface CallHistoryEntry {
   companyName: string;
   product: string;
   phoneNumber: string;
-  timestamp: number;
+  timestamp: number;     // end-of-call wallclock ms (Date.now())
+  callStartMs?: number;  // dial-time wallclock ms (Date.now() when call placed)
   duration: number;
   finalSentiment: number;
   finalIntent: number;
@@ -131,6 +132,30 @@ interface CallHistoryEntry {
   recordEnabled?: boolean;
   recordingUrl?: string | null;
   warroom?: any | null;
+}
+
+/**
+ * Push a call entry into history, deduplicating by callSid. If a call with
+ * the same callSid is already there, we MERGE the new fields onto the old
+ * row instead of pushing a duplicate. Called from 3 different code paths
+ * (poll loop, websocket close, manual hangup) — any of which can fire for
+ * the same call.
+ */
+function upsertHistoryEntry(prev: CallHistoryEntry[], entry: CallHistoryEntry): CallHistoryEntry[] {
+  const i = prev.findIndex(c => c.callSid === entry.callSid);
+  if (i === -1) return [entry, ...prev];
+  const merged: CallHistoryEntry = {
+    ...prev[i],
+    ...entry,
+    // Keep the longest transcript / sentiment history we've seen for this call
+    transcript:       (entry.transcript?.length || 0)       >= (prev[i].transcript?.length || 0)       ? entry.transcript       : prev[i].transcript,
+    sentimentHistory: (entry.sentimentHistory?.length || 0) >= (prev[i].sentimentHistory?.length || 0) ? entry.sentimentHistory : prev[i].sentimentHistory,
+    // Keep the earlier callStartMs / later timestamp
+    callStartMs: Math.min(prev[i].callStartMs ?? entry.callStartMs ?? entry.timestamp, entry.callStartMs ?? entry.timestamp),
+    timestamp:   Math.max(prev[i].timestamp, entry.timestamp),
+    duration:    Math.max(prev[i].duration, entry.duration),
+  };
+  return [merged, ...prev.slice(0, i), ...prev.slice(i + 1)];
 }
 
 type CallStatus = "idle" | "dialing" | "active" | "ended";
@@ -507,7 +532,11 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
   // there's no audio (or paused at start), we show the static end-of-call
   // final values. This is what lets reps "watch the call back" with the
   // sentiment line, transcript cursor, and emotion bars syncing to audio.
-  const callStartMs = entry.timestamp - (entry.duration * 1000);
+  //
+  // We anchor on entry.callStartMs (recorded at dial time, same origin as
+  // sentimentHistory[i].ts). Older entries without that field fall back to
+  // the end-of-call timestamp minus duration.
+  const callStartMs = entry.callStartMs ?? (entry.timestamp - (entry.duration * 1000));
   const cursorMs    = callStartMs + (currentSec * 1000);
   const inReplay    = audioReady && (isPlaying || currentSec > 0.25);
 
@@ -696,7 +725,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
       {sortedSentiment.length > 1 && (() => {
         const max = sortedSentiment.reduce((a, b) => b.value > a.value ? b : a);
         const min = sortedSentiment.reduce((a, b) => b.value < a.value ? b : a);
-        const cs = entry.timestamp - entry.duration * 1000;
+        const cs = callStartMs;
         return (
           <div
             className="rounded-xl p-4 grid grid-cols-2 gap-4"
@@ -1063,7 +1092,19 @@ export default function ATOMLeadGen() {
   const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>(() => {
     try {
       const saved = localStorage.getItem('atom_leadgen_call_history');
-      return saved ? JSON.parse(saved) : [];
+      const raw: CallHistoryEntry[] = saved ? JSON.parse(saved) : [];
+      // One-time cleanup: prior versions could push the same callSid up to
+      // 3 times (poll loop + websocket close + manual hangup all fired).
+      // Collapse any duplicates that snuck into localStorage on load.
+      const seen = new Set<string>();
+      const deduped: CallHistoryEntry[] = [];
+      for (const c of raw) {
+        const key = c.callSid || c.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(c);
+      }
+      return deduped;
     } catch { return []; }
   });
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
@@ -1089,6 +1130,10 @@ export default function ATOMLeadGen() {
   const buyingSignalsRef = useRef(buyingSignals);
   const warroomRef       = useRef(warroom);
   const recordCallRef    = useRef(recordCall);
+  // Wallclock millis the dial was placed (Date.now() right before /api/call).
+  // Same origin as sentimentHistory[i].ts, so the replay scrubber
+  // (audio currentTime) maps cleanly to sentiment timeline indexes.
+  const callStartMsRef   = useRef<number>(0);
   const formRef = useRef({ contactName, companyName, product: productSlug, phone });
 
   useEffect(() => { metricsRef.current = metrics; }, [metrics]);
@@ -1247,8 +1292,9 @@ export default function ATOMLeadGen() {
               recordEnabled: recordCallRef.current,
               recordingUrl: null,
               warroom: warroomRef.current,
+              callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
             };
-            setCallHistory(prev => [entry, ...prev]);
+            setCallHistory(prev => upsertHistoryEntry(prev, entry));
 
             // Persist to Supabase so the call-history detail page can replay
             // it later from any device. Best-effort — the local copy in
@@ -1374,8 +1420,9 @@ export default function ATOMLeadGen() {
           recordEnabled: recordCallRef.current,
           recordingUrl: null,
           warroom: warroomRef.current,
+          callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
         };
-        setCallHistory((prev) => [entry, ...prev]);
+        setCallHistory((prev) => upsertHistoryEntry(prev, entry));
 
         // Persist to Supabase (best-effort).
         fetch("/api/atom-leadgen/save-call", {
@@ -1423,6 +1470,9 @@ export default function ATOMLeadGen() {
     console.log("[handleDial] Bridge URL:", BRIDGE_URL);
 
     setCallStatus("dialing");
+    // Anchor the wallclock origin for sentiment + transcript timestamps so
+    // the replay scrubber lines audio currentTime up with the timeline.
+    callStartMsRef.current = Date.now();
     setTranscript([]);
     setBuyingSignals([]);
     setSentimentHistory([]);
@@ -1541,8 +1591,9 @@ export default function ATOMLeadGen() {
       recordEnabled: recordCallRef.current,
       recordingUrl: null,
       warroom: warroomRef.current,
+      callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
     };
-    setCallHistory((prev) => [entry, ...prev]);
+    setCallHistory((prev) => upsertHistoryEntry(prev, entry));
 
     // Persist to Supabase (best-effort).
     fetch("/api/atom-leadgen/save-call", {
