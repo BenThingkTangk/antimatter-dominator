@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
-import { useEffectiveSession, ViewAsToggle, ViewAsBanner } from "../auth/ViewAs";
+import { useEffectiveSession, ViewAsToggle } from "../auth/ViewAs";
 import { DtomLogo } from "@nirmata/dtom-brand-system";
 
 interface NavItem { href: string; icon: any; label: string; }
@@ -370,8 +370,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
-      {/* View-As preview affordances — both render null for non-super-admins */}
-      <ViewAsBanner />
+      {/* View-As preview affordance — floating pill, no top banner */}
       <ViewAsToggle />
     </TooltipProvider>
   );
