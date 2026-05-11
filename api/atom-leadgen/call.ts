@@ -276,6 +276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     product,
     productSlug,
     productName,
+    pitchTopic,         // user-typed value-prop / talking point (informational)
     deal_value,
     dealValue,
     tenant_slug,
@@ -333,6 +334,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     // Append Apollo intel — fresh firmographics + decision-maker context for the voice agent.
     if (apolloBrief) companyBrief = companyBrief + "\n" + apolloBrief;
+
+    // Append the rep's pitch-topic note so ATOM knows the SPECIFIC angle to lead with.
+    // This is critical: without this hook the LLM hallucinates a generic pitch (or
+    // picks up training-set noise like "Boost Mobile"). With it, ATOM has a sharp
+    // talking-point to anchor the opening line and the call brief on.
+    const trimmedPitchTopic = ((pitchTopic || "").toString().trim()).slice(0, 320);
+    if (trimmedPitchTopic) {
+      companyBrief = `\n---REP'S CALL ANGLE---\nWhen ${first} engages, steer the conversation toward this topic specifically:\n  ${trimmedPitchTopic}\nFrame the value-prop around this angle. Do NOT name another product unrelated to ${productLabel}.\n\n` + companyBrief;
+    }
 
     // 1.5. Resolve which Hume config + reasoning model to use for this call.
     //      Enterprise tier + deal_value over threshold + GPT-5.5 config

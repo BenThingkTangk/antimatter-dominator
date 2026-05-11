@@ -61,9 +61,11 @@ interface HumeEvent {
   end_reason?: string;
 }
 
+// Hume's TwiML integration writes the Twilio CallSid into `metadata.twilio.call_sid`.
+// The `custom_session_id` query param we used to pass is NOT propagated to the chat,
+// so we match by call_sid instead. Frontend passes the call_sid OR the sessionId
+// (which contains the call_sid for direct dials).
 async function findChatBySessionId(sessionId: string): Promise<string | null> {
-  // Query Hume list chats and filter by custom_session_id.
-  // We scan the 30 most recent chats (plenty for live calls).
   const url = `https://api.hume.ai/v0/evi/chats?page_number=0&page_size=30&ascending_order=false`;
   try {
     const r = await fetch(url, { headers: { "X-Hume-Api-Key": HUME_API_KEY } });
@@ -71,11 +73,14 @@ async function findChatBySessionId(sessionId: string): Promise<string | null> {
     const data: any = await r.json();
     const chats: any[] = data.chats_page || [];
     for (const c of chats) {
+      // Legacy match (kept for backwards-compat with any old sessions)
       if (c.custom_session_id === sessionId) return c.id;
       if (c.metadata && typeof c.metadata === "string") {
         try {
           const md = JSON.parse(c.metadata);
-          if (md.custom_session_id === sessionId) return c.id;
+          // NEW: match against Twilio call_sid embedded in metadata.
+          if (md?.twilio?.call_sid === sessionId) return c.id;
+          if (md?.custom_session_id === sessionId) return c.id;
         } catch {}
       }
     }

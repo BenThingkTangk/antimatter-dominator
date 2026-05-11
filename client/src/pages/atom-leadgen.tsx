@@ -675,6 +675,7 @@ export default function ATOMLeadGen() {
   };
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
+  const [pitchTopic, setPitchTopic] = useState(params.get("topic") || "");
   // Deal value field removed from the UI — enterprise routing now keys off
   // tenant plan + Apollo firmographics rather than a manual rep input.
   const dealValue = "";
@@ -1044,6 +1045,7 @@ export default function ATOMLeadGen() {
         firstName: contactName.trim() || undefined,
         companyName: companyName.trim() || undefined,
         product: productSlug.trim() || undefined,
+        pitchTopic: pitchTopic.trim() || undefined,
         productIntel: productIntelData || undefined,
         // GPT-5.5 router inputs
         dealValue: dealValue ? Number(dealValue.replace(/[^0-9.]/g, "")) : undefined,
@@ -1070,14 +1072,15 @@ export default function ATOMLeadGen() {
       const json = await res.json();
       console.log("[handleDial] Success response:", json);
       const sid: string = json.callSid;
-      const sessionId: string = json.sessionId || json.humeCustomSessionId || sid;
       setCallSid(sid);
       callSidRef.current = sid;
       // Surface backend's tier routing decision
       setCallTier(json.tier || "standard");
       setReasoningModel(json.reasoningModel || null);
-      // Start polling Hume chat-events for live transcript + emotions
-      startPolling(sessionId);
+      // Poll Hume by Twilio CallSid — Hume's TwiML integration writes call_sid
+      // into chat metadata. The legacy `sessionId` query-param we used to send
+      // was never propagated to the chat, so polling never resolved a chat.
+      startPolling(sid);
       setCallStatus("active");
     } catch (err: any) {
       console.error("[handleDial] Caught error:", err);
@@ -1380,14 +1383,14 @@ export default function ATOMLeadGen() {
                   />
                 </div>
 
-                {/* Product */}
+                {/* Seller company (becomes "Adam from {{this}}" in the call opener) */}
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
-                    Product / Service to Pitch
+                    Pitching On Behalf Of <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(seller company)</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="Akamai, TierPoint, CDN…"
+                    placeholder="Akamai, AntimatterAI, TierPoint…"
                     value={productSlug}
                     onChange={(e) => setProductSlug(e.target.value)}
                     disabled={callStatus === "active" || callStatus === "dialing"}
@@ -1398,6 +1401,32 @@ export default function ATOMLeadGen() {
                       color: "var(--color-text)",
                     }}
                   />
+                  <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
+                    Just the company name — ATOM will open with “Hey [name], this is Adam from [{productSlug || "AntimatterAI"}]”
+                  </p>
+                </div>
+
+                {/* Pitch topic / talking point (informational — fed to brief, not the opener) */}
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                    Pitch Topic <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="HIPAA compliance changes, Guardicore segmentation, App & API Protector…"
+                    value={pitchTopic}
+                    onChange={(e) => setPitchTopic(e.target.value)}
+                    disabled={callStatus === "active" || callStatus === "dialing"}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
+                    What you specifically want ATOM to bring up — surfaces in the call brief.
+                  </p>
                 </div>
 
                 {/* Deal Value field removed — enterprise routing keys off
