@@ -87,7 +87,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Always advertise range support so the browser <audio> element can seek.
     res.setHeader("Accept-Ranges", "bytes");
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    // Vercel's edge cache will otherwise serve a non-Range 200 to a Range
+    // request and break seek. `private, no-store` keeps each request hitting
+    // origin so Range propagates upstream to Twilio.
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Vary", "Range");
 
     // Forward the browser's Range header upstream to Twilio. Twilio supports
     // partial content on recordings, so we can pipe their 206 right back.
