@@ -449,11 +449,11 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
           <a href={`tel:${callablePhone}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-violet-400 transition-colors">
             <Phone className="w-3.5 h-3.5" />{callablePhone}
             {!contact.phone && (prospect as any).companyPhone && (
-              <span className="text-[9px] text-white/25 ml-1">(main line)</span>
+              <span className="text-[9px] text-white/55 ml-1">(main line)</span>
             )}
           </a>
         ) : (
-          <span className="flex items-center gap-1.5 text-xs text-white/25">
+          <span className="flex items-center gap-1.5 text-xs text-white/55">
             <Phone className="w-3.5 h-3.5" />No phone available
           </span>
         )}
@@ -466,7 +466,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
       {/* Location + tags */}
       <div className="flex flex-wrap items-center gap-1.5 pl-[52px]">
         {(contact.city || contact.state) && (
-          <span className="flex items-center gap-1 text-[10px] text-white/25">
+          <span className="flex items-center gap-1 text-[10px] text-white/55">
             <MapPin className="w-3 h-3" />{[contact.city, contact.state].filter(Boolean).join(", ")}
           </span>
         )}
@@ -715,7 +715,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
                       <div>
                         <span className="text-xs text-[#8a8a96]">{typeof item === "string" ? item : item.headline || item.title || JSON.stringify(item)}</span>
                         {typeof item === "object" && item.date && (
-                          <span className="text-[10px] text-white/20 font-mono ml-2">{item.date}</span>
+                          <span className="text-[10px] text-white/50 font-mono ml-2">{item.date}</span>
                         )}
                       </div>
                     </div>
@@ -743,12 +743,12 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="font-mono text-[9px] uppercase tracking-wider text-[#4a4a55]">Decision Makers</p>
-                <button className="flex items-center gap-1 text-[9px] font-mono text-white/25 hover:text-violet-400 transition-colors">
+                <button className="flex items-center gap-1 text-[9px] font-mono text-white/55 hover:text-violet-400 transition-colors">
                   <RefreshCw className="w-2.5 h-2.5" />Refresh
                 </button>
               </div>
               {contacts.length === 0 ? (
-                <p className="text-xs text-white/20 italic">No contacts found</p>
+                <p className="text-xs text-white/50 italic">No contacts found</p>
               ) : (
                 <div className="space-y-2">
                   {contacts.map((c, i) => (
@@ -881,7 +881,7 @@ function HistoryDrawer({
             <div className="flex flex-col items-center justify-center h-48 text-center">
               <History className="w-10 h-10 text-white/10 mb-3" />
               <p className="text-sm text-white/30">No search history yet</p>
-              <p className="text-xs text-white/20 mt-1">Past searches will appear here</p>
+              <p className="text-xs text-white/50 mt-1">Past searches will appear here</p>
             </div>
           ) : (
             history.map((entry) => (
@@ -899,7 +899,7 @@ function HistoryDrawer({
                     <p className="text-xs text-white/60 leading-relaxed">{filterSummary(entry.filters)}</p>
                   </button>
                   <Button variant="ghost" size="sm" onClick={() => deleteEntry(entry.id)}
-                    className="h-6 w-6 p-0 text-white/20 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    className="h-6 w-6 p-0 text-white/50 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
@@ -1008,7 +1008,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.productFocus}
             onChange={(e) => set("productFocus", e.target.value)}
             placeholder='e.g. "Cloudflare CDN" or "Akamai"'
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
@@ -1020,7 +1020,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.techStack}
             onChange={(e) => set("techStack", e.target.value)}
             placeholder="e.g. Salesforce, AWS, HubSpot"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
@@ -1032,7 +1032,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.keywords}
             onChange={(e) => set("keywords", e.target.value)}
             placeholder="e.g. digital transformation, cloud"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
       </div>
