@@ -375,12 +375,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sessionId = `atom_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
     const humeTwimlUrl = new URL("https://api.hume.ai/v0/evi/twilio");
+    // Hume template variable mapping (FIXED):
+    //   {{company_name}}     = the company ATOM is pitching FROM (the seller).
+    //                          The Hume system prompt says "You are Adam, a
+    //                          senior rep at {{company_name}}" — so this MUST
+    //                          be the seller's company, NOT the prospect's.
+    //                          We use the 'product / service to pitch' field
+    //                          for this so the rep can dial as any tenant they
+    //                          want (AntimatterAI, Akamai, etc.).
+    //   {{product_name}}     = the specific product/service being pitched.
+    //                          For now this mirrors {{company_name}} since
+    //                          the form has one field for both; future split
+    //                          can add a separate 'product' input.
+    //   {{first_name}}       = prospect's first name.
+    //   {{prospect_company}} = the contact's actual company (informational —
+    //                          surfaces in the call brief).
+    const sellerCompany = productLabel && productLabel !== "their solution"
+      ? productLabel
+      : "AntimatterAI";
     humeTwimlUrl.searchParams.set("config_id",         routedConfig.configId);
     humeTwimlUrl.searchParams.set("api_key",           HUME_API_KEY);
     humeTwimlUrl.searchParams.set("custom_session_id", sessionId);
     humeTwimlUrl.searchParams.set("first_name",        first);
-    humeTwimlUrl.searchParams.set("company_name",      company);
-    humeTwimlUrl.searchParams.set("product_name",      productLabel);
+    humeTwimlUrl.searchParams.set("company_name",      sellerCompany);
+    humeTwimlUrl.searchParams.set("product_name",      sellerCompany);
+    humeTwimlUrl.searchParams.set("prospect_company",  company);
     humeTwimlUrl.searchParams.set("company_brief",     trimmedBrief);
 
     // 3. Place the outbound call.
@@ -408,7 +427,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       briefLength: trimmedBrief.length,
       briefRawLength: companyBrief.length,
       briefPreview: trimmedBrief.slice(0, 300) + (trimmedBrief.length > 300 ? "..." : ""),
-      message: `ADAM calling ${first} at ${company} about ${productLabel}`,
+      message: `ADAM (from ${productLabel || "AntimatterAI"}) calling ${first} at ${company}`,
     });
   } catch (err: any) {
     console.error("ATOM Lead Gen direct call error:", err);
