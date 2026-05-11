@@ -1000,7 +1000,7 @@ export default function CompanyIntelligence() {
                 <button
                   key={d}
                   onClick={() => setDepth(d)}
-                  className={`px-2.5 py-[3px] rounded-full text-[9px] font-mono uppercase tracking-[0.14em] transition-all ${
+                  className={`px-2.5 py-[3px] rounded-full text-[8px] font-mono uppercase tracking-[0.14em] transition-all ${
                     depth === d ? "text-white" : "text-white/45 hover:text-white/80"
                   }`}
                   style={{
@@ -1009,7 +1009,7 @@ export default function CompanyIntelligence() {
                   }}
                   title={d === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
                 >
-                  {d === "standard" ? "Std" : "Ent"}
+                  {d === "standard" ? "Standard" : "Enterprise"}
                 </button>
               ))}
             </div>
