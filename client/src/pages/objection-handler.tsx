@@ -447,14 +447,14 @@ export default function ObjectionHandler() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+            <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
               <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Objection Details</h2>
 
               {/* Product */}
               <div>
                 <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="bg-[#161618] border-white/[0.08] hover:border-violet-500/30 transition-colors text-sm" data-testid="select-product">
+                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,7 +467,7 @@ export default function ObjectionHandler() {
                     placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className="mt-2 bg-[#161618] border-white/[0.08] hover:border-violet-500/30 transition-colors text-sm h-9"
+                    className="mt-2 bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
                     style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
                     data-testid="input-custom-product"
                   />
@@ -481,7 +481,7 @@ export default function ObjectionHandler() {
                   placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
                   value={objectionText}
                   onChange={e => setObjectionText(e.target.value)}
-                  className="bg-[#161618] border-white/[0.08] hover:border-violet-500/30 transition-colors text-sm min-h-[100px] resize-none"
+                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[100px] resize-none"
                   data-testid="textarea-objection"
                 />
               </div>
@@ -512,13 +512,13 @@ export default function ObjectionHandler() {
                   placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
                   value={context}
                   onChange={e => setContext(e.target.value)}
-                  className="bg-[#161618] border-white/[0.08] hover:border-violet-500/30 transition-colors text-sm min-h-[60px] resize-none"
+                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[60px] resize-none"
                   data-testid="textarea-context"
                 />
               </div>
 
               <Button
-                className="w-full bg-amber-500/80 hover:bg-amber-500 text-white font-medium transition-all"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_28px_rgba(245,158,11,0.35)] transition-all"
                 onClick={() => handleObjection.mutate()}
                 disabled={!selectedProduct || !objectionText || handleObjection.isPending}
                 data-testid="button-handle-objection">
@@ -532,7 +532,7 @@ export default function ObjectionHandler() {
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {handleObjection.isPending ? (
-              <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-6">
+              <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
                   <p className="text-sm text-white/50">Analyzing objection and crafting counter-response...</p>
@@ -542,7 +542,7 @@ export default function ObjectionHandler() {
             ) : activeResult ? (
               <>
                 {/* Sentiment Dashboard */}
-                <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Sentiment Analysis</p>
                     <div className="flex items-center gap-2">
@@ -592,7 +592,7 @@ export default function ObjectionHandler() {
                 </div>
 
                 {/* Primary Response */}
-                <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" style={{ boxShadow: "0 0 6px #f59e0b" }} />
@@ -627,7 +627,7 @@ export default function ObjectionHandler() {
 
                 {/* Response Strategies */}
                 {activeResult.strategies?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5">
+                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Response Strategies</p>
 
                     {/* Strategy tabs */}
@@ -688,7 +688,7 @@ export default function ObjectionHandler() {
 
                 {/* Follow-Up Questions — clickable to deep-dive */}
                 {activeResult.followUpQuestions?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5">
+                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
                       <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-violet-400/40">· click to prepare response</span>
                     </p>
@@ -749,7 +749,7 @@ export default function ObjectionHandler() {
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.08] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
+              <div className="rounded-xl border border-white/[0.12] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
                 <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/15">
                   <Zap className="w-7 h-7 text-amber-500/40" />
                 </div>

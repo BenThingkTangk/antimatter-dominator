@@ -361,7 +361,7 @@ function PipelineFlow() {
     { icon: Mic, title: "VOICE BRIEF", body: "Personalized call script, live objection handling, talk track, discovery Qs", color: "text-emerald-400", border: "border-emerald-500/20" },
   ];
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-5">
+    <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-5">
       <MonoLabel>WarBook Intelligence Pipeline</MonoLabel>
       <div className="flex items-center gap-1 flex-wrap">
         {nodes.map((n, i) => (
@@ -464,7 +464,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
       </div>
 
       {/* Tech Stack Detection */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Cpu size={14} className="text-cyan-400" />
           <MonoLabel>Tech Stack Signals</MonoLabel>
@@ -481,7 +481,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
       </div>
 
       {/* Buying Signals */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Zap size={14} className="text-yellow-400" />
           <MonoLabel>Buying Signals Detected</MonoLabel>
@@ -570,7 +570,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
       </div>
 
       {/* Competitive Landscape */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Swords size={14} className="text-amber-400" />
           <MonoLabel>Competitive Landscape</MonoLabel>
@@ -600,7 +600,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
 
       {/* Objection Map */}
       {(wb.battlePlan?.objectionPredictions || wb.objectionPredictions || []).length > 0 && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-amber-400" />
             <MonoLabel>Objection Map</MonoLabel>
@@ -654,7 +654,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       </div>
 
       {/* Talk Track */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Radio size={14} className="text-violet-400" />
           <MonoLabel>Talk Track</MonoLabel>
@@ -670,7 +670,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       </div>
 
       {/* Discovery Questions */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <MessageSquare size={14} className="text-cyan-400" />
           <MonoLabel>Discovery Questions</MonoLabel>
@@ -687,7 +687,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
 
       {/* Live Objection Handling */}
       {brief.objections.length > 0 && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-amber-400" />
             <MonoLabel>Live Objection Handling</MonoLabel>
@@ -705,7 +705,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
 
       {/* Call Strategy */}
       {callStrategy && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <PhoneCall size={14} className="text-violet-400" />
             <MonoLabel>Call Strategy</MonoLabel>
@@ -732,7 +732,7 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
     <div className="space-y-5 fade-in">
       {/* Pricing & Terms */}
       {bc && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2"><DollarSign size={14} className="text-violet-400" /><MonoLabel>Pricing & Lock-In</MonoLabel></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <StatCell icon={DollarSign} label="Pricing Model" value={bc.pricingModel || "—"} />
@@ -781,7 +781,7 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
 
       {/* Pitch Angles */}
       {(bp?.pitchAngles || wb.pitchAngles || []).length > 0 && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2"><TrendingUp size={14} className="text-violet-400" /><MonoLabel>Pitch Angles</MonoLabel></div>
           <div className="space-y-2">
             {(bp?.pitchAngles || wb.pitchAngles || []).map((pa, i) => (
@@ -991,28 +991,31 @@ export default function CompanyIntelligence() {
         </div>
 
         {/* ── Input Section ── */}
-        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
-          {/* Depth toggle */}
-          <div className="flex items-center gap-3">
-            <MonoLabel>Research Depth:</MonoLabel>
-            <div className="flex gap-1.5">
+        <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
+          {/* Depth toggle — compact pills */}
+          <div className="flex items-center gap-2.5">
+            <MonoLabel>Depth:</MonoLabel>
+            <div className="inline-flex rounded-full p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
               {(["standard", "enterprise"] as const).map(d => (
                 <button
                   key={d}
                   onClick={() => setDepth(d)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wide transition-all ${depth === d
-                    ? "text-[#696aac] border-[#696aac]/40"
-                    : "text-white/35 border-white/10 hover:border-white/20"
+                  className={`px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all ${
+                    depth === d ? "text-white" : "text-white/45 hover:text-white/80"
                   }`}
                   style={{
-                    background: depth === d ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${depth === d ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    background: depth === d ? "linear-gradient(93deg, #818cf8 0%, #6366f1 100%)" : "transparent",
+                    boxShadow: depth === d ? "0 0 12px rgba(99,102,241,0.4)" : "none",
                   }}
+                  title={d === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
                 >
-                  {d === "standard" ? "Standard (3 queries · ~20s)" : "Enterprise (5 queries · ~40s)"}
+                  {d === "standard" ? "Standard" : "Enterprise"}
                 </button>
               ))}
             </div>
+            <span className="text-[10px] text-white/35 font-mono">
+              {depth === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
+            </span>
           </div>
 
           {/* Inputs row */}
@@ -1112,7 +1115,7 @@ export default function CompanyIntelligence() {
           <div className="space-y-5 fade-in">
 
             {/* Company Command Header */}
-            <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-6 space-y-5">
+            <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-6 space-y-5">
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-3 flex-wrap">

@@ -60,7 +60,7 @@ const DEFAULT_HEADLINE =
   'ΔTOM ignition for machine-scale command and human-grade nerve.';
 
 const DEFAULT_BODY =
-  'ΔTOM is the voice AI flagship of Nirmata Holdings — a cinematic command layer where NirmX-UFO reasoning, Pi3 - SiQ voice telemetry, and AntimatterAI infrastructure come online like an aerospace launch system.';
+  'ΔTOM is the voice AI flagship — a cinematic command layer where NirmX-UFO reasoning, Pi3 - SiQ voice telemetry, and AntimatterAI infrastructure come online like an aerospace launch system.';
 
 const DEFAULT_EYEBROW = 'v3.0 · Black-Site Aerospace Brand System';
 
@@ -130,7 +130,7 @@ export function DtomHero({
             </div>
             <div className="dtom-hero__capsule-item">
               <span className="dtom-hero__capsule-label">System</span>
-              <span className="dtom-hero__capsule-value">ΔTOM · Nirmata command stack live</span>
+              <span className="dtom-hero__capsule-value">ΔTOM · command stack live</span>
             </div>
             <div className="dtom-hero__capsule-item">
               <span className="dtom-hero__capsule-label">LLM</span>

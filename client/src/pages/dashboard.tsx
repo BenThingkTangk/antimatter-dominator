@@ -699,7 +699,7 @@ export default function Dashboard() {
         justifyContent: "space-between",
       }}>
         <p style={{ fontSize: 10, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", margin: 0 }}>
-          ΔTOM · Nirmata Holdings · © 2026
+          ΔTOM · © 2026
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 5px #4ade80", display: "inline-block" }} />

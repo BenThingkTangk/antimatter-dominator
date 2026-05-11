@@ -81,7 +81,7 @@ export default function LandingPage() {
       {/* Footer — domain literal preserved (AtomDominator.com) */}
       <footer className="text-center py-8 border-t" style={{ borderColor: "var(--color-border)" }}>
         <p className="text-xs" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)" }}>
-          ΔTOM · Nirmata Holdings · AtomDominator.com · © 2026
+          ΔTOM · AtomDominator.com · © 2026
         </p>
       </footer>
     </div>

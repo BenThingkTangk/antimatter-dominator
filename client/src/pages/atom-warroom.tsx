@@ -752,14 +752,14 @@ function IntelAnalyzerTab({
         </button>
       </div>
 
-      {/* Loading */}
+      {/* Loading — teal to match ATOM War Room's module color */}
       {isAnalyzing && (
-        <div className="rounded-xl border border-red-500/20 bg-gradient-to-r from-red-500/[0.04] to-transparent p-5 flex items-center gap-3">
+        <div className="rounded-xl border border-teal-400/30 bg-gradient-to-r from-teal-500/[0.06] to-transparent p-5 flex items-center gap-3">
           <div className="relative w-5 h-5 shrink-0">
-            <div className="absolute inset-0 rounded-full border-2 border-red-400/30" />
-            <div className="absolute inset-0 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+            <div className="absolute inset-0 rounded-full border-2 border-teal-400/30" />
+            <div className="absolute inset-0 rounded-full border-2 border-teal-300 border-t-transparent animate-spin" />
           </div>
-          <span className="text-[13px] font-mono" style={{ color: "color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
+          <span className="text-[13px] font-mono text-teal-200/90">
             Von Clausewitz scanning for deception patterns, behavioral signals, competitive intelligence...
           </span>
         </div>

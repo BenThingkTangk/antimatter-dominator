@@ -1946,7 +1946,7 @@ export default function ATOMLeadGen() {
                         </span>
                       </span>
                       <span className="block text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.75 }}>
-                        Captures both audio channels via Twilio. Playback + sentiment replay surfaces in History.
+                        Captures both audio channels. Playback + sentiment replay surfaces in History.
                       </span>
                     </span>
                   </label>

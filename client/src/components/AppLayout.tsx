@@ -274,7 +274,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
             <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-              ΔTOM · Nirmata Holdings · © 2026
+              ΔTOM · © 2026
             </p>
           </div>
         )}

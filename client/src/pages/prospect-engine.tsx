@@ -329,20 +329,29 @@ function exportToCSV(prospects: Prospect[]) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-// Full-width gradient score bar matching the screenshot
+// Signal-intelligence ramp: cold (steel) → warm (amber) → hot (rose).
+// Picks a CSS gradient that ends at the score, so the fill itself encodes
+// the temperature (low scores stay cool, high scores burn).
 function ScoreBar({ score }: { score: number }) {
+  const fillGradient =
+    score >= 80 ? "linear-gradient(to right, #f97316, #f43f5e)" :       // hot — amber → rose
+    score >= 60 ? "linear-gradient(to right, #14b8a6, #f59e0b)" :       // warm — teal → amber
+    score >= 40 ? "linear-gradient(to right, #38bdf8, #14b8a6)" :       // tepid — sky → teal
+                  "linear-gradient(to right, #475569, #64748b)";        // cold — slate ramp
+  const glow =
+    score >= 80 ? "0 0 12px rgba(244, 63, 94, 0.45)" :
+    score >= 60 ? "0 0 10px rgba(245, 158, 11, 0.35)" :
+    score >= 40 ? "0 0 8px rgba(20, 184, 166, 0.25)" :
+                  "none";
   return (
     <div className="flex items-center gap-2 w-full">
       <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{
-            width: `${score}%`,
-            background: "linear-gradient(to right, #22c55e, #eab308, var(--color-error))",
-          }}
+          style={{ width: `${score}%`, background: fillGradient, boxShadow: glow }}
         />
       </div>
-      <span className="text-xs font-bold tabular-nums text-white/70 w-6 text-right font-mono">
+      <span className="text-xs font-bold tabular-nums text-white/80 w-6 text-right font-mono">
         {Math.round(score)}
       </span>
     </div>
@@ -1298,6 +1307,43 @@ export default function ProspectEngine() {
               </div>
             )}
           </div>
+
+          {/* Hot / Warm / Cold / Contacts KPI strip — only when we have results. */}
+          {displayedProspects.length > 0 && (() => {
+            // Bucket by ATOM score: Hot 75+, Warm 50–74, Cold <50.
+            const hot   = displayedProspects.filter(p => p.score >= 75).length;
+            const warm  = displayedProspects.filter(p => p.score >= 50 && p.score < 75).length;
+            const cold  = displayedProspects.filter(p => p.score < 50).length;
+            const tiles = [
+              { label: "HOT",      sub: "(75+)",   value: hot,           color: "#f43f5e", glow: "244,63,94",  icon: Flame },
+              { label: "WARM",     sub: "(50–74)", value: warm,          color: "#f59e0b", glow: "245,158,11", icon: TrendingUp },
+              { label: "COLD",     sub: "(<50)",   value: cold,          color: "#64748b", glow: "100,116,139", icon: Snowflake },
+              { label: "CONTACTS", sub: "verified", value: totalContacts, color: "#14b8a6", glow: "20,184,166", icon: Users },
+            ];
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                {tiles.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <div key={t.label} className="rounded-xl border bg-[#111113] px-4 py-3 flex items-center gap-3"
+                      style={{ borderColor: `rgba(${t.glow},0.3)`, boxShadow: `0 0 14px rgba(${t.glow},0.06) inset` }}>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: `rgba(${t.glow},0.12)`, border: `1px solid rgba(${t.glow},0.3)` }}>
+                        <Icon className="w-4 h-4" style={{ color: t.color }} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[24px] leading-none font-bold tabular-nums" style={{ color: t.color }}>{t.value}</div>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-[10px] font-mono tracking-wider" style={{ color: t.color }}>{t.label}</span>
+                          <span className="text-[9px] font-mono text-white/35">{t.sub}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Industry-level Premium Signals (informs ICP scoring + keyword guidance) */}
           <IndustrySignalsPanel

@@ -987,7 +987,7 @@ export default function VibraniumShell() {
             textTransform: "uppercase", color: ATOM_DANGER, marginBottom: 6,
           }}>Super Admin required</div>
           <p style={{ marginTop: 0, marginBottom: 0, color: "var(--color-text-muted)" }}>
-            This console is restricted to super_admin accounts. Contact Nirmata Holdings to request access.
+            This console is restricted to super_admin accounts. Contact your ΔTOM administrator to request access.
           </p>
         </div>
       ) : (

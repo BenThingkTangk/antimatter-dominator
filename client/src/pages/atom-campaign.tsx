@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -1718,7 +1719,7 @@ export default function AtomCampaign() {
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Contact</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Phone</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Email / LinkedIn</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Signals</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Email</p>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Conf.</p>
                 </div>
 
@@ -1749,11 +1750,30 @@ export default function AtomCampaign() {
                           className="w-3.5 h-3.5 rounded border-white/20 bg-transparent accent-violet-400 cursor-pointer"
                         />
 
-                        {/* ATOM Score */}
+                        {/* ATOM Score — hover for what the number means */}
                         <div className="flex items-center justify-center">
-                          <span className={`text-xs font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${scoreColor(t.score)}`}>
-                            {t.score}
-                          </span>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`text-xs font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border cursor-help ${scoreColor(t.score)}`}>
+                                  {t.score}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" align="start" className="max-w-[280px] bg-[#111113] border border-violet-500/30 text-white/90 px-3 py-2.5">
+                                <div className="text-[10px] font-mono uppercase tracking-wider text-violet-300 mb-1.5">ΔTOM Score · {t.score}/100</div>
+                                <div className="text-[11px] text-white/80 leading-relaxed mb-2">
+                                  {t.score >= 80 ? "Hot target. Strong buying signals + ICP fit + recent intent activity. Dial first."
+                                    : t.score >= 60 ? "Warm target. Solid ICP match with at least one fresh signal. Worth a call."
+                                    : t.score >= 40 ? "Tepid. Right industry / size but no recent intent. Email-first cadence recommended."
+                                    : "Cold. Generic ICP fit only. Nurture queue."}
+                                </div>
+                                <div className="text-[10px] text-white/55 leading-relaxed pt-2 border-t border-white/10">
+                                  Composite of: Sonar intent signals, Apollo firmographic match,
+                                  buying-signal recency, and Aletheia behavioral score.
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
 
                         {/* Company */}
@@ -1849,34 +1869,25 @@ export default function AtomCampaign() {
                           )}
                         </div>
 
-                        {/* Buying Signals + Premium Sonar Signal (first 1-2) */}
-                        <div className="min-w-0 space-y-0.5">
-                          <TargetSignalChip company={t.companyName} domain={t.domain} />
-                          {t.buyingSignals.slice(0, 1).map((sig, idx) => (
-                            <div key={idx} className="flex items-center gap-1">
-                              <Zap className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                              <span className="text-[9px] text-white/55 truncate leading-tight">{sig}</span>
-                            </div>
-                          ))}
-                          {t.buyingSignals.length === 0 && (
-                            <span className="text-[9px] text-white/15 font-mono">premium signals only</span>
+                        {/* Email — dedicated column with prominent send button */}
+                        <div className="min-w-0 flex items-center">
+                          {t.email ? (
+                            <Button
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
+                              disabled={emailingTarget === t.id}
+                              className="h-7 text-[11px] px-3 gap-1.5 bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/30"
+                            >
+                              {emailingTarget === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                              Email
+                            </Button>
+                          ) : (
+                            <span className="text-[9px] text-white/25 font-mono">no email</span>
                           )}
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-1.5 justify-end">
-                          {t.email && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
-                              disabled={emailingTarget === t.id}
-                              className="h-6 text-[10px] px-2 gap-1 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
-                            >
-                              {emailingTarget === t.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
-                              Email
-                            </Button>
-                          )}
+                        {/* Confidence */}
+                        <div className="flex items-center justify-end">
                           <Badge className={`text-[9px] font-mono px-1.5 shrink-0 ${
                             t.confidence >= 70
                               ? "bg-emerald-500/10 text-emerald-400/70 border-emerald-500/20"
