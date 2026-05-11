@@ -96,15 +96,20 @@ async function fetchChatEvents(chatId: string): Promise<HumeEvent[]> {
   return (data.events_page as HumeEvent[]) || [];
 }
 
+// Sentiment = weighted (pos - neg) / (pos + neg + neutral_floor).
+// Adding a neutrality floor prevents tiny absolute scores (which happen on
+// neutral utterances like "yeah" / "sure") from amplifying to extreme
+// values. Also: previously this returned strongly negative on neutral
+// inputs because Hume's 'Doubt' and 'Awkwardness' fire on any uncertainty.
 function computeSentiment(emotions: Record<string, number>): number {
   let pos = 0, neg = 0;
   for (const [k, v] of Object.entries(emotions)) {
     if (POS_EMOTIONS.has(k)) pos += v;
     if (NEG_EMOTIONS.has(k)) neg += v;
   }
-  // Range -100..100
-  if (pos + neg < 0.001) return 0;
-  return Math.round(((pos - neg) / (pos + neg)) * 100);
+  const NEUTRAL_FLOOR = 0.5;
+  const denom = pos + neg + NEUTRAL_FLOOR;
+  return Math.round(((pos - neg) / denom) * 100);
 }
 
 function computeIntent(emotions: Record<string, number>): number {
@@ -116,12 +121,17 @@ function computeIntent(emotions: Record<string, number>): number {
   return Math.min(100, Math.round((intent / 2.0) * 100));
 }
 
+// Each group's score = MAX member score, not average. Hume scores are each
+// 0..1 and most are near-zero on any given turn — averaging buries the
+// signal. Max keeps the dominant emotion in a group visible. Also scale up
+// 2x because Hume's typical strong-signal value is ~0.4–0.5 (rarely 1.0),
+// and we want the bars to feel proportional to perceived intensity.
 function rollupEmotions(emotions: Record<string, number>): Record<string, number> {
   const rolled: Record<string, number> = {};
   for (const [group, members] of Object.entries(EMOTION_GROUPS)) {
-    let sum = 0;
-    for (const m of members) sum += emotions[m] || 0;
-    rolled[group] = Math.min(1, sum / members.length);
+    let maxV = 0;
+    for (const m of members) maxV = Math.max(maxV, emotions[m] || 0);
+    rolled[group] = Math.min(1, maxV * 2);
   }
   return rolled;
 }

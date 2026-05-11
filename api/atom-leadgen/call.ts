@@ -47,6 +47,10 @@ const TWILIO_PHONE_NUMBER   = clean(process.env.TWILIO_PHONE_NUMBER);
 
 const HUME_API_KEY          = clean(process.env.HUME_API_KEY);
 
+// Supabase (used to seed atom_calls for the history view)
+const SUPABASE_URL              = clean(process.env.SUPABASE_URL);
+const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 // ATOM RAG microservice (Pinecone-backed, always-warm cache)
 const RAG_URL = clean(process.env.RAG_URL) || "https://atom-rag.45-79-202-76.sslip.io";
 
@@ -239,10 +243,31 @@ function twilioAuthHeader() {
   return "Basic " + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64");
 }
 
-async function twilioCreateCall(to: string, from: string, opts: { twiml?: string; url?: string }) {
+async function twilioCreateCall(to: string, from: string, opts: {
+  twiml?: string;
+  url?: string;
+  record?: boolean;
+  recordingStatusCallback?: string;
+  statusCallback?: string;
+}) {
   const form = new URLSearchParams({ To: to, From: from });
   if (opts.twiml) form.set("Twiml", opts.twiml);
   if (opts.url)   form.set("Url",   opts.url);
+  if (opts.record) {
+    form.set("Record", "true");
+    form.set("RecordingChannels", "dual");
+    form.set("RecordingTrack", "both");
+  }
+  if (opts.recordingStatusCallback) {
+    form.set("RecordingStatusCallback", opts.recordingStatusCallback);
+    form.set("RecordingStatusCallbackEvent", "completed");
+    form.set("RecordingStatusCallbackMethod", "POST");
+  }
+  if (opts.statusCallback) {
+    form.set("StatusCallback", opts.statusCallback);
+    form.set("StatusCallbackEvent", "completed");
+    form.set("StatusCallbackMethod", "POST");
+  }
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Calls.json`,
     {
@@ -291,6 +316,30 @@ async function createPerCallConfig(args: {
     .replace(/\{\{\s*prospect_company\s*\}\}/g, args.prospectCompany || "their company")
     .replace(/\{\{\s*company_brief\s*\}\}/g,    args.companyBrief    || "");
   const renderedPrompt = substitute(master.prompt.text);
+
+  // ── Conversational pacing tune-up ─────────────────────────────────────────
+  // User report 2026-05-11: "ATOM barreled into the next line without waiting
+  // after 'not catching you at a bad time?'". Root cause: Hume's default
+  // max_duration on the inactivity timeout is too aggressive (~1.5s) — ATOM
+  // treats a half-beat of silence as turn-end and barges in. We lengthen
+  // inactivity so ATOM holds the floor for the prospect, and we DISABLE the
+  // unsolicited nudge (which prompts ATOM to fill silence proactively — the
+  // exact behavior we don't want on a cold call open).
+  const tunedTimeouts = {
+    ...(master.timeouts || {}),
+    inactivity: {
+      enabled: true,
+      // Wait ~3.2s of silence before ATOM speaks again. Previously ~1.2s.
+      duration_secs: 3.2,
+      ...((master.timeouts && master.timeouts.inactivity && typeof master.timeouts.inactivity === "object") ? {} : {}),
+    },
+  };
+  // Master nudges struct can be either { enabled: bool, ... } or undefined.
+  // Force-disable: ATOM should never auto-prompt itself during a cold call.
+  const tunedNudges = master.nudges
+    ? { ...master.nudges, enabled: false }
+    : { enabled: false };
+
   const createRes = await fetch("https://api.hume.ai/v0/evi/configs", {
     method: "POST",
     headers: { "X-Hume-Api-Key": HUME_API_KEY, "Content-Type": "application/json" },
@@ -304,8 +353,8 @@ async function createPerCallConfig(args: {
       tools: master.tools || [],
       builtin_tools: master.builtin_tools || [],
       event_messages: master.event_messages,
-      timeouts: master.timeouts,
-      nudges: master.nudges,
+      timeouts: tunedTimeouts,
+      nudges: tunedNudges,
       webhooks: master.webhooks || [],
     }),
   });
@@ -336,7 +385,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     dealValue,
     tenant_slug,
     tenantSlug,
+    record,             // user-toggled “Record this call” checkbox
+    recordCall,
   } = req.body || {};
+  const wantRecord = Boolean(record ?? recordCall ?? false);
 
   // Normalize: accept both snake_case and camelCase from the frontend.
   const dealValueNum = Number(deal_value ?? dealValue ?? 0) || 0;
@@ -469,9 +521,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     humeTwimlUrl.searchParams.set("api_key",   HUME_API_KEY);
 
     // 3. Place the outbound call.
+    // Build absolute callbacks so Twilio can hit our Vercel app once the
+    // recording is ready or the call ends. Without these the recording URL
+    // never reaches our backend.
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host  = (req.headers["x-forwarded-host"] as string)
+      || (req.headers.host as string)
+      || "atom-dominator-pro.vercel.app";
+    const recordingStatusCallback = `${proto}://${host}/api/atom-leadgen/recording-callback`;
+    const statusCallback          = `${proto}://${host}/api/atom-leadgen/call-status`;
+
     const call = await twilioCreateCall(cleanNumber, TWILIO_PHONE_NUMBER, {
       url: humeTwimlUrl.toString(),
+      record: wantRecord,
+      recordingStatusCallback: wantRecord ? recordingStatusCallback : undefined,
+      statusCallback,
     });
+
+    // ── Seed an atom_calls row so /recording-callback + /history have something to update.
+    //    Best-effort — never block the dial.
+    try {
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        await fetch(`${SUPABASE_URL}/rest/v1/atom_calls`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            call_sid: call.sid,
+            to_number: cleanNumber,
+            from_number: TWILIO_PHONE_NUMBER,
+            status: call.status || "queued",
+            started_at: new Date().toISOString(),
+            contact_name: rawName || null,
+            company_name: company || null,
+            product_name: productLabel || null,
+            pitch_topic: trimmedPitchTopic || null,
+            tenant_slug: reqTenantSlug || null,
+            record_enabled: wantRecord,
+            recording_status: wantRecord ? "pending" : null,
+          }),
+        }).catch(() => { /* best-effort */ });
+      }
+    } catch { /* never block dial on Supabase */ }
 
     return res.status(200).json({
       success: true,
@@ -481,7 +576,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: call.status || "queued",
       to: cleanNumber,
       from: TWILIO_PHONE_NUMBER,
-      architecture: "twilio-hume-direct-rag-cached-v10",
+      architecture: "twilio-hume-direct-rag-cached-v11-record",
+      recordEnabled: wantRecord,
       humeConfigId: routedConfig.configId,
       humeVoiceId: HUME_VOICE_ID,
       reasoningModel: routedConfig.reasoningModel,        // "claude-sonnet" | "gpt-5.5"

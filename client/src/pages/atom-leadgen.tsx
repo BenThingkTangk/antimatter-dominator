@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useProductIntel } from "@/hooks/use-product-intel";
 import { useToast } from "@/hooks/use-toast";
-import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair } from "lucide-react";
+import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair, Play, Pause, Download, Mic } from "lucide-react";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 
@@ -128,6 +128,9 @@ interface CallHistoryEntry {
   sentimentHistory: SentimentPoint[];
   emotions: Record<string, number>;
   buyingSignals: string[];
+  recordEnabled?: boolean;
+  recordingUrl?: string | null;
+  warroom?: any | null;
 }
 
 type CallStatus = "idle" | "dialing" | "active" | "ended";
@@ -453,9 +456,104 @@ function PulsingDot() {
 
 // ─── History Card Detail ──────────────────────────────────────────────────────
 
+// ─── Helpers used by the history detail replay scrubber ────────────────────
+function interpolateSentiment(points: SentimentPoint[], targetMs: number): number {
+  if (!points || points.length === 0) return 0;
+  if (targetMs <= points[0].ts) return points[0].value;
+  if (targetMs >= points[points.length - 1].ts) return points[points.length - 1].value;
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].ts >= targetMs) {
+      const a = points[i - 1];
+      const b = points[i];
+      const range = (b.ts - a.ts) || 1;
+      const t = (targetMs - a.ts) / range;
+      return a.value + (b.value - a.value) * t;
+    }
+  }
+  return points[points.length - 1].value;
+}
+
+function transcriptIndexAt(transcriptItems: TranscriptEntry[], targetMs: number): number {
+  if (!transcriptItems || transcriptItems.length === 0) return -1;
+  if (targetMs < transcriptItems[0].ts) return -1;
+  let idx = 0;
+  for (let i = 0; i < transcriptItems.length; i++) {
+    if (transcriptItems[i].ts <= targetMs) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function formatMs(ms: number): string {
+  const totalSec = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
   const idx = entry.id;
+
+  // ─── Audio playback state ─────────────────────────────────────────────
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentSec, setCurrentSec] = useState(0);
+  const [audioDurSec, setAudioDurSec] = useState(0);
+
+  // Replay-scrub mode: when the user is actively playing the recording, we
+  // re-derive the live-analytics panes from where in the call we are. When
+  // there's no audio (or paused at start), we show the static end-of-call
+  // final values. This is what lets reps "watch the call back" with the
+  // sentiment line, transcript cursor, and emotion bars syncing to audio.
+  const callStartMs = entry.timestamp - (entry.duration * 1000);
+  const cursorMs    = callStartMs + (currentSec * 1000);
+  const inReplay    = audioReady && (isPlaying || currentSec > 0.25);
+
+  const sortedTranscript = [...(entry.transcript || [])].sort((a, b) => a.ts - b.ts);
+  const sortedSentiment  = [...(entry.sentimentHistory || [])].sort((a, b) => a.ts - b.ts);
+
+  const replaySentiment = inReplay
+    ? Math.round(interpolateSentiment(sortedSentiment, cursorMs))
+    : entry.finalSentiment;
+
+  const transcriptCursorIdx = inReplay
+    ? transcriptIndexAt(sortedTranscript, cursorMs)
+    : sortedTranscript.length - 1;
+
+  // Try to fetch a recording URL from the backend. The Twilio recording
+  // callback may have populated it after the call ended even if the row
+  // wasn't saved locally with one.
+  const [resolvedRecordingUrl, setResolvedRecordingUrl] = useState<string | null>(entry.recordingUrl ?? null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!entry.callSid || entry.callSid.startsWith("manual-")) return;
+    // We always go through our proxy — Twilio recordings need basic-auth.
+    // Probing it with HEAD first lets us suppress the error UI if there's no
+    // recording on this call.
+    const proxied = `/api/atom-leadgen/recording-stream?callSid=${encodeURIComponent(entry.callSid)}`;
+    fetch(proxied, { method: "HEAD" })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) setResolvedRecordingUrl(proxied);
+        else setResolvedRecordingUrl(null);
+      })
+      .catch(() => { if (!cancelled) setResolvedRecordingUrl(null); });
+    return () => { cancelled = true; };
+  }, [entry.callSid]);
+
+  const hasAudio = Boolean(resolvedRecordingUrl);
+
+  const togglePlay = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) el.play().catch(() => setAudioError("Playback blocked. Try again."));
+    else el.pause();
+  };
+
   return (
+    <>
     <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
       {/* Gauges */}
       <div className="grid grid-cols-2 gap-4">
@@ -518,6 +616,110 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
         </div>
       </div>
 
+      {/* Von Clausewitz / Aletheia Engine snapshot */}
+      {entry.warroom && (
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <div className="text-xs uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
+            <span>Von Clausewitz Engine · Final Read</span>
+            <span
+              className="px-1.5 py-[1px] rounded text-[9px]"
+              style={{
+                background:
+                  entry.warroom.dealRisk === "HEALTHY" ? "rgba(34,197,94,0.2)" :
+                  entry.warroom.dealRisk === "CAUTION" ? "rgba(250,204,21,0.2)" :
+                  entry.warroom.dealRisk === "AT_RISK" ? "rgba(251,146,60,0.2)" :
+                  "rgba(239,68,68,0.2)",
+                color:
+                  entry.warroom.dealRisk === "HEALTHY" ? "#4ade80" :
+                  entry.warroom.dealRisk === "CAUTION" ? "#fde047" :
+                  entry.warroom.dealRisk === "AT_RISK" ? "var(--color-primary-2)" :
+                  "var(--color-error)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {entry.warroom.dealRisk || "—"}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Truth</div>
+              <div className="text-xl font-light" style={{ color: "var(--color-text)" }}>{entry.warroom.truthScore ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Leverage</div>
+              <div className="text-xl font-light capitalize" style={{ color: "var(--color-text)" }}>
+                {entry.warroom.negotiationPosture?.leveragePosition || "—"}
+              </div>
+              <div className="text-[9px] opacity-60">power {entry.warroom.negotiationPosture?.powerScore ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Ghost risk</div>
+              <div className="text-xl font-light" style={{
+                color: (entry.warroom.ghostProbability ?? 0) > 50 ? "var(--color-error)" : "var(--color-text)",
+              }}>
+                {entry.warroom.ghostProbability ?? 0}%
+              </div>
+            </div>
+          </div>
+          {entry.warroom.signal && (
+            <div className="mt-3 text-[11px] italic" style={{ color: "var(--color-text-muted)" }}>
+              “{entry.warroom.signal}”
+            </div>
+          )}
+          {Array.isArray(entry.warroom.flags) && entry.warroom.flags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {entry.warroom.flags.slice(0, 6).map((f: any, i: number) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 rounded-full text-[10px]"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: f.severity === "high" ? "var(--color-error)" :
+                           f.severity === "medium" ? "var(--color-primary-2)" :
+                           "var(--color-text-muted)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {f.type}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sentiment peaks & bottoms */}
+      {sortedSentiment.length > 1 && (() => {
+        const max = sortedSentiment.reduce((a, b) => b.value > a.value ? b : a);
+        const min = sortedSentiment.reduce((a, b) => b.value < a.value ? b : a);
+        const cs = entry.timestamp - entry.duration * 1000;
+        return (
+          <div
+            className="rounded-xl p-4 grid grid-cols-2 gap-4"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Peak sentiment</div>
+              <div className="text-2xl font-light" style={{ color: sentimentColor(max.value) }}>+{Math.round(max.value)}</div>
+              <div className="text-[10px] opacity-70" style={{ color: "var(--color-text-muted)" }}>
+                at {formatMs(max.ts - cs)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Lowest sentiment</div>
+              <div className="text-2xl font-light" style={{ color: sentimentColor(min.value) }}>{Math.round(min.value)}</div>
+              <div className="text-[10px] opacity-70" style={{ color: "var(--color-text-muted)" }}>
+                at {formatMs(min.ts - cs)}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Buying Signals */}
       {entry.buyingSignals.length > 0 && (
         <div>
@@ -544,23 +746,167 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
 
       {/* Transcript */}
       <div>
-        <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
-          Full Transcript
+        <div className="text-xs uppercase tracking-wider mb-3 flex items-center justify-between" style={{ color: "var(--color-text-muted)" }}>
+          <span>Full Transcript</span>
+          {inReplay && transcriptCursorIdx >= 0 && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{
+                background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
+                color: "var(--color-primary)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Replay · turn {transcriptCursorIdx + 1}/{sortedTranscript.length}
+            </span>
+          )}
         </div>
         <div
           className="overflow-y-auto pr-1"
           style={{ maxHeight: "360px", minHeight: "80px" }}
         >
-          {entry.transcript.length === 0 ? (
+          {sortedTranscript.length === 0 ? (
             <div className="text-sm text-center py-8" style={{ color: "var(--color-text-faint)" }}>
               No transcript recorded.
             </div>
           ) : (
-            entry.transcript.map((e, i) => <TxMessage key={i} entry={e} />)
+            sortedTranscript.map((e, i) => (
+              <div
+                key={i}
+                style={{
+                  opacity: inReplay ? (i <= transcriptCursorIdx ? 1 : 0.25) : 1,
+                  outline: inReplay && i === transcriptCursorIdx
+                    ? "1px solid color-mix(in oklab, var(--color-primary) 40%, transparent)"
+                    : "none",
+                  borderRadius: "8px",
+                  transition: "opacity 120ms ease, outline-color 120ms ease",
+                }}
+              >
+                <TxMessage entry={e} />
+              </div>
+            ))
           )}
         </div>
       </div>
     </div>
+
+    {/* ── Call Recording + Replay Scrubber (only when audio is available) ── */}
+    {hasAudio && (
+      <div
+        className="mt-4 rounded-xl p-4"
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid color-mix(in oklab, var(--color-primary) 22%, transparent)" }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Mic size={14} style={{ color: "var(--color-primary)" }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              Call Recording · Live Analytics Replay
+            </span>
+          </div>
+          <a
+            href={resolvedRecordingUrl!}
+            download={`atom-call-${entry.callSid}.mp3`}
+            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md"
+            style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "var(--color-text-muted)",
+              background: "rgba(255,255,255,0.03)",
+            }}
+          >
+            <Download size={11} />Download
+          </a>
+        </div>
+
+        {/* Hidden audio element — we drive playback via the custom button */}
+        <audio
+          ref={audioRef}
+          src={resolvedRecordingUrl || undefined}
+          preload="metadata"
+          onLoadedMetadata={() => {
+            const el = audioRef.current;
+            if (!el) return;
+            setAudioReady(true);
+            if (Number.isFinite(el.duration)) setAudioDurSec(el.duration);
+            else if (entry.duration > 0) setAudioDurSec(entry.duration);
+          }}
+          onTimeUpdate={() => {
+            const el = audioRef.current;
+            if (!el) return;
+            setCurrentSec(el.currentTime);
+          }}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => setIsPlaying(false)}
+          onError={() => setAudioError("Recording is still being processed by Twilio. Refresh in a minute.")}
+        />
+
+        {audioError && (
+          <div className="text-[11px] mb-2" style={{ color: "var(--color-error)" }}>
+            {audioError}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={togglePlay}
+            className="flex items-center justify-center rounded-full transition-all"
+            style={{
+              width: 40, height: 40,
+              background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",
+              color: "var(--color-text-inverse)",
+              boxShadow: "0 0 14px var(--color-primary-glow)",
+            }}
+          >
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+
+          <div className="flex-1">
+            <input
+              type="range"
+              min={0}
+              max={audioDurSec || entry.duration || 1}
+              step={0.05}
+              value={Math.min(currentSec, audioDurSec || entry.duration || 1)}
+              onChange={(e) => {
+                const t = Number(e.target.value);
+                setCurrentSec(t);
+                const el = audioRef.current;
+                if (el) el.currentTime = t;
+              }}
+              className="w-full"
+              style={{ accentColor: "var(--color-primary)" }}
+            />
+            <div className="flex items-center justify-between mt-1 text-[10px]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
+              <span>{formatMs(currentSec * 1000)}</span>
+              <span>
+                Sentiment now: <strong style={{ color: sentimentColor(replaySentiment) }}>{replaySentiment}</strong>
+              </span>
+              <span>{formatMs((audioDurSec || entry.duration) * 1000)}</span>
+            </div>
+          </div>
+        </div>
+
+        {sortedSentiment.length > 0 && (
+          <div className="mt-3">
+            <SentimentSparkline points={sortedSentiment} idSuffix={`-replay-${idx}`} />
+          </div>
+        )}
+      </div>
+    )}
+
+    {!hasAudio && entry.recordEnabled && entry.callSid && !entry.callSid.startsWith("manual-") && (
+      <div
+        className="mt-4 rounded-xl p-3 text-[11px] flex items-center gap-2"
+        style={{
+          background: "rgba(255,255,255,0.025)",
+          border: "1px dashed rgba(255,255,255,0.12)",
+          color: "var(--color-text-muted)",
+        }}
+      >
+        <Mic size={12} /> Recording still being processed by Twilio. Reopen this call in a minute to play it back.
+      </div>
+    )}
+    </>
   );
 }
 
@@ -676,6 +1022,17 @@ export default function ATOMLeadGen() {
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
   const [pitchTopic, setPitchTopic] = useState(params.get("topic") || "");
+  // "Record this call" toggle — default ON so a normal dial captures audio.
+  // Persisted to localStorage so the rep's preference sticks across reloads.
+  const [recordCall, setRecordCall] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem("atom_dial_record");
+      return v == null ? true : v === "1";
+    } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("atom_dial_record", recordCall ? "1" : "0"); } catch {}
+  }, [recordCall]);
   // Deal value field removed from the UI — enterprise routing now keys off
   // tenant plan + Apollo firmographics rather than a manual rep input.
   const dealValue = "";
@@ -730,6 +1087,8 @@ export default function ATOMLeadGen() {
   const sentimentHistoryRef = useRef(sentimentHistory);
   const emotionsRef = useRef(metrics.emotions);
   const buyingSignalsRef = useRef(buyingSignals);
+  const warroomRef       = useRef(warroom);
+  const recordCallRef    = useRef(recordCall);
   const formRef = useRef({ contactName, companyName, product: productSlug, phone });
 
   useEffect(() => { metricsRef.current = metrics; }, [metrics]);
@@ -737,6 +1096,8 @@ export default function ATOMLeadGen() {
   useEffect(() => { sentimentHistoryRef.current = sentimentHistory; }, [sentimentHistory]);
   useEffect(() => { emotionsRef.current = metrics.emotions; }, [metrics.emotions]);
   useEffect(() => { buyingSignalsRef.current = buyingSignals; }, [buyingSignals]);
+  useEffect(() => { warroomRef.current       = warroom; },       [warroom]);
+  useEffect(() => { recordCallRef.current    = recordCall; },    [recordCall]);
   useEffect(() => {
     formRef.current = { contactName, companyName, product: productSlug, phone };
   }, [contactName, companyName, productSlug, phone]);
@@ -813,12 +1174,15 @@ export default function ATOMLeadGen() {
             buyerIntent: data.metrics.buyerIntent ?? 0,
             stage: ["Discovery", "Evaluation", "Negotiation", "Close"][(data.metrics.stage || 1) - 1] || "Discovery",
             emotions: {
-              confidence:  (data.metrics.emotions?.confidence ?? 0) * 100,
-              interest:    (data.metrics.emotions?.interest ?? 0) * 100,
-              skepticism:  (data.metrics.emotions?.skepticism ?? 0) * 100,
-              excitement:  (data.metrics.emotions?.excitement ?? 0) * 100,
-              frustration: (data.metrics.emotions?.frustration ?? 0) * 100,
-              neutrality:  (data.metrics.emotions?.neutrality ?? 0) * 100,
+              // Server returns 0..1 from rollupEmotions(). EmotionBar already
+              // multiplies value*100 to get a percent. So pass through as-is
+              // — don't double-multiply (that was the 'all bars at 100%' bug).
+              confidence:  data.metrics.emotions?.confidence  ?? 0,
+              interest:    data.metrics.emotions?.interest    ?? 0,
+              skepticism:  data.metrics.emotions?.skepticism  ?? 0,
+              excitement:  data.metrics.emotions?.excitement  ?? 0,
+              frustration: data.metrics.emotions?.frustration ?? 0,
+              neutrality:  data.metrics.emotions?.neutrality  ?? 0,
             },
             buyingSignals: data.buyingSignals || [],
           });
@@ -864,26 +1228,50 @@ export default function ATOMLeadGen() {
 
             const currentSid = callSidRef.current ?? sessionId;
             const form = formRef.current;
-            setCallHistory(prev => [
-              {
-                id: currentSid,
+            const entry: CallHistoryEntry = {
+              id: currentSid,
+              callSid: currentSid,
+              contactName: form.contactName,
+              companyName: form.companyName,
+              product: form.product,
+              phoneNumber: form.phone,
+              timestamp: Date.now(),
+              duration: dur,
+              finalSentiment: metricsRef.current.sentiment,
+              finalIntent: metricsRef.current.buyerIntent,
+              finalStage: metricsRef.current.stage,
+              transcript: [...transcriptRef.current],
+              sentimentHistory: [...sentimentHistoryRef.current],
+              emotions: { ...emotionsRef.current },
+              buyingSignals: [...buyingSignalsRef.current],
+              recordEnabled: recordCallRef.current,
+              recordingUrl: null,
+              warroom: warroomRef.current,
+            };
+            setCallHistory(prev => [entry, ...prev]);
+
+            // Persist to Supabase so the call-history detail page can replay
+            // it later from any device. Best-effort — the local copy in
+            // localStorage above is the source of truth for the current rep.
+            fetch("/api/atom-leadgen/save-call", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
                 callSid: currentSid,
-                contactName: form.contactName,
-                companyName: form.companyName,
-                product: form.product,
-                phoneNumber: form.phone,
-                timestamp: Date.now(),
                 duration: dur,
                 finalSentiment: metricsRef.current.sentiment,
                 finalIntent: metricsRef.current.buyerIntent,
                 finalStage: metricsRef.current.stage,
-                transcript: [...transcriptRef.current],
-                sentimentHistory: [...sentimentHistoryRef.current],
-                emotions: { ...emotionsRef.current },
-                buyingSignals: [...buyingSignalsRef.current],
-              },
-              ...prev,
-            ]);
+                transcript: transcriptRef.current,
+                sentimentHistory: sentimentHistoryRef.current,
+                emotions: emotionsRef.current,
+                buyingSignals: buyingSignalsRef.current,
+                warroom: warroomRef.current,
+                contactName: form.contactName,
+                companyName: form.companyName,
+                productName: form.product,
+              }),
+            }).catch(() => { /* best-effort */ });
           }
         }
       } catch (e) {
@@ -967,26 +1355,48 @@ export default function ATOMLeadGen() {
         // Push to call history using latest refs
         const currentSid = callSidRef.current ?? sid;
         const form = formRef.current;
-        setCallHistory((prev) => [
-          {
-            id: currentSid,
+        const entry: CallHistoryEntry = {
+          id: currentSid,
+          callSid: currentSid,
+          contactName: form.contactName,
+          companyName: form.companyName,
+          product: form.product,
+          phoneNumber: form.phone,
+          timestamp: Date.now(),
+          duration: dur,
+          finalSentiment: metricsRef.current.sentiment,
+          finalIntent: metricsRef.current.buyerIntent,
+          finalStage: metricsRef.current.stage,
+          transcript: [...transcriptRef.current],
+          sentimentHistory: [...sentimentHistoryRef.current],
+          emotions: { ...emotionsRef.current },
+          buyingSignals: [...buyingSignalsRef.current],
+          recordEnabled: recordCallRef.current,
+          recordingUrl: null,
+          warroom: warroomRef.current,
+        };
+        setCallHistory((prev) => [entry, ...prev]);
+
+        // Persist to Supabase (best-effort).
+        fetch("/api/atom-leadgen/save-call", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             callSid: currentSid,
-            contactName: form.contactName,
-            companyName: form.companyName,
-            product: form.product,
-            phoneNumber: form.phone,
-            timestamp: Date.now(),
             duration: dur,
             finalSentiment: metricsRef.current.sentiment,
             finalIntent: metricsRef.current.buyerIntent,
             finalStage: metricsRef.current.stage,
-            transcript: [...transcriptRef.current],
-            sentimentHistory: [...sentimentHistoryRef.current],
-            emotions: { ...emotionsRef.current },
-            buyingSignals: [...buyingSignalsRef.current],
-          },
-          ...prev,
-        ]);
+            transcript: transcriptRef.current,
+            sentimentHistory: sentimentHistoryRef.current,
+            emotions: emotionsRef.current,
+            buyingSignals: buyingSignalsRef.current,
+            warroom: warroomRef.current,
+            contactName: form.contactName,
+            companyName: form.companyName,
+            productName: form.product,
+          }),
+        }).catch(() => { /* best-effort */ });
 
         ws.close();
       }
@@ -1047,6 +1457,8 @@ export default function ATOMLeadGen() {
         product: productSlug.trim() || undefined,
         pitchTopic: pitchTopic.trim() || undefined,
         productIntel: productIntelData || undefined,
+        // Toggle — backend wires Twilio Record=true + recording status callback
+        record: recordCall,
         // GPT-5.5 router inputs
         dealValue: dealValue ? Number(dealValue.replace(/[^0-9.]/g, "")) : undefined,
         tenantSlug: window.location.hostname.split(".")[0] || undefined,
@@ -1110,26 +1522,48 @@ export default function ATOMLeadGen() {
     // Push to history when manually ended
     const currentSid = callSidRef.current ?? "manual-" + Date.now();
     const form = formRef.current;
-    setCallHistory((prev) => [
-      {
-        id: currentSid,
+    const entry: CallHistoryEntry = {
+      id: currentSid,
+      callSid: currentSid,
+      contactName: form.contactName,
+      companyName: form.companyName,
+      product: form.product,
+      phoneNumber: form.phone,
+      timestamp: Date.now(),
+      duration: dur,
+      finalSentiment: metricsRef.current.sentiment,
+      finalIntent: metricsRef.current.buyerIntent,
+      finalStage: metricsRef.current.stage,
+      transcript: [...transcriptRef.current],
+      sentimentHistory: [...sentimentHistoryRef.current],
+      emotions: { ...emotionsRef.current },
+      buyingSignals: [...buyingSignalsRef.current],
+      recordEnabled: recordCallRef.current,
+      recordingUrl: null,
+      warroom: warroomRef.current,
+    };
+    setCallHistory((prev) => [entry, ...prev]);
+
+    // Persist to Supabase (best-effort).
+    fetch("/api/atom-leadgen/save-call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         callSid: currentSid,
-        contactName: form.contactName,
-        companyName: form.companyName,
-        product: form.product,
-        phoneNumber: form.phone,
-        timestamp: Date.now(),
         duration: dur,
         finalSentiment: metricsRef.current.sentiment,
         finalIntent: metricsRef.current.buyerIntent,
         finalStage: metricsRef.current.stage,
-        transcript: [...transcriptRef.current],
-        sentimentHistory: [...sentimentHistoryRef.current],
-        emotions: { ...emotionsRef.current },
-        buyingSignals: [...buyingSignalsRef.current],
-      },
-      ...prev,
-    ]);
+        transcript: transcriptRef.current,
+        sentimentHistory: sentimentHistoryRef.current,
+        emotions: emotionsRef.current,
+        buyingSignals: buyingSignalsRef.current,
+        warroom: warroomRef.current,
+        contactName: form.contactName,
+        companyName: form.companyName,
+        productName: form.product,
+      }),
+    }).catch(() => { /* best-effort */ });
   };
 
   const handleNewCall = () => {
@@ -1427,6 +1861,44 @@ export default function ATOMLeadGen() {
                   <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
                     What you specifically want ATOM to bring up — surfaces in the call brief.
                   </p>
+                </div>
+
+                {/* Record this call — per-call audio capture toggle */}
+                <div>
+                  <label
+                    className="flex items-start gap-3 px-3 py-2.5 rounded-xl cursor-pointer select-none transition-colors"
+                    style={{
+                      background: recordCall ? "color-mix(in oklab, var(--color-primary) 9%, transparent)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${recordCall ? "color-mix(in oklab, var(--color-primary) 35%, transparent)" : "rgba(255,255,255,0.08)"}`,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={recordCall}
+                      onChange={(e) => setRecordCall(e.target.checked)}
+                      disabled={callStatus === "active" || callStatus === "dialing"}
+                      className="mt-0.5 h-4 w-4 cursor-pointer accent-current"
+                      style={{ accentColor: "var(--color-primary)" }}
+                    />
+                    <span className="flex-1">
+                      <span className="block text-sm" style={{ color: "var(--color-text)" }}>
+                        Record this call
+                        <span
+                          className="ml-2 px-1.5 py-[1px] rounded text-[9px] uppercase tracking-[0.16em]"
+                          style={{
+                            background: recordCall ? "color-mix(in oklab, var(--color-primary) 22%, transparent)" : "rgba(255,255,255,0.06)",
+                            color: recordCall ? "var(--color-primary)" : "var(--color-text-muted)",
+                            fontFamily: "var(--font-mono)",
+                          }}
+                        >
+                          {recordCall ? "ON" : "OFF"}
+                        </span>
+                      </span>
+                      <span className="block text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.75 }}>
+                        Captures both audio channels via Twilio. Playback + sentiment replay surfaces in History.
+                      </span>
+                    </span>
+                  </label>
                 </div>
 
                 {/* Deal Value field removed — enterprise routing keys off
