@@ -95,9 +95,28 @@ async function sb(path: string, init: RequestInit = {}) {
   return t ? JSON.parse(t) : null;
 }
 
-async function tenantBySlug(slug: string): Promise<{ id: string; slug: string; name: string } | null> {
-  const rows = await sb(`tenants?slug=eq.${encodeURIComponent(slug)}&deleted_at=is.null&select=id,slug,name`);
+async function tenantBySlug(slug: string): Promise<{ id: string; slug: string; name: string; custom_domain: string | null } | null> {
+  const rows = await sb(`tenants?slug=eq.${encodeURIComponent(slug)}&deleted_at=is.null&select=id,slug,name,custom_domain`);
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+// Canonical app origin for a tenant. Prefers an explicit custom_domain; falls
+// back to the {slug}.atomdominator.com subdomain convention documented in the
+// white-label playbook. Exported so tests can pin behavior — and so the invite
+// email link always lands on the tenant's own URL rather than whatever origin
+// the admin happened to be on when sending the invite.
+export function tenantOrigin(tenant: { slug: string; custom_domain?: string | null }): string {
+  const domain = (tenant.custom_domain || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  if (domain) return `https://${domain}`;
+  return `https://${tenant.slug}.atomdominator.com`;
+}
+
+export function buildInviteUrl(tenant: { slug: string; custom_domain?: string | null }, token: string): string {
+  return `${tenantOrigin(tenant)}/#/invite/${token}`;
+}
+
+export function buildResetPasswordUrl(tenant: { slug: string; custom_domain?: string | null }, email: string): string {
+  return `${tenantOrigin(tenant)}/#/forgot-password?email=${encodeURIComponent(email)}`;
 }
 
 const VALID_ROLES = ["admin", "manager", "rep", "viewer"] as const;
@@ -135,6 +154,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!VALID_ROLES.includes(role as any)) return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(", ")}` });
       const tenant = await tenantBySlug(slug);
       if (!tenant) return res.status(404).json({ error: "tenant not found" });
+
+      // If the email already belongs to an accepted user in THIS tenant, do
+      // not send a new invite (and never touch or reveal their password).
+      // Route them to forgot-password on the tenant's own domain instead.
+      const existingUsers = await sb(
+        `tenant_users?email=eq.${encodeURIComponent(email)}&tenant_id=eq.${tenant.id}&deleted_at=is.null&accepted_at=not.is.null&select=id,email&limit=1`
+      );
+      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+        const resetPasswordUrl = buildResetPasswordUrl(tenant, email);
+        const emailResult = await sendEmail({
+          to: email,
+          subject: `Reset your ${tenant.name} password on ΔTOM`,
+          html: brandedEmail({
+            preheader: `You already have a ${tenant.name} account — use this link to reset your password.`,
+            heading: `Welcome back to ${tenant.name}`,
+            body: `
+              <p>You already have an account at <strong style="color:#e8e8ea">${tenant.name}</strong> on ΔTOM. We can't share your existing password, but you can reset it using the link below.</p>
+              <p>If you didn't request this, you can safely ignore this email — your password won't change.</p>
+            `,
+            ctaLabel: "Reset password",
+            ctaUrl: resetPasswordUrl,
+          }),
+          text: `You already have a ${tenant.name} account on ΔTOM. Reset your password here: ${resetPasswordUrl}`,
+        });
+        return res.status(200).json({
+          existingUser: true,
+          resetPasswordUrl,
+          email: { sent: emailResult.ok, id: emailResult.id, error: emailResult.error, skipped: emailResult.skipped },
+        });
+      }
+
+      // Dedupe: revoke any prior pending invites for this tenant+email so the
+      // recipient never receives two live tokens. We supersede (not delete) to
+      // keep an audit trail of what was sent and when.
+      const supersededRows = await sb(
+        `tenant_invites?tenant_id=eq.${tenant.id}&email=eq.${encodeURIComponent(email)}&accepted_at=is.null&revoked_at=is.null`,
+        { method: "PATCH", body: JSON.stringify({ revoked_at: new Date().toISOString() }) }
+      );
+      const supersededCount = Array.isArray(supersededRows) ? supersededRows.length : 0;
+
       const token = crypto.randomBytes(24).toString("base64url");
       const invite = await sb("tenant_invites", {
         method: "POST",
@@ -146,13 +205,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           invited_by: invitedBy || null,
         }),
       });
-      const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
-      const inviteUrl = `${origin}/#/invite/${token}`;
+      const inviteUrl = buildInviteUrl(tenant, token);
 
-      // Fire-and-forget email send — never blocks the invite write.
       const emailResult = await sendEmail({
         to: email,
-        subject: `You’re invited to ${tenant.name} on ΔTOM`,
+        subject: `You're invited to ${tenant.name} on ΔTOM`,
         html: brandedEmail({
           preheader: `${invitedBy || "Your team"} invited you to ${tenant.name} on ΔTOM — accept your invite to get started.`,
           heading: `You're invited to ${tenant.name}`,
@@ -170,6 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(201).json({
         invite: invite?.[0] || invite,
         inviteUrl,
+        supersededInvites: supersededCount,
         email: { sent: emailResult.ok, id: emailResult.id, error: emailResult.error, skipped: emailResult.skipped },
       });
     }
