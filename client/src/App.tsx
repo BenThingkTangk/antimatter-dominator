@@ -155,8 +155,11 @@ function MobileGate() {
   return null;
 }
 
-/** Authenticated app routes — only shown when logged in (via AuthGate). */
-function AuthenticatedRoutes() {
+/** Authenticated app routes inner — only shown when logged in (via AuthGate).
+ *  Wrapped by AuthenticatedRoutes below in ViewAsProvider so the
+ *  super-admin View-As toggle can mask down to manager/rep across every
+ *  gated surface inside the layout. */
+function AuthenticatedRoutesInner() {
   const { user } = useSessionContext();
 
   return (
@@ -186,6 +189,14 @@ function AuthenticatedRoutes() {
       {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
       <AtomChat />
     </AppLayout>
+  );
+}
+
+function AuthenticatedRoutes() {
+  return (
+    <ViewAsProvider>
+      <AuthenticatedRoutesInner />
+    </ViewAsProvider>
   );
 }
 

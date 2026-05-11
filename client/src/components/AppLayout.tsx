@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
+import { useEffectiveSession, ViewAsToggle, ViewAsBanner } from "../auth/ViewAs";
 import { DtomLogo } from "@nirmata/dtom-brand-system";
 
 interface NavItem { href: string; icon: any; label: string; }
@@ -59,7 +60,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Theme is locked dark-first per brand bible — no toggle, no state.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const session = useSessionContext();
+  // Use the EFFECTIVE session everywhere the sidebar / RBAC decisions are
+  // made. When the real super-admin flips the View-As toggle, `session`
+  // here returns `isSuperAdmin: false` and the Nirmata HQ / Seat Costs /
+  // Vibranium GA / Billing / System Control entries disappear from the
+  // sidebar exactly like a manager / rep would experience.
+  const session = useEffectiveSession();
   const { tenant } = useTenant();
   const isCustomBrand = !!tenant?.slug && tenant.slug !== "antimatter" && tenant.name !== "AntimatterAI";
   const tenantLogo = isCustomBrand && tenant.logo_url ? tenant.logo_url : null;
@@ -96,8 +102,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     dynamicNavItems.push({ href: "/admin/vibranium-ga", icon: Zap, label: "Vibranium GA" });
   }
 
-  // All standard items
-  dynamicNavItems.push(...navItems);
+  // All standard items — with the rep view trimmed to day-to-day modules.
+  // Manager and overlord see all 8 weapons; rep sees the production surfaces
+  // they actually use minute-to-minute (no WarBook playbook editing, no
+  // multi-deal War Room dashboard).
+  const visibleNavItems = session.role === "rep"
+    ? navItems.filter(n =>
+        n.href !== "/war-room" &&
+        n.href !== "/company-intelligence"
+      )
+    : navItems;
+  dynamicNavItems.push(...visibleNavItems);
 
   // Billing & Plan + ΔTOM System Control are SUPER-ADMIN ONLY — tenants only
   // see the eight product modules (War Room, Pitch, Objection Handler, Market
@@ -355,6 +370,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+      {/* View-As preview affordances — both render null for non-super-admins */}
+      <ViewAsBanner />
+      <ViewAsToggle />
     </TooltipProvider>
   );
 }
