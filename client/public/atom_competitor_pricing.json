@@ -1,0 +1,641 @@
+[
+  {
+    "module": "atom_dial",
+    "competitors": [
+      {
+        "vendor": "Bland AI",
+        "plan": "Build",
+        "per_minute_usd": 0.12,
+        "platform_fee_per_month_usd": 299,
+        "included": "50 concurrent calls, 2,000 calls/day",
+        "annual_billed": false,
+        "note": "Per-minute billing + monthly platform fee; no annual seat price",
+        "source": "https://www.bland.ai/pricing"
+      },
+      {
+        "vendor": "Bland AI",
+        "plan": "Scale",
+        "per_minute_usd": 0.11,
+        "platform_fee_per_month_usd": 499,
+        "included": "100 concurrent calls, 5,000 calls/day",
+        "annual_billed": false,
+        "note": "Per-minute billing + monthly platform fee",
+        "source": "https://www.bland.ai/pricing"
+      },
+      {
+        "vendor": "Retell AI",
+        "plan": "Pay-as-you-go",
+        "per_minute_usd": 0.07,
+        "platform_fee_per_month_usd": 0,
+        "included": "60 free minutes, 20 concurrent calls, 10 free Knowledge Bases",
+        "annual_billed": false,
+        "note": "Base voice engine only; LLM/TTS costs extra. All-in ~$0.11\u20130.15/min",
+        "source": "https://www.retellai.com/pricing"
+      },
+      {
+        "vendor": "Synthflow AI",
+        "plan": "Pro",
+        "per_minute_usd": 0.13,
+        "platform_fee_per_month_usd": 375,
+        "included": "2,000 min/mo included, 25 concurrent calls",
+        "annual_billed": true,
+        "source": "https://synthflow.ai/pricing"
+      },
+      {
+        "vendor": "Air.ai",
+        "plan": "Outbound Campaigns",
+        "per_minute_usd": 0.11,
+        "platform_fee_per_month_usd": 0,
+        "included": "Outbound only; telephony via Twilio billed separately",
+        "annual_billed": false,
+        "note": "Inbound/API calls at $0.32/min",
+        "source": "https://tekpon.com/software/air-ai/pricing/"
+      },
+      {
+        "vendor": "Vapi.ai",
+        "plan": "Ad-Hoc",
+        "per_seat_per_month_usd": null,
+        "per_minute_usd": 0.05,
+        "included": "Platform fee only; LLM, TTS, STT billed separately. All-in ~$0.18\u20130.33/min",
+        "annual_billed": false,
+        "note": "No packaged plans published; pricing page does not render tiers publicly",
+        "source": "https://vapi.ai/pricing"
+      }
+    ]
+  },
+  {
+    "module": "atom_campaign_auto_dialer",
+    "competitors": [
+      {
+        "vendor": "Orum",
+        "plan": "Launch",
+        "per_seat_per_month_usd": 250,
+        "included": "Unlimited calls, virtual salesfloor, basic AI features; 3-seat minimum",
+        "annual_billed": true,
+        "note": "Annual contract required; Ascend plan is QUOTE_ONLY",
+        "source": "https://www.orum.com/pricing"
+      },
+      {
+        "vendor": "Nooks",
+        "plan": "All-inclusive",
+        "per_seat_per_month_usd": 417,
+        "included": "Parallel dialing (5 lines), virtual salesfloor, AI battle cards, CRM sync, Spotify integration",
+        "annual_billed": true,
+        "note": "~$5,000/user/year; pricing not published on website \u2014 third-party estimate",
+        "source": "https://outboundsalespro.com/nooks-reviews/"
+      },
+      {
+        "vendor": "Aircall",
+        "plan": "Professional",
+        "per_seat_per_month_usd": 50,
+        "included": "Power dialer, Salesforce integration, voicemail drop, 3-license minimum",
+        "annual_billed": true,
+        "source": "https://aircall.io/pricing/"
+      },
+      {
+        "vendor": "JustCall",
+        "plan": "Pro",
+        "per_seat_per_month_usd": 49,
+        "included": "Unlimited calls (US/Canada), 1,000 SMS segments/user, AI transcription, automations",
+        "annual_billed": true,
+        "source": "https://justcall.io/pricing/"
+      },
+      {
+        "vendor": "Dialpad AI Sales",
+        "plan": "Essentials",
+        "per_seat_per_month_usd": 60,
+        "included": "AI sales dialer, real-time coaching, CRM integrations",
+        "annual_billed": true,
+        "source": "https://www.dialpad.com/pricing/"
+      }
+    ]
+  },
+  {
+    "module": "atom_multi_channel_outreach",
+    "competitors": [
+      {
+        "vendor": "Reply.io",
+        "plan": "Multichannel",
+        "per_seat_per_month_usd": 89,
+        "included": "Unlimited contacts, email + LinkedIn + SMS + calls, 10,000 data search credits/mo",
+        "annual_billed": true,
+        "source": "https://reply.io/pricing/"
+      },
+      {
+        "vendor": "Lemlist",
+        "plan": "Multichannel Expert",
+        "per_seat_per_month_usd": 87,
+        "included": "Email + LinkedIn + calling, unlimited contacts, landing pages, lead finder",
+        "annual_billed": true,
+        "note": "Annual billing; monthly is $109/user",
+        "source": "https://www.lemlist.com/pricing"
+      },
+      {
+        "vendor": "Instantly.ai",
+        "plan": "Hypergrowth",
+        "per_seat_per_month_usd": null,
+        "workspace_per_month_usd": 78,
+        "included": "Unlimited email accounts, warmup, 25K contacts, 100K emails/mo (workspace-based, not per-seat)",
+        "annual_billed": true,
+        "note": "Flat workspace pricing, not per-seat; covers unlimited team members",
+        "source": "https://instantly.ai/pricing"
+      },
+      {
+        "vendor": "Smartlead",
+        "plan": "Pro",
+        "per_seat_per_month_usd": null,
+        "workspace_per_month_usd": 78,
+        "included": "30,000 active contacts, 90,000 emails/mo, unlimited email accounts, API, webhooks; workspace-based pricing",
+        "annual_billed": true,
+        "note": "17% off with annual; flat workspace not per-seat",
+        "source": "https://www.smartlead.ai/pricing"
+      },
+      {
+        "vendor": "Outreach.io",
+        "plan": "Engage",
+        "per_seat_per_month_usd": 120,
+        "included": "Core sequencing, dialer, CRM sync, basic AI; advanced AI/Amplify credits extra",
+        "annual_billed": true,
+        "note": "No public pricing; ~$100\u2013$140/user/mo per Vendr/MarketBetter data. Annual contract required.",
+        "source": "https://marketbetter.ai/blog/outreach-pricing-breakdown-2026/"
+      }
+    ]
+  },
+  {
+    "module": "atom_prospect_engine",
+    "competitors": [
+      {
+        "vendor": "Apollo.io",
+        "plan": "Basic",
+        "per_seat_per_month_usd": 49,
+        "included": "5,000 export credits/mo, unlimited email credits, basic CRM integration",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Apollo.io",
+        "plan": "Professional",
+        "per_seat_per_month_usd": 79,
+        "included": "10,000 export credits/mo, advanced automation, A/B testing, dialer",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Apollo.io",
+        "plan": "Organization",
+        "per_seat_per_month_usd": 119,
+        "included": "15,000 export credits/mo, 3-user min, call transcripts, custom reports, API",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Lusha",
+        "plan": "Pro",
+        "per_seat_per_month_usd": 22.45,
+        "included": "250 credits/mo (1 credit \u2248 1 verified contact), up to 3 seats",
+        "annual_billed": true,
+        "source": "https://www.lusha.com/pricing/"
+      },
+      {
+        "vendor": "Lusha",
+        "plan": "Premium",
+        "per_seat_per_month_usd": 52.45,
+        "included": "600 credits/mo, bulk show (25 at once), job change alerts, advanced filters",
+        "annual_billed": true,
+        "source": "https://www.lusha.com/pricing/"
+      },
+      {
+        "vendor": "Clay",
+        "plan": "Explorer",
+        "per_seat_per_month_usd": null,
+        "workspace_per_month_usd": 314,
+        "included": "10,000 enrichment credits/mo, up to 10 users, 180+ data providers",
+        "annual_billed": true,
+        "note": "Workspace pricing, not per-seat; $314/mo covers up to 10 users",
+        "source": "https://www.clay.com/pricing"
+      },
+      {
+        "vendor": "Cognism",
+        "plan": "Standard",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 est. ~$15K/yr platform fee + ~$1,500/user/yr (third-party estimate, not public list price)",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing page",
+        "source": "https://www.cognism.com/pricing"
+      },
+      {
+        "vendor": "ZoomInfo Sales",
+        "plan": "All tiers",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 custom credits; baseline ~$10K/yr for smallest setups",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing page",
+        "source": "https://www.zoominfo.com/pricing"
+      }
+    ]
+  },
+  {
+    "module": "atom_market_intent",
+    "competitors": [
+      {
+        "vendor": "Warmly",
+        "plan": "Orchestrate",
+        "per_seat_per_month_usd": null,
+        "platform_per_year_usd": 15000,
+        "included": "1st, 2nd, 3rd-party signals, visitor identification, AI chat, no per-seat fees",
+        "annual_billed": true,
+        "note": "Workspace pricing, starting at $15K/yr; usage-based visitor reveal charges extra",
+        "source": "https://www.warmly.ai/p/pricing"
+      },
+      {
+        "vendor": "Koala",
+        "plan": "Growth",
+        "per_seat_per_month_usd": null,
+        "workspace_per_month_usd": 1000,
+        "included": "3 seats included, 5,000 credits/mo, intent signal workflows",
+        "annual_billed": false,
+        "source": "https://getkoala.com/pricing"
+      },
+      {
+        "vendor": "6sense",
+        "plan": "Sales Intelligence + Predictive AI",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 est. ~$50K/yr; median $55,211/yr (Vendr); 2-year contract typical",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing",
+        "source": "https://salesmotion.io/blog/6sense-pricing"
+      },
+      {
+        "vendor": "Demandbase",
+        "plan": "Professional",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 est. $45K\u2013$65K/yr + ~$29K onboarding; per-user fees $1,200\u2013$3,000/seat/yr extra",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing",
+        "source": "https://salesmotion.io/blog/demandbase-pricing"
+      }
+    ]
+  },
+  {
+    "module": "atom_pitch",
+    "competitors": [
+      {
+        "vendor": "Lavender",
+        "plan": "Starter",
+        "per_seat_per_month_usd": 27,
+        "included": "Unlimited email scoring, AI coaching, personalization, multi-inbox, Gmail + Outlook",
+        "annual_billed": true,
+        "source": "https://www.lavender.ai/coach"
+      },
+      {
+        "vendor": "Lavender",
+        "plan": "Individual Pro",
+        "per_seat_per_month_usd": 45,
+        "included": "Everything in Starter + integrations (Outreach, Salesloft, etc.), dedicated CSM",
+        "annual_billed": true,
+        "source": "https://www.lavender.ai/coach"
+      },
+      {
+        "vendor": "Lavender",
+        "plan": "Team Plan",
+        "per_seat_per_month_usd": 89,
+        "included": "Everything in Pro + team coaching dashboard, aggregated analytics, content studio",
+        "annual_billed": true,
+        "source": "https://www.lavender.ai/coach"
+      },
+      {
+        "vendor": "Regie.ai",
+        "plan": "AI SEP",
+        "per_seat_per_month_usd": 180,
+        "included": "Static + dynamic sequencing agents, intent prioritization, power dialer, AI coaching, voicemails, social outreach",
+        "annual_billed": true,
+        "source": "https://www.regie.ai/pricing"
+      },
+      {
+        "vendor": "Regie.ai",
+        "plan": "Force Multiplier Rep",
+        "per_seat_per_month_usd": 499,
+        "included": "Autonomous prospecting agents, full multi-channel outreach, advanced AI personalization, priority support",
+        "annual_billed": true,
+        "source": "https://www.regie.ai/pricing"
+      },
+      {
+        "vendor": "Copy.ai",
+        "plan": "Chat (5 seats)",
+        "per_seat_per_month_usd": 6,
+        "included": "Unlimited words in chat, OpenAI/Anthropic/Gemini access, 5 seats per $29/mo workspace",
+        "annual_billed": false,
+        "note": "Workspace plan ($29/mo total for 5 seats). Agents plan ($249/mo for 10 seats) adds workflow credits.",
+        "source": "https://www.copy.ai/prices"
+      }
+    ]
+  },
+  {
+    "module": "atom_objection_handler",
+    "competitors": [
+      {
+        "vendor": "Gong",
+        "plan": "Foundations",
+        "per_seat_per_month_usd": 133,
+        "included": "Call recording, transcription, AI summaries, deal intelligence; $50K/yr platform fee additional",
+        "annual_billed": true,
+        "note": "List price $1,600/user/yr ($133/mo) + $50K platform fee. Actual negotiated range $1,000\u2013$1,349/user/yr per Tropic.",
+        "source": "https://www.tropicapp.io/glossary/gong-price"
+      },
+      {
+        "vendor": "Clari Copilot",
+        "plan": "Accelerator (add-on)",
+        "per_seat_per_month_usd": 90,
+        "included": "Call recording, transcription, AI summaries, objection handling, battle cards; add-on to Clari Core",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 third-party estimate; requires Clari Core ($100\u2013120/user/mo) as base",
+        "source": "https://docket.io/resources/research/clari-pricing"
+      },
+      {
+        "vendor": "Chorus.ai (ZoomInfo)",
+        "plan": "Base Package",
+        "per_seat_per_month_usd": 222,
+        "included": "3-seat minimum ($8,000/yr base), unlimited recording, AI transcription, CRM integration",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 third-party estimate. Additional seats ~$100/mo ($1,200/yr). 2-year contract typical.",
+        "source": "https://www.itsconvo.com/pricing/chorus"
+      },
+      {
+        "vendor": "Avoma",
+        "plan": "Organization",
+        "per_seat_per_month_usd": 29,
+        "included": "Custom AI notes, conversation intelligence, group/round-robin scheduling, up to 100 paid seats",
+        "annual_billed": true,
+        "source": "https://www.avoma.com/pricing"
+      }
+    ]
+  },
+  {
+    "module": "atom_war_room",
+    "competitors": [
+      {
+        "vendor": "Gong",
+        "plan": "Forecast add-on",
+        "per_seat_per_month_usd": 58,
+        "included": "AI-powered pipeline forecasting, deal risk identification, revenue context insights",
+        "annual_billed": true,
+        "note": "List $700/user/yr; negotiated range $475\u2013$603/user/yr (Tropic). Requires Gong Foundations + $50K platform fee.",
+        "source": "https://www.tropicapp.io/glossary/gong-price"
+      },
+      {
+        "vendor": "Clari",
+        "plan": "Forecast (Core)",
+        "per_seat_per_month_usd": 110,
+        "included": "AI revenue forecasting, pipeline inspection, deal scoring, Salesforce + Dynamics 365 integration",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 third-party estimate $100\u2013$120/user/mo. Copilot and Groove add-ons priced separately.",
+        "source": "https://docket.io/resources/research/clari-pricing"
+      },
+      {
+        "vendor": "Avoma",
+        "plan": "Revenue Intelligence add-on",
+        "per_seat_per_month_usd": 29,
+        "included": "Dealboard pipeline review, deal risk alerts, AI methodology tracker, roll-up forecasting",
+        "annual_billed": true,
+        "source": "https://www.avoma.com/pricing"
+      },
+      {
+        "vendor": "People.ai",
+        "plan": "SalesAI",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 activity capture, deal scoring, revenue intelligence; free PeopleGlass tier available for Salesforce users",
+        "annual_billed": true,
+        "note": "No public pricing; entry-level est. ~$50/seat/mo per third-party reports",
+        "source": "https://saleshive.com/vendors/people-ai/"
+      }
+    ]
+  },
+  {
+    "module": "atom_warbook",
+    "competitors": [
+      {
+        "vendor": "Guru",
+        "plan": "Self-serve",
+        "per_seat_per_month_usd": 25,
+        "included": "AI-powered knowledge base, search, chat, Slack/Salesforce/SharePoint integrations; 10-seat minimum",
+        "annual_billed": true,
+        "note": "Minimum 10 seats = $250/mo minimum. Enterprise plan is QUOTE_ONLY.",
+        "source": "https://www.getguru.com/pricing"
+      },
+      {
+        "vendor": "Highspot",
+        "plan": "Enterprise",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 content management, sales plays, analytics, training, AI enablement; avg $91,460/yr (Vendr); est. $45\u201365/seat/mo",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing. Average contract $91,460/yr per Vendr (62 deals).",
+        "source": "https://www.highspot.com/pricing/"
+      },
+      {
+        "vendor": "Seismic",
+        "plan": "Professional Edition",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 enablement cloud, content management, analytics; est. $30\u2013$60/user/mo per procurement benchmarks",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing. Typical deployment $20K\u2013$120K/yr (SpendFlo).",
+        "source": "https://www.seismic.com"
+      },
+      {
+        "vendor": "Mindtickle",
+        "plan": "Core Readiness",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 onboarding, training, coaching, call AI add-on; est. $100\u2013$200/user/year core; median contract $44,054/yr (Vendr)",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing. Median contract $44,054/yr per Vendr (62 purchases).",
+        "source": "https://www.vendr.com/marketplace/mindtickle"
+      }
+    ]
+  },
+  {
+    "module": "bundled_platforms",
+    "competitors": [
+      {
+        "vendor": "HubSpot Sales Hub",
+        "plan": "Starter",
+        "per_seat_per_month_usd": 15,
+        "included": "Pipeline management, 1 sequence, basic CRM, email integration, meeting scheduling",
+        "annual_billed": true,
+        "source": "https://www.hubspot.com/pricing/sales"
+      },
+      {
+        "vendor": "HubSpot Sales Hub",
+        "plan": "Professional",
+        "per_seat_per_month_usd": 90,
+        "included": "300 workflows, sequences, calling, forecasting, reporting, playbooks; $1,500 onboarding fee",
+        "annual_billed": true,
+        "source": "https://www.hubspot.com/pricing/sales"
+      },
+      {
+        "vendor": "HubSpot Sales Hub",
+        "plan": "Enterprise",
+        "per_seat_per_month_usd": 150,
+        "included": "1,000 workflows, custom objects, advanced permissions, predictive lead scoring; $3,500 onboarding",
+        "annual_billed": true,
+        "source": "https://www.hubspot.com/pricing/sales"
+      },
+      {
+        "vendor": "Salesforce Sales Cloud",
+        "plan": "Starter Suite",
+        "per_seat_per_month_usd": 25,
+        "included": "Basic CRM, lead/contact/opportunity management, email integration",
+        "annual_billed": true,
+        "source": "https://www.salesforce.com/sales/pricing/"
+      },
+      {
+        "vendor": "Salesforce Sales Cloud",
+        "plan": "Pro Suite",
+        "per_seat_per_month_usd": 100,
+        "included": "Full CRM, forecast management, quoting, custom reports and dashboards",
+        "annual_billed": true,
+        "source": "https://www.salesforce.com/sales/pricing/"
+      },
+      {
+        "vendor": "Salesforce Sales Cloud",
+        "plan": "Enterprise",
+        "per_seat_per_month_usd": 175,
+        "included": "Advanced pipeline, deal insights, conversation intelligence, Agentforce (add-on)",
+        "annual_billed": true,
+        "note": "6% price increase effective August 1, 2025",
+        "source": "https://www.salesforce.com/sales/pricing/"
+      },
+      {
+        "vendor": "Salesforce Sales Cloud",
+        "plan": "Unlimited",
+        "per_seat_per_month_usd": 350,
+        "included": "Predictive AI, full sales engagement + conversation intelligence, Premier Success, full sandbox",
+        "annual_billed": true,
+        "source": "https://www.salesforce.com/sales/pricing/"
+      },
+      {
+        "vendor": "Outreach",
+        "plan": "Engage",
+        "per_seat_per_month_usd": 120,
+        "included": "Sequencing, dialer, CRM sync, basic AI; Amplify AI credits extra; Meet/Deal add-ons $30\u201350/user/mo",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY officially \u2014 $100\u2013$140/user/mo per Vendr marketplace data. Annual contract required.",
+        "source": "https://marketbetter.ai/blog/outreach-pricing-breakdown-2026/"
+      },
+      {
+        "vendor": "Salesloft",
+        "plan": "Advanced",
+        "per_seat_per_month_usd": 145,
+        "included": "Cadences, conversation intelligence, coaching, forecasting; dialer ~$25/user/mo add-on",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY officially \u2014 est. $125\u2013$165/user/mo list; ~$100\u2013$130 after negotiation (Vendr). Annual contract.",
+        "source": "https://www.landbase.com/blog/salesloft-pricing"
+      },
+      {
+        "vendor": "Apollo.io",
+        "plan": "Basic",
+        "per_seat_per_month_usd": 49,
+        "included": "5,000 export credits/mo, email sequences, basic CRM sync, intent data access",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Apollo.io",
+        "plan": "Professional",
+        "per_seat_per_month_usd": 79,
+        "included": "10,000 export credits, sequences + dialer, A/B testing, advanced automation, SendGrid integration",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Apollo.io",
+        "plan": "Organization",
+        "per_seat_per_month_usd": 119,
+        "included": "15,000 export credits, 3-user min, call transcripts, custom reports, API, advanced admin",
+        "annual_billed": true,
+        "source": "https://www.apollo.io/pricing"
+      },
+      {
+        "vendor": "Gong",
+        "plan": "Foundations",
+        "per_seat_per_month_usd": 133,
+        "included": "Call recording, transcription, AI summaries, deal intelligence; Engage (+$67/user/mo) and Forecast (+$58/user/mo) extra",
+        "annual_billed": true,
+        "note": "List $1,600/user/yr ($133/mo) + mandatory $50,000/yr platform fee. Negotiated range $1,000\u2013$1,349/user/yr.",
+        "source": "https://www.tropicapp.io/glossary/gong-price"
+      },
+      {
+        "vendor": "Clari",
+        "plan": "Full Platform (Core + Copilot + Groove)",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 revenue forecasting, conversation intelligence (call coaching), engagement (Salesloft integration); est. $200\u2013$310+/user/mo",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 Clari merged with Salesloft Dec 2025. Core $100\u2013120/mo; Copilot adds $60\u2013110/mo; Groove adds $50\u201380/mo.",
+        "source": "https://docket.io/resources/research/clari-pricing"
+      },
+      {
+        "vendor": "Microsoft Dynamics 365 Sales",
+        "plan": "Professional",
+        "per_seat_per_month_usd": 65,
+        "included": "Sales force automation, Microsoft 365 interop, mobile access, reporting and dashboards",
+        "annual_billed": true,
+        "source": "https://www.microsoft.com/en-us/dynamics-365/products/sales"
+      },
+      {
+        "vendor": "Microsoft Dynamics 365 Sales",
+        "plan": "Enterprise",
+        "per_seat_per_month_usd": 105,
+        "included": "Advanced automation, AI insights, Copilot, customization, contextual intelligence",
+        "annual_billed": true,
+        "source": "https://www.microsoft.com/en-us/dynamics-365/products/sales"
+      },
+      {
+        "vendor": "Microsoft Dynamics 365 Sales",
+        "plan": "Premium",
+        "per_seat_per_month_usd": 150,
+        "included": "Full sales intelligence, AI-powered recommendations, data enrichment, 1,000 Copilot Credits",
+        "annual_billed": true,
+        "source": "https://www.microsoft.com/en-us/dynamics-365/products/sales"
+      },
+      {
+        "vendor": "Pipedrive",
+        "plan": "Lite",
+        "per_seat_per_month_usd": 14,
+        "included": "Basic pipeline management, 2,500 active leads+deals/user, contact management, mobile app",
+        "annual_billed": true,
+        "source": "https://www.pipedrive.com/en/pricing"
+      },
+      {
+        "vendor": "Pipedrive",
+        "plan": "Growth",
+        "per_seat_per_month_usd": 39,
+        "included": "5,000 leads+deals/user, email sync, workflow automation (3 if/else steps), custom reports (50)",
+        "annual_billed": true,
+        "source": "https://www.pipedrive.com/en/pricing"
+      },
+      {
+        "vendor": "Pipedrive",
+        "plan": "Premium",
+        "per_seat_per_month_usd": 59,
+        "included": "LeadBooster (chatbot, live chat, prospector, web forms), advanced AI, advanced reporting",
+        "annual_billed": true,
+        "source": "https://www.pipedrive.com/en/pricing"
+      },
+      {
+        "vendor": "Pipedrive",
+        "plan": "Ultimate",
+        "per_seat_per_month_usd": 79,
+        "included": "Full feature access, all add-ons included, advanced customization, enhanced security",
+        "annual_billed": true,
+        "source": "https://www.pipedrive.com/en/pricing"
+      },
+      {
+        "vendor": "ZoomInfo Sales",
+        "plan": "All tiers",
+        "per_seat_per_month_usd": null,
+        "included": "QUOTE_ONLY \u2014 contact/company database, intent signals, engagement tools; baseline ~$10K/yr per ZoomInfo reps",
+        "annual_billed": true,
+        "note": "QUOTE_ONLY \u2014 no public pricing. Most teams see $14,995\u2013$35,000+/yr depending on credits and seats.",
+        "source": "https://pipeline.zoominfo.com/sales/how-much-does-zoominfo-cost"
+      }
+    ]
+  }
+]
