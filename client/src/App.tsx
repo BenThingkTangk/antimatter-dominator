@@ -22,13 +22,25 @@ import HqShell from "./admin/HqShell";
 import SeatCostsShell from "./admin/SeatCostsShell";
 import VibraniumShell from "./admin/VibraniumShell";
 import TenantDetailShell from "./admin/TenantDetailShell";
-import { useSessionContext } from "./auth/AuthGate";
+import { useSessionContext, AuthGate } from "./auth/AuthGate";
+import { ViewAsProvider, useEffectiveSession } from "./auth/ViewAs";
+import NotFound from "./pages/not-found";
+import LoginPage from "./pages/login";
+import SignupPage from "./pages/signup";
+import LandingPage from "./pages/landing";
+import { useTenant } from "./lib/useTenant";
+import AtomChat from "./components/AtomChat";
+import MobileApp from "./mobile/MobileApp";
 
 // Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
 // they're bounced to the default product module.
+//
+// Reads the EFFECTIVE session (not the raw one) so that when a real
+// super-admin flips the View-As toggle to manager/rep, this gate behaves
+// exactly as if they had logged in with that lower role.
 function SuperAdminOnly({ children }: { children: React.ReactNode }) {
-  const session = useSessionContext();
+  const session = useEffectiveSession();
   if (!session.isSuperAdmin) {
     if (typeof window !== "undefined") {
       window.location.hash = "#/pitch";
@@ -37,15 +49,6 @@ function SuperAdminOnly({ children }: { children: React.ReactNode }) {
   }
   return <>{children}</>;
 }
-import NotFound from "./pages/not-found";
-import LoginPage from "./pages/login";
-import SignupPage from "./pages/signup";
-import LandingPage from "./pages/landing";
-import { useTenant } from "./lib/useTenant";
-import { AuthGate } from "./auth/AuthGate";
-import { useSessionContext } from "./auth/AuthGate";
-import AtomChat from "./components/AtomChat";
-import MobileApp from "./mobile/MobileApp";
 
 /**
  * Detects phone-class viewports + touch UA. We check both width AND touch
