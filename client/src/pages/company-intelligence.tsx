@@ -992,30 +992,27 @@ export default function CompanyIntelligence() {
 
         {/* ── Input Section ── */}
         <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
-          {/* Depth toggle — compact pills */}
-          <div className="flex items-center gap-2.5">
+          {/* Depth toggle — tiny segmented pill (matches plan/billing toggle scale) */}
+          <div className="flex items-center gap-2">
             <MonoLabel>Depth:</MonoLabel>
-            <div className="inline-flex rounded-full p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="inline-flex rounded-full p-[2px] gap-[2px]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
               {(["standard", "enterprise"] as const).map(d => (
                 <button
                   key={d}
                   onClick={() => setDepth(d)}
-                  className={`px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all ${
+                  className={`px-2.5 py-[3px] rounded-full text-[9px] font-mono uppercase tracking-[0.14em] transition-all ${
                     depth === d ? "text-white" : "text-white/45 hover:text-white/80"
                   }`}
                   style={{
                     background: depth === d ? "linear-gradient(93deg, #818cf8 0%, #6366f1 100%)" : "transparent",
-                    boxShadow: depth === d ? "0 0 12px rgba(99,102,241,0.4)" : "none",
+                    boxShadow: depth === d ? "0 0 10px rgba(99,102,241,0.35)" : "none",
                   }}
                   title={d === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
                 >
-                  {d === "standard" ? "Standard" : "Enterprise"}
+                  {d === "standard" ? "Std" : "Ent"}
                 </button>
               ))}
             </div>
-            <span className="text-[10px] text-white/35 font-mono">
-              {depth === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
-            </span>
           </div>
 
           {/* Inputs row */}
@@ -1054,16 +1051,22 @@ export default function CompanyIntelligence() {
               data-testid="button-build-warbook"
             >
               {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
-              {isLoading ? "Building..." : `Build WarBook (${depth === "enterprise" ? "5" : "3"} queries)`}
+              {isLoading ? "Building..." : "Build WarBook"}
             </Button>
           </div>
 
-          {/* Quick suggestions */}
+          {/* Quick suggestions — properly outlined chips */}
           {!result && !isLoading && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-white/20 font-mono">QUICK:</span>
+              <span className="text-[10px] text-white/40 font-mono uppercase tracking-wider">Quick:</span>
               {["Cloudflare", "Akamai", "Salesforce", "HubSpot", "Snowflake"].map(c => (
-                <button key={c} onClick={() => setCompany(c)} className="text-[11px] px-2.5 py-1 rounded-lg border border-white/[0.08] text-white/35 hover:text-white/60 hover:border-white/20 bg-white/[0.02] transition-all">{c}</button>
+                <button
+                  key={c}
+                  onClick={() => setCompany(c)}
+                  className="text-[11px] px-3 py-1 rounded-full border border-white/[0.14] bg-[#161618] text-white/75 hover:text-white hover:border-violet-500/45 hover:bg-violet-500/10 transition-all"
+                >
+                  {c}
+                </button>
               ))}
             </div>
           )}
