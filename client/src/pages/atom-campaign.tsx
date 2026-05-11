@@ -928,7 +928,7 @@ export default function AtomCampaign() {
       let companiesScanned = 0;
       let broadMode = false;
 
-      setBuildProgress((p) => [...p, `ATOM Intelligence scanning — target: ${maxTargets} contacts...`]);
+      setBuildProgress((p) => [...p, `ΔTOM Intelligence scanning — target: ${maxTargets} contacts...`]);
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         if (allTargets.length >= maxTargets) break;
@@ -1399,7 +1399,7 @@ export default function AtomCampaign() {
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
-              ATOM Campaign
+              ΔTOM Campaign
             </h1>
           </div>
           <p className="text-sm text-[#8a8a96] ml-12">
@@ -1435,8 +1435,8 @@ export default function AtomCampaign() {
 
             <div className="space-y-3">
               <p className="text-sm text-white/50 leading-relaxed">
-                Describe your campaign in plain English. ATOM AI will extract product focus, target industry,
-                and ideal personas — then scan ATOM Intelligence to build your target list automatically.
+                Describe your campaign in plain English. ΔTOM AI will extract product focus, target industry,
+                and ideal personas — then scan ΔTOM Intelligence to build your target list automatically.
               </p>
 
               <textarea
@@ -1477,7 +1477,7 @@ export default function AtomCampaign() {
 
               <div className="flex items-center justify-between">
                 <p className="text-xs text-white/40">
-                  {brief.length} chars · the richer your brief, the better ATOM can target
+                  {brief.length} chars · the richer your brief, the better ΔTOM can target
                 </p>
                 <Button
                   onClick={buildTargets}
@@ -1619,7 +1619,7 @@ export default function AtomCampaign() {
                       bg: "",
                     },
                     {
-                      label: "Avg ATOM Score",
+                      label: "Avg ΔTOM Score",
                       value: avgScore,
                       icon: BarChart3,
                       color: scoreTextColor(avgScore),

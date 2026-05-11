@@ -132,10 +132,10 @@ const CONTACT_TITLES = [
 ];
 
 const PRODUCTS = [
-  { value: "atom-enterprise", label: "ATOM Enterprise" },
-  { value: "atom-voice", label: "ATOM Voice" },
-  { value: "atom-intelligence", label: "ATOM Intelligence" },
-  { value: "atom-cx", label: "ATOM CX Platform" },
+  { value: "atom-enterprise", label: "ΔTOM Enterprise" },
+  { value: "atom-voice", label: "ΔTOM Voice" },
+  { value: "atom-intelligence", label: "ΔTOM Intelligence" },
+  { value: "atom-cx", label: "ΔTOM CX Platform" },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -229,8 +229,8 @@ function ArchitectureFlow() {
   const nodes = [
     { label: "Company Input", icon: Building2 },
     { label: "Sonar Deep Research", icon: Radar },
-    { label: "ATOM AI Context Builder", icon: Brain },
-    { label: "ATOM Voice Brief", icon: Mic },
+    { label: "ΔTOM AI Context Builder", icon: Brain },
+    { label: "ΔTOM Voice Brief", icon: Mic },
     { label: "Live Call", icon: PhoneCall },
   ];
 
@@ -401,7 +401,7 @@ export default function AtomSonar() {
     }
     const brief = generateVoiceBrief(result, contactTitle, product);
     setVoiceBrief(brief);
-    toast({ title: "ATOM Voice Brief Ready", description: "Personalized call script generated." });
+    toast({ title: "ΔTOM Voice Brief Ready", description: "Personalized call script generated." });
   }
 
   const wb = result?.warbook;
@@ -603,7 +603,7 @@ export default function AtomSonar() {
               }}
             >
               <Mic size={14} />
-              ATOM Voice Brief
+              ΔTOM Voice Brief
             </button>
           </div>
         </div>
@@ -624,7 +624,7 @@ export default function AtomSonar() {
             <div className="text-center space-y-1">
               <h2 className="text-[16px] font-semibold text-white/40">Enter a company name and run Sonar Deep Research</h2>
               <p className="text-[13px] text-white/20 max-w-md">
-                ATOM Sonar builds a full intelligence profile — pain points, tech stack, buying signals, and a personalized voice brief.
+                ΔTOM Sonar builds a full intelligence profile — pain points, tech stack, buying signals, and a personalized voice brief.
               </p>
             </div>
 
@@ -742,7 +742,7 @@ export default function AtomSonar() {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════
-                RIGHT COLUMN — ATOM Voice Intelligence
+                RIGHT COLUMN — ΔTOM Voice Intelligence
             ═══════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
 
@@ -786,7 +786,7 @@ export default function AtomSonar() {
                   ) : (
                     <div className="flex items-center gap-1.5 text-[11px] text-white/30">
                       <User size={10} />
-                      <span>Contact · Direct Line via ATOM Contacts</span>
+                      <span>Contact · Direct Line via ΔTOM Contacts</span>
                     </div>
                   )}
                 </div>
@@ -812,9 +812,9 @@ export default function AtomSonar() {
                       style={{ background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.12)" }}
                     >
                       <div className="flex items-start gap-2">
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>ATOM</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>ΔTOM</span>
                         <p className="text-[12px] text-white/50 italic">
-                          Click "ATOM Voice Brief" to generate your personalized call script based on Sonar research data for {result.company}.
+                          Click "ΔTOM Voice Brief" to generate your personalized call script based on Sonar research data for {result.company}.
                         </p>
                       </div>
                     </div>
@@ -840,7 +840,7 @@ export default function AtomSonar() {
                         style={{ background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.12)" }}
                       >
                         <div className="flex items-start gap-2">
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>ATOM</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>ΔTOM</span>
                           <p className="text-[12px] text-white/70 leading-relaxed">{voiceBrief.opener}</p>
                         </div>
                         <div className="flex items-start gap-2">

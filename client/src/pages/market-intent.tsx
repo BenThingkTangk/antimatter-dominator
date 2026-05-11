@@ -39,12 +39,12 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
         type: "news",
         headline: signal,
         date: new Date().toISOString().slice(0, 10),
-        source: "ATOM Market Intent",
+        source: "ΔTOM Market Intent",
         impactScore: 7,
       }] as any : [],
     });
     setFlagged(true);
-    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ATOM War Room.` });
+    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ΔTOM War Room.` });
   };
 
   if (flagged) {
@@ -60,7 +60,7 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
   return (
     <button onClick={handleFlag}
       className="h-6 px-2 rounded border border-white/10 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all flex items-center gap-1"
-      title="Flag as HVT — Send to ATOM War Room">
+      title="Flag as HVT — Send to ΔTOM War Room">
       <Crosshair className="w-2.5 h-2.5" />Flag
     </button>
   );
@@ -744,7 +744,7 @@ export default function MarketIntent() {
                   </div>
                 </div>
 
-                {/* ATOM Premium Signals (Sonar Pro · CB Insights, PitchBook, Bloomberg, SEC, etc.) */}
+                {/* ΔTOM Premium Signals (Sonar Pro · CB Insights, PitchBook, Bloomberg, SEC, etc.) */}
                 <PremiumSignalsBlock industry={selectedIndustry} />
 
                 {/* Tab Navigator */}
@@ -920,7 +920,7 @@ function PremiumSignalsBlock({ industry }: { industry: string }) {
     return (
       <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/70">⚡ ATOM Premium Signals · Sonar Pro</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/70">⚡ ΔTOM Premium Signals · Sonar Pro</span>
           <span className="text-[9px] text-white/30 font-mono animate-pulse">scanning…</span>
         </div>
         <div className="h-16 bg-white/[0.03] rounded-md animate-pulse" />
@@ -938,7 +938,7 @@ function PremiumSignalsBlock({ industry }: { industry: string }) {
     <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80 shrink-0">⚡ ATOM Premium Signals · Sonar Pro</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80 shrink-0">⚡ ΔTOM Premium Signals · Sonar Pro</span>
           <span className="text-[9px] text-white/40 font-mono shrink-0">{data.sourceCount || 0} sources · score {data.atomScore}/100</span>
         </div>
         <button

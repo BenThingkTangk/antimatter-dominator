@@ -5,7 +5,11 @@
  * was producing duplicate options ("ATOM Enterprise AI" twice, etc.) and the
  * roster the user actually wants pitched is fixed:
  *
- *   ATOM Platform, Vidzee, MoleculeAI, ClinixAI, Red Team ATOM, Custom Product
+ *   ΔTOM Platform, Vidzee, MoleculeAI, Red Team ΔTOM, Custom Product
+ *
+ * Retired sub-brands removed: ClinixAI, rrg.bio, thingk tangk-humanos. Active
+ * sub-brand registry per the ΔTOM Brand Design System v2: Nirmata Holdings,
+ * ΔTOM, AntimatterAI only.
  *
  * "Custom Product" toggles a free-text input where the user types whatever
  * (PhysioPS, Akamai, Five9, Segway, anything). The free-text value is what
@@ -20,11 +24,10 @@ export interface AtomProductOption {
 }
 
 export const ATOM_PRODUCTS: AtomProductOption[] = [
-  { value: "atom-platform",   label: "ATOM Platform",   ragSlug: "antimatter-ai" },
+  { value: "atom-platform",   label: "ΔTOM Platform",   ragSlug: "antimatter-ai" },
   { value: "vidzee",          label: "Vidzee",          ragSlug: "vidzee" },
   { value: "moleculeai",      label: "MoleculeAI",      ragSlug: "moleculeai" },
-  { value: "clinix-ai",       label: "ClinixAI",        ragSlug: "clinix-ai" },
-  { value: "red-team-atom",   label: "Red Team ATOM",   ragSlug: "red-team-atom" },
+  { value: "red-team-atom",   label: "Red Team ΔTOM",   ragSlug: "red-team-atom" },
   { value: "custom",          label: "Custom Product" },
 ];
 

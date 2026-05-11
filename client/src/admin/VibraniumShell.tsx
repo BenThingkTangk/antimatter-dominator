@@ -526,7 +526,7 @@ function TabMultiChannel() {
       </div>
 
       <Panel>
-        <PanelTitle>ATOM Orchestrator — Channel Decision Tree</PanelTitle>
+        <PanelTitle>ΔTOM Orchestrator — Channel Decision Tree</PanelTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {ORCHESTRATOR_TREE.map((row, i) => (
             <div key={i} style={{
@@ -550,7 +550,7 @@ function TabMultiChannel() {
 // TAB 6 — Competitive Intel
 // ─────────────────────────────────────────────────────────────────────────────
 const FEATURE_MATRIX_COLS = [
-  { key: "atom",      label: "ATOM",       color: ATOM_TEAL },
+  { key: "atom",      label: "ΔTOM",       color: ATOM_TEAL },
   { key: "gong",      label: "Gong",       color: ATOM_MUTED },
   { key: "outreach",  label: "Outreach",   color: ATOM_MUTED },
   { key: "salesloft", label: "SalesLoft",  color: ATOM_MUTED },
@@ -573,7 +573,7 @@ const FUNDING_DATA = [
   { name: "Outreach",  funding: 489 },
   { name: "SalesLoft", funding: 245 },
   { name: "Apollo.io", funding: 251 },
-  { name: "ATOM",      funding: 12 },
+  { name: "ΔTOM",      funding: 12 },
 ];
 
 const COMP_TABLE = [
@@ -581,7 +581,7 @@ const COMP_TABLE = [
   { company: "Outreach",   arr: "$150M+",  round: "Series F · $200M",  pricing: "$120/seat/mo",  notes: "Sequences-focused, no AI voice" },
   { company: "SalesLoft",  arr: "$100M+",  round: "Acquired by Vista", pricing: "$125/seat/mo",  notes: "CRM-native, weak AI" },
   { company: "Apollo.io",  arr: "$100M+",  round: "Series D · $100M",  pricing: "$49/seat/mo",   notes: "Data-rich, shallow voice layer" },
-  { company: "ATOM",       arr: "Pre-GA",  round: "Seed",              pricing: "From $299/mo",  notes: "Voice-first AI, open-weights, Vibranium stack" },
+  { company: "ΔTOM",       arr: "Pre-GA",  round: "Seed",              pricing: "From $299/mo",  notes: "Voice-first AI, open-weights, Vibranium stack" },
 ];
 
 // Normalize API competitor shape → table shape (the API returns
@@ -632,7 +632,7 @@ function TabCompetitive() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Feature Heatmap */}
       <Panel>
-        <PanelTitle>Feature Heatmap — ATOM vs Competitors</PanelTitle>
+        <PanelTitle>Feature Heatmap — ΔTOM vs Competitors</PanelTitle>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead>
@@ -680,7 +680,7 @@ function TabCompetitive() {
             <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(0,230,211,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
             <Bar dataKey="funding" name="Funding ($M)" radius={[4, 4, 0, 0]}>
               {FUNDING_DATA.map((entry, i) => (
-                <rect key={i} fill={entry.name === "ATOM" ? ATOM_TEAL : ATOM_MUTED} />
+                <rect key={i} fill={entry.name === "ΔTOM" ? ATOM_TEAL : ATOM_MUTED} />
               ))}
             </Bar>
           </BarChart>
@@ -710,7 +710,7 @@ function TabCompetitive() {
             <tbody>
               {rows.map((row: any) => (
                 <tr key={row.company}>
-                  <td style={{ ...TD_STYLE, fontWeight: 700, color: row.company === "ATOM" ? ATOM_TEAL : ATOM_TEXT }}>{row.company}</td>
+                  <td style={{ ...TD_STYLE, fontWeight: 700, color: row.company === "ΔTOM" ? ATOM_TEAL : ATOM_TEXT }}>{row.company}</td>
                   <td style={{ ...TD_STYLE, fontFamily: "var(--font-mono)" }}>{row.arr}</td>
                   <td style={{ ...TD_STYLE, color: ATOM_MUTED }}>{row.round}</td>
                   <td style={{ ...TD_STYLE, color: ATOM_AMBER, fontFamily: "var(--font-mono)" }}>{row.pricing}</td>

@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
+import { DtomLogo } from "@nirmata/dtom-brand-system";
 
 interface NavItem { href: string; icon: any; label: string; }
 
@@ -23,12 +24,12 @@ const navItems: NavItem[] = [
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
 
-// ATOM canonical logo — v2.0 Cinematic Systems Edition
-// Counter-clockwise atomic orbit mark (teal plasma) per the ATOM Brand &
-// Design System Configuration Standards. The mark spins left, the nucleus
-// pulses, and the electrons flicker. CSS controls all motion (so reduced-
-// motion preference is respected automatically).
-function AtomLogo({ size = 42 }: { size?: number }) {
+// ΔTOM canonical logo — sourced from @nirmata/dtom-brand-system.
+// Counter-clockwise SVG orbital mark + ΔT[O]M wordmark, teal accent on the O.
+// The legacy local AtomLogo SVG is retained ONLY for the collapsed-sidebar
+// fallback because DtomLogo wraps in an <a>, which we don't want for the
+// collapsed icon-only state. We render the same SVG inline there.
+function CollapsedAtomMark({ size = 26 }: { size?: number }) {
   return (
     <svg
       className="atom-mark"
@@ -49,16 +50,6 @@ function AtomLogo({ size = 42 }: { size?: number }) {
       <circle className="atom-electron atom-electron-b" cx="61" cy="32" r="2.4" />
       <circle className="atom-electron atom-electron-c" cx="15.5" cy="48.5" r="2.2" />
     </svg>
-  );
-}
-
-/** ATOM lockup — mark + wordmark (with the O glowing). Per spec. */
-function AtomLockup({ markSize = 36 }: { markSize?: number }) {
-  return (
-    <a href="/" className="atom-logo" aria-label="ATOM home" style={{ ['--logo-size' as any]: `${markSize}px` }}>
-      <AtomLogo size={markSize} />
-      <span className="atom-wordmark">ΔT<span>O</span>M</span>
-    </a>
   );
 }
 
@@ -107,13 +98,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // All standard items
   dynamicNavItems.push(...navItems);
 
-  // Billing & Plan + ATOM System Control are SUPER-ADMIN ONLY — tenants only
+  // Billing & Plan + ΔTOM System Control are SUPER-ADMIN ONLY — tenants only
   // see the eight product modules (War Room, Pitch, Objection Handler, Market
   // Intent, Prospect, Dial, Campaign, WarBook). Tenant-admin role does NOT
   // grant access to platform-level surfaces.
   if (session.isSuperAdmin) {
     dynamicNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
-    dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ATOM System Control" });
+    dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ΔTOM System Control" });
   }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -131,21 +122,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {tenantLogo ? (
               <img src={tenantLogo} alt={tenant.name} className="w-full h-full object-contain" />
             ) : (
-              <AtomLogo size={26} />
+              <CollapsedAtomMark size={26} />
             )}
           </div>
         ) : (
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="shrink-0" style={{ width: 32, height: 32 }}>
-              {tenantLogo ? (
-                <img src={tenantLogo} alt={tenant.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              ) : (
-                <AtomLogo size={32} />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              {isCustomBrand ? (
-                <>
+            {isCustomBrand ? (
+              <>
+                <div className="shrink-0" style={{ width: 32, height: 32 }}>
+                  {tenantLogo ? (
+                    <img src={tenantLogo} alt={tenant.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <CollapsedAtomMark size={32} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
                   <h1
                     className="text-base font-bold leading-tight truncate"
                     style={{ color: "var(--color-text)", fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
@@ -158,24 +149,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   >
                     Powered by ΔTOM
                   </p>
-                </>
-              ) : (
-                <>
-                  <h1
-                    className="atom-wordmark text-lg leading-none truncate"
-                    style={{ color: "var(--color-text)" }}
-                  >
-                    ΔT<span>O</span>M
-                  </h1>
-                  <p
-                    className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
-                    style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
-                  >
-                    Sales Dominator
-                  </p>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="min-w-0 flex-1 flex items-center gap-2.5">
+                {/* Canonical ΔTOM lockup — SVG orbital mark + ΔT[O]M wordmark */}
+                <DtomLogo size="md" spinning showWordmark={true} ariaLabel="ΔTOM home" />
+                <p
+                  className="text-[10px] tracking-[0.18em] uppercase mt-0.5 ml-auto whitespace-nowrap"
+                  style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+                >
+                  Sales Dominator
+                </p>
+              </div>
+            )}
             {isMobile && (
               <button onClick={() => setMobileOpen(false)} className="ml-auto shrink-0 w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: "var(--color-text-muted)" }} aria-label="Close menu">
                 <X className="w-5 h-5" />
@@ -240,7 +227,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     {session.user.fullName || session.user.email}
                   </p>
                   <p className="text-[10px] truncate" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-                    ATOM
+                    ΔTOM
                   </p>
                 </div>
               )}
@@ -358,12 +345,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center gap-2">
-                <AtomLogo size={22} />
-                <span className="atom-wordmark text-sm leading-none" style={{ color: "var(--color-text)" }}>
-                  ΔT<span>O</span>M
-                </span>
-              </div>
+              <DtomLogo size="sm" spinning showWordmark={true} ariaLabel="ΔTOM home" />
             </div>
             <div className="w-10" />
           </header>

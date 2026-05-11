@@ -2,6 +2,7 @@ import { useSessionContext } from "../auth/AuthGate";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { TrendingUp, Brain, Shield, PhoneCall } from "lucide-react";
+import { DtomLogo, DtomHero } from "@nirmata/dtom-brand-system";
 
 const features = [
   { icon: TrendingUp, title: "AI Pitch Generator", desc: "RAG-powered objection-proof scripts in seconds", href: "/pitch?demo=1" },
@@ -24,31 +25,9 @@ export default function LandingPage() {
       className="min-h-screen"
       style={{ background: "radial-gradient(120% 80% at 50% 18%, #0c2024 0%, #05090c 55%, #03060a 100%)" }}
     >
-      {/* Top nav */}
+      {/* Top nav — canonical ΔTOM lockup */}
       <header className="flex items-center justify-between px-6 md:px-10 py-5">
-        <div className="flex items-center gap-2.5">
-          <svg
-            className="atom-mark"
-            style={{ width: 32, height: 32 }}
-            viewBox="0 0 64 64"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle className="atom-atmosphere" cx="32" cy="32" r="30" />
-            <g className="atom-orbits">
-              <ellipse className="atom-orbit atom-orbit-a" cx="32" cy="32" rx="12" ry="29" />
-              <ellipse className="atom-orbit atom-orbit-b" cx="32" cy="32" rx="29" ry="12" />
-              <ellipse className="atom-orbit atom-orbit-c" cx="32" cy="32" rx="23" ry="10" transform="rotate(45 32 32)" />
-            </g>
-            <circle className="atom-nucleus" cx="32" cy="32" r="4.25" />
-            <circle className="atom-electron atom-electron-a" cx="32" cy="3" r="2.6" />
-            <circle className="atom-electron atom-electron-b" cx="61" cy="32" r="2.4" />
-            <circle className="atom-electron atom-electron-c" cx="15.5" cy="48.5" r="2.2" />
-          </svg>
-          <span className="atom-wordmark text-lg" style={{ color: "var(--color-text)" }}>
-            ΔT<span>O</span>M
-          </span>
-        </div>
+        <DtomLogo href="/#/" size="md" spinning />
         <div className="flex items-center gap-3">
           <a href="/#/login" className="atom-btn-ghost" style={{ padding: "0.5rem 1.25rem", fontSize: "var(--text-sm)" }}>
             Sign In
@@ -59,30 +38,14 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="text-center px-6 pt-16 pb-20 md:pt-28 md:pb-28">
-        <p className="atom-eyebrow mb-4">AI-Powered Sales Intelligence</p>
-        <h1
-          className="atom-hero-title mx-auto"
-          style={{ maxWidth: "800px" }}
-        >
-          ΔTOM routes live intent<br />into action.
-        </h1>
-        <p
-          className="mt-6 text-lg mx-auto"
-          style={{ color: "var(--color-text-muted)", maxWidth: "560px", fontFamily: "var(--font-body)" }}
-        >
-          Autonomous AI voice agents, real-time market intelligence, and objection-proof pitches — all in one platform.
-        </p>
-        <div className="flex items-center justify-center gap-4 mt-10">
-          <a href="/#/signup" className="atom-btn-primary" style={{ fontSize: "var(--text-base)" }}>
-            Start 14-Day Free Trial
-          </a>
-          <a href="/#/pitch?demo=1" className="atom-btn-ghost" style={{ fontSize: "var(--text-base)" }}>
-            Try Demo
-          </a>
-        </div>
-      </section>
+      {/* Black-site aerospace hero — sourced from the canonical brand system */}
+      <DtomHero
+        eyebrow="v3.0 · Black-Site Aerospace Brand System"
+        headline="ΔTOM routes live intent into action."
+        body="Autonomous AI voice agents, real-time market intelligence, and objection-proof pitches — engineered like a classified weapons system, deployed like an Apple keynote."
+        primaryCta={{ label: "Start 14-Day Free Trial", href: "/#/signup" }}
+        secondaryCta={{ label: "Run Live Demo", href: "/#/pitch?demo=1" }}
+      />
 
       {/* Feature tiles */}
       <section className="px-6 md:px-10 pb-24 max-w-5xl mx-auto">
@@ -115,10 +78,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer — domain literal preserved (AtomDominator.com) */}
       <footer className="text-center py-8 border-t" style={{ borderColor: "var(--color-border)" }}>
         <p className="text-xs" style={{ color: "var(--color-text-faint)", fontFamily: "var(--font-mono)" }}>
-          ΔTOM · Nirmata Holdings · © 2026
+          ΔTOM · Nirmata Holdings · AtomDominator.com · © 2026
         </p>
       </footer>
     </div>

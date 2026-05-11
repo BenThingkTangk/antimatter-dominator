@@ -271,8 +271,8 @@ function generateVoiceBrief(result: WarBookResult): VoiceBrief {
     ],
     talkTrack: [
       `Open with pain: "${pp[0] || "infrastructure challenges"}" — show you've done homework`,
-      `Pivot to value: Connect their ${init || "initiative"} to ATOM's capabilities`,
-      `Social proof: Reference similar companies in their vertical that switched to ATOM`,
+      `Pivot to value: Connect their ${init || "initiative"} to ΔTOM's capabilities`,
+      `Social proof: Reference similar companies in their vertical that switched to ΔTOM`,
       `Discovery: Ask open-ended questions about their decision timeline and stakeholders`,
       `Close: Propose a 15-min deep dive with their technical lead`,
     ],
@@ -352,8 +352,8 @@ function PipelineFlow() {
   const nodes = [
     { label: "Company Input", icon: Building2 },
     { label: "Sonar Deep Research", icon: Radar },
-    { label: "ATOM AI Context Builder", icon: Brain },
-    { label: "ATOM Voice Brief", icon: Mic },
+    { label: "ΔTOM AI Context Builder", icon: Brain },
+    { label: "ΔTOM Voice Brief", icon: Mic },
   ];
   const cards = [
     { icon: Radar, title: "SONAR SCANS", body: "News, filings, LinkedIn, Glassdoor, job posts, press releases, tech stack signals", color: "text-cyan-400", border: "border-cyan-500/20" },
@@ -1098,7 +1098,7 @@ export default function CompanyIntelligence() {
             <div className="text-center space-y-1">
               <h2 className="text-base font-semibold text-white/40">Enter a company to build their WarBook</h2>
               <p className="text-[13px] text-white/20 max-w-md">
-                ATOM will compile a full intelligence package on this company, including decision makers, pain points, buying signals, and a complete battle plan.
+                ΔTOM will compile a full intelligence package on this company, including decision makers, pain points, buying signals, and a complete battle plan.
               </p>
             </div>
             <div className="mt-6 w-full max-w-3xl">

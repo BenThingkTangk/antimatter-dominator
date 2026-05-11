@@ -36,10 +36,10 @@ const PLAN_TIERS = [
   { value: "enterprise", label: "Enterprise — Custom" },
 ];
 
-// V4 brand-coordinated palette — first option is the canonical ATOM teal.
+// V4 brand-coordinated palette — first option is the canonical ΔTOM teal.
 // Tenants can pick from these or use the color pickers for full custom.
 const PRESET_COLORS = [
-  { primary: "#00e6d3", accent: "#00a7ff", label: "ATOM teal" },
+  { primary: "#00e6d3", accent: "#00a7ff", label: "ΔTOM teal" },
   { primary: "#0ea5e9", accent: "#b987ff", label: "Cyan / violet" },
   { primary: "#10b981", accent: "#ffd166", label: "Emerald / amber" },
   { primary: "#a78bfa", accent: "#00e6d3", label: "Violet / teal" },
@@ -292,7 +292,7 @@ export default function AdminTenants() {
                 <Sparkles size={16} color="white" />
               </div>
               <div>
-                <div className="text-base font-semibold">{name || "Your tenant"} <span style={{ color: accentHex }}>·</span> ATOM</div>
+                <div className="text-base font-semibold">{name || "Your tenant"} <span style={{ color: accentHex }}>·</span> ΔTOM</div>
                 <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>{slug ? `${slug}.atomdominator.com` : "subdomain.atomdominator.com"}</div>
               </div>
             </div>
