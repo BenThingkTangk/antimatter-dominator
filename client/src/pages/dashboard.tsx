@@ -70,7 +70,7 @@ const API_PROVIDERS: ApiProvider[] = [
 ];
 
 const MODULES: ModuleInfo[] = [
-  { name: "ATOM Pitch",         icon: Zap,          route: "/pitch",        lines: 788,  status: "operational", endpoint: "/api/pitch/generate",        description: "AI pitch generation" },
+  { name: "ΔTOM Pitch",         icon: Zap,          route: "/pitch",        lines: 788,  status: "operational", endpoint: "/api/pitch/generate",        description: "AI pitch generation" },
   { name: "Objection Handler",  icon: MessageSquare,route: "/objections",   lines: 761,  status: "operational", endpoint: "/api/objections/handle",      description: "Destroy pushback" },
   { name: "Market Intent",      icon: BarChart3,     route: "/market",       lines: 842,  status: "operational", endpoint: "/api/market/analyze",         description: "Intel & trends" },
   { name: "Prospect",           icon: Target,        route: "/prospects",    lines: 1188, status: "operational", endpoint: "/api/prospects/scan",         description: "AI-powered pipeline" },
@@ -699,7 +699,7 @@ export default function Dashboard() {
         justifyContent: "space-between",
       }}>
         <p style={{ fontSize: 10, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", margin: 0 }}>
-          ATOM · Nirmata Holdings · © 2026
+          ΔTOM · Nirmata Holdings · © 2026
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 5px #4ade80", display: "inline-block" }} />

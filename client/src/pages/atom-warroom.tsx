@@ -440,7 +440,7 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
         </div>
         <div className="space-y-2 max-w-sm">
           <p className="text-[15px] font-semibold text-[#f6f6fd]">No active deals.</p>
-          <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ATOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
+          <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ΔTOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
         </div>
         <button
           onClick={() => onTabChange("pipeline")}
@@ -1302,7 +1302,7 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
         content: activeSectionContent,
         at: Date.now(),
       }));
-      toast({ title: "✅ Pushed to Campaign", description: "Open ATOM Campaign to use in your template." });
+      toast({ title: "✅ Pushed to Campaign", description: "Open ΔTOM Campaign to use in your template." });
     } catch {}
   }
 

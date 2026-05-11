@@ -434,7 +434,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
         </div>
         <Button size="sm" onClick={handleCallAtom}
           className="h-8 text-xs px-3 gap-1.5 bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/20 shrink-0">
-          <PhoneCall className="w-3 h-3" />Call with ATOM
+          <PhoneCall className="w-3 h-3" />Call with ΔTOM
         </Button>
       </div>
       {/* Contact details */}
@@ -510,7 +510,7 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
     setFlagged(true);
     toast({
       title: "🎯 HVT Flagged",
-      description: `${prospect.companyName} deployed to ATOM War Room — Von Clausewitz Engine activated.`,
+      description: `${prospect.companyName} deployed to ΔTOM War Room — Von Clausewitz Engine activated.`,
     });
   };
 
@@ -536,7 +536,7 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
     <button
       onClick={handleFlag}
       className="h-7 px-2.5 rounded-lg border border-white/[0.08] flex items-center gap-1 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all shrink-0"
-      title="Flag as HVT — Send to ATOM War Room"
+      title="Flag as HVT — Send to ΔTOM War Room"
     >
       <Crosshair className="w-3 h-3" />Flag HVT
     </button>
@@ -1070,7 +1070,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", background: "linear-gradient(93.92deg, #22d3ee -13.51%, #06b6d4 40.91%, #0891b2 113.69%)", boxShadow: "0 0 20px rgba(6,182,212,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
       >
         {isScanning ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ATOM Intelligence...</>
+          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence...</>
         ) : (
           <><Radar className="w-4 h-4" />Scan for Prospects</>
         )}
@@ -1198,11 +1198,11 @@ export default function ProspectEngine() {
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
-              ATOM Prospect
+              ΔTOM Prospect
             </h1>
           </div>
           <p className="text-sm text-[#8a8a96] ml-12">
-            ATOM-powered prospect scanner · find decision makers with verified contact data
+            ΔTOM-powered prospect scanner · find decision makers with verified contact data
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -1237,7 +1237,7 @@ export default function ProspectEngine() {
                 Scan Filters
               </span>
               <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono ml-auto">
-                ATOM Intelligence · 275M+ verified contacts
+                ΔTOM Intelligence · 275M+ verified contacts
               </Badge>
             </div>
             <FilterPanel

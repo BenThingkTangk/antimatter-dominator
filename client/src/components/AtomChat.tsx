@@ -1,5 +1,5 @@
 /**
- * ATOM Chat — floating in-app assistant.
+ * ΔTOM Chat — floating in-app assistant.
  *
  * UX:
  *   - Bottom-right floating button (atomic orbit icon, teal glow)
@@ -46,7 +46,7 @@ const ROUTE_TO_CONTEXT: Record<string, string> = {
 
 const STARTERS_BY_CONTEXT: Record<string, string[]> = {
   general: [
-    "What can ATOM do for me?",
+    "What can ΔTOM do for me?",
     "How do I start a call?",
     "Walk me through the War Room",
   ],
@@ -209,7 +209,7 @@ export default function AtomChat() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label="Close ATOM Chat"
+              aria-label="Close ΔTOM Chat"
               className="w-8 h-8 flex items-center justify-center rounded-lg"
               style={{ color: "var(--color-text-muted)" }}
             >

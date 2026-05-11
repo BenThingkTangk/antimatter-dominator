@@ -1,7 +1,8 @@
 import { Switch, Route, Router, Redirect, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { DtomBrandShell, DtomBootLoader } from "@nirmata/dtom-brand-system";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
@@ -215,13 +216,38 @@ function AppRouter() {
 }
 
 function App() {
+  // One-shot cinematic boot loader on first paint of the app session. We
+  // suppress it on `?noboot=1` and after sessionStorage flag so navigation
+  // inside the app doesn't re-trigger the cinematic ignition.
+  const [bootDone, setBootDone] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("noboot") === "1") return true;
+      if (sessionStorage.getItem("dtom_boot_done") === "1") return true;
+    } catch {}
+    return false;
+  });
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Router hook={useHashLocation}>
-        <MobileGate />
-        <AppRouter />
-      </Router>
-      <Toaster />
+      <DtomBrandShell assetBasePath="/dtom-assets" theme="dark" brand="atom">
+        {!bootDone && (
+          <DtomBootLoader
+            active={!bootDone}
+            minimumDrama={2200}
+            onComplete={() => {
+              try { sessionStorage.setItem("dtom_boot_done", "1"); } catch {}
+              setBootDone(true);
+            }}
+          />
+        )}
+        <Router hook={useHashLocation}>
+          <MobileGate />
+          <AppRouter />
+        </Router>
+        <Toaster />
+      </DtomBrandShell>
     </QueryClientProvider>
   );
 }

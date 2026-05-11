@@ -1,0 +1,1417 @@
+/*
+ * @nirmata/dtom-brand-system — dtom-brand-system.css
+ * ΔTOM Black-Site Aerospace Cinematic Design System
+ * Nirmata Holdings / AntimatterAI / ΔTOM
+ * Version: 1.0.0
+ *
+ * All class names prefixed dtom- to prevent collision.
+ * Import once at root layout: import '@nirmata/dtom-brand-system/styles';
+ */
+
+/* ============================================================
+   SECTION 1 — CSS CUSTOM PROPERTIES / DESIGN TOKENS
+   ============================================================ */
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  font-display: swap;
+  src: local('Cabinet Grotesk');
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  font-display: swap;
+  src: local('Satoshi');
+}
+
+:root {
+  color-scheme: dark light;
+
+  /* --- Typography --- */
+  --dtom-font-display: 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif;
+  --dtom-font-body: 'Satoshi', 'Inter', system-ui, sans-serif;
+  --dtom-font-mono: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+
+  /* --- Type scale (fluid) --- */
+  --dtom-text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
+  --dtom-text-sm:   clamp(0.875rem, 0.82rem + 0.25vw, 1rem);
+  --dtom-text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
+  --dtom-text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
+  --dtom-text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
+  --dtom-text-2xl:  clamp(2rem,     1.2rem  + 2.7vw,  3.75rem);
+  --dtom-text-3xl:  clamp(2.8rem,   1rem    + 5vw,    6rem);
+  --dtom-text-hero: clamp(4rem,     0.8rem  + 8vw,    10rem);
+
+  /* --- Spacing --- */
+  --dtom-space-1:  0.25rem;
+  --dtom-space-2:  0.5rem;
+  --dtom-space-3:  0.75rem;
+  --dtom-space-4:  1rem;
+  --dtom-space-5:  1.25rem;
+  --dtom-space-6:  1.5rem;
+  --dtom-space-8:  2rem;
+  --dtom-space-10: 2.5rem;
+  --dtom-space-12: 3rem;
+  --dtom-space-16: 4rem;
+  --dtom-space-20: 5rem;
+  --dtom-space-24: 6rem;
+  --dtom-space-32: 8rem;
+
+  /* --- Radii --- */
+  --dtom-radius-sm:   0.375rem;
+  --dtom-radius-md:   0.5rem;
+  --dtom-radius-lg:   0.75rem;
+  --dtom-radius-xl:   1rem;
+  --dtom-radius-2xl:  1.5rem;
+  --dtom-radius-3xl:  2rem;
+  --dtom-radius-full: 9999px;
+
+  /* --- Easing --- */
+  --dtom-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --dtom-ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --dtom-ease-inout:  cubic-bezier(0.4, 0, 0.2, 1);
+  --dtom-transition:  180ms var(--dtom-ease-out);
+
+  /* --- Motion durations --- */
+  --dtom-motion-orbit:  8.5s;
+  --dtom-motion-loader: 2.4s;
+
+  /* --- Layout --- */
+  --dtom-content-default: 1120px;
+  --dtom-content-wide:    1440px;
+  --dtom-content-narrow:  720px;
+}
+
+/* --- Black-site aerospace dark palette (default) --- */
+:root,
+[data-dtom-theme="dark"] {
+  --dtom-color-bg:            #08090a;
+  --dtom-color-bg-2:          #0b0d10;
+  --dtom-color-surface:       #101215;
+  --dtom-color-surface-2:     #15191d;
+  --dtom-color-surface-3:     #1b2026;
+  --dtom-color-surface-glass: color-mix(in oklab, #11151a 72%, transparent);
+  --dtom-color-border:        rgba(255, 255, 255, 0.08);
+  --dtom-color-border-strong: rgba(255, 255, 255, 0.16);
+  --dtom-color-divider:       rgba(255, 255, 255, 0.055);
+
+  /* --- Typography colors --- */
+  --dtom-color-text:         #edf8f8;
+  --dtom-color-text-muted:   #9ca8ad;
+  --dtom-color-text-faint:   #5e6970;
+  --dtom-color-text-inverse: #061011;
+
+  /* --- Teal/cyan accent — ΔTOM primary energy --- */
+  --dtom-color-primary:            #00e6d3;
+  --dtom-color-primary-2:          #00a7ff;
+  --dtom-color-primary-dim:        #00a89e;
+  --dtom-color-primary-glow:       rgba(0, 230, 211, 0.18);
+  --dtom-color-primary-glow-strong: rgba(0, 230, 211, 0.32);
+  --dtom-color-primary-cinematic:  #00f0df;
+
+  /* --- Semantic --- */
+  --dtom-color-success: #72f2a1;
+  --dtom-color-warning: #ffd166;
+  --dtom-color-error:   #ff6b8b;
+
+  /* --- Shadows --- */
+  --dtom-shadow-sm:          0 1px 2px rgba(0, 0, 0, 0.45);
+  --dtom-shadow-md:          0 8px 24px rgba(0, 0, 0, 0.46);
+  --dtom-shadow-lg:          0 24px 80px rgba(0, 0, 0, 0.58);
+  --dtom-shadow-glow:        0 0 48px var(--dtom-color-primary-glow);
+  --dtom-shadow-glow-strong: 0 0 80px var(--dtom-color-primary-glow-strong);
+}
+
+[data-dtom-theme="light"] {
+  --dtom-color-bg:            #f3f5f2;
+  --dtom-color-bg-2:          #e9eeee;
+  --dtom-color-surface:       #fbfcf9;
+  --dtom-color-surface-2:     #ffffff;
+  --dtom-color-surface-3:     #e8efec;
+  --dtom-color-surface-glass: color-mix(in oklab, #ffffff 76%, transparent);
+  --dtom-color-border:        rgba(6, 16, 17, 0.09);
+  --dtom-color-border-strong: rgba(6, 16, 17, 0.16);
+  --dtom-color-divider:       rgba(6, 16, 17, 0.06);
+
+  --dtom-color-text:         #061011;
+  --dtom-color-text-muted:   #546164;
+  --dtom-color-text-faint:   #8d989a;
+  --dtom-color-text-inverse: #edf8f8;
+
+  --dtom-color-primary:             #007e79;
+  --dtom-color-primary-2:           #006da8;
+  --dtom-color-primary-dim:         #005c59;
+  --dtom-color-primary-glow:        rgba(0, 126, 121, 0.12);
+  --dtom-color-primary-glow-strong: rgba(0, 126, 121, 0.22);
+  --dtom-color-primary-cinematic:   #007e79;
+
+  --dtom-color-success: #2d7a46;
+  --dtom-color-warning: #9c7200;
+  --dtom-color-error:   #b42c50;
+
+  --dtom-shadow-sm: 0 1px 2px rgba(6, 16, 17, 0.06);
+  --dtom-shadow-md: 0 8px 24px rgba(6, 16, 17, 0.09);
+  --dtom-shadow-lg: 0 24px 72px rgba(6, 16, 17, 0.14);
+  --dtom-shadow-glow:        0 0 48px var(--dtom-color-primary-glow);
+  --dtom-shadow-glow-strong: 0 0 80px var(--dtom-color-primary-glow-strong);
+}
+
+/* Sub-brand accent map */
+[data-dtom-brand="atom"]       { --dtom-brand-accent: var(--dtom-color-primary); }
+[data-dtom-brand="antimatter"] { --dtom-brand-accent: var(--dtom-color-primary); }
+[data-dtom-brand="nirmata"]    { --dtom-brand-accent: var(--dtom-color-primary); }
+
+/* ============================================================
+   SECTION 2 — CANONICAL BASE RESET
+   ============================================================ */
+
+.dtom-shell *,
+.dtom-shell *::before,
+.dtom-shell *::after {
+  box-sizing: border-box;
+}
+
+.dtom-shell {
+  font-family: var(--dtom-font-body);
+  font-size: var(--dtom-text-base);
+  line-height: 1.6;
+  color: var(--dtom-color-text);
+  background: var(--dtom-color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+.dtom-shell img,
+.dtom-shell picture,
+.dtom-shell video,
+.dtom-shell canvas,
+.dtom-shell svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.dtom-shell button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.dtom-shell a {
+  color: inherit;
+}
+
+.dtom-shell h1,
+.dtom-shell h2,
+.dtom-shell h3,
+.dtom-shell h4 {
+  font-family: var(--dtom-font-display);
+  text-wrap: balance;
+  letter-spacing: -0.045em;
+  line-height: 0.94;
+}
+
+.dtom-shell p,
+.dtom-shell li {
+  max-width: 72ch;
+  text-wrap: pretty;
+}
+
+.dtom-shell ::selection {
+  background: var(--dtom-color-primary-glow-strong);
+  color: var(--dtom-color-text);
+}
+
+.dtom-shell :focus-visible {
+  outline: 2px solid var(--dtom-color-primary);
+  outline-offset: 3px;
+  border-radius: var(--dtom-radius-sm);
+}
+
+/* ============================================================
+   SECTION 3 — TYPOGRAPHY UTILITIES
+   ============================================================ */
+
+.dtom-hero-title {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-hero);
+  font-weight: 900;
+  max-width: 11ch;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.dtom-display {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-3xl);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.94;
+}
+
+.dtom-section-title {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-2xl);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.96;
+}
+
+.dtom-product-title {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-xl);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.dtom-lead {
+  font-family: var(--dtom-font-body);
+  font-size: var(--dtom-text-lg);
+  font-weight: 500;
+  color: var(--dtom-color-text-muted);
+  line-height: 1.55;
+}
+
+.dtom-system-label {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+}
+
+.dtom-kinetic-word {
+  display: inline-block;
+  background: linear-gradient(
+    110deg,
+    var(--dtom-color-text),
+    var(--dtom-color-primary) 48%,
+    var(--dtom-color-primary-2)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   SECTION 4 — LAYOUT
+   ============================================================ */
+
+.dtom-container {
+  width: min(100% - clamp(2rem, 6vw, 8rem), var(--dtom-content-default));
+  margin-inline: auto;
+}
+
+.dtom-container-wide {
+  width: min(100% - clamp(1.5rem, 4vw, 6rem), var(--dtom-content-wide));
+  margin-inline: auto;
+}
+
+.dtom-container-narrow {
+  width: min(100% - clamp(2rem, 6vw, 8rem), var(--dtom-content-narrow));
+  margin-inline: auto;
+}
+
+.dtom-section {
+  padding-block: clamp(var(--dtom-space-20), 12vw, var(--dtom-space-32));
+}
+
+.dtom-section-tight {
+  padding-block: clamp(var(--dtom-space-10), 7vw, var(--dtom-space-20));
+}
+
+.dtom-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+  gap: clamp(var(--dtom-space-8), 6vw, var(--dtom-space-20));
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .dtom-split-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   SECTION 5 — CINEMATIC SURFACE PATTERNS
+   ============================================================ */
+
+.dtom-glass-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--dtom-color-border);
+  border-radius: var(--dtom-radius-2xl);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    var(--dtom-color-surface-glass);
+  box-shadow: var(--dtom-shadow-md);
+  backdrop-filter: blur(24px) saturate(1.35);
+}
+
+.dtom-glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 0%, var(--dtom-color-primary-glow), transparent 34%),
+    linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.08) 48%, transparent 58%);
+  opacity: 0.7;
+}
+
+.dtom-command-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--dtom-color-surface), var(--dtom-color-surface)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), var(--dtom-color-primary-glow), rgba(255, 255, 255, 0.05)) border-box;
+}
+
+/* Animated conic border */
+@property --dtom-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.dtom-animated-border {
+  --dtom-angle: 0deg;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--dtom-color-surface), var(--dtom-color-surface)) padding-box,
+    conic-gradient(from var(--dtom-angle), transparent, var(--dtom-color-primary), var(--dtom-color-primary-2), transparent) border-box;
+  animation: dtom-border-scan 5s linear infinite;
+}
+
+@keyframes dtom-border-scan {
+  to { --dtom-angle: 360deg; }
+}
+
+.dtom-command-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: var(--dtom-space-5);
+  padding: clamp(var(--dtom-space-6), 4vw, var(--dtom-space-10));
+  border-radius: var(--dtom-radius-2xl);
+  background:
+    radial-gradient(circle at 20% 0%, var(--dtom-color-primary-glow), transparent 36%),
+    var(--dtom-color-surface);
+  border: 1px solid var(--dtom-color-border);
+  box-shadow: var(--dtom-shadow-md);
+}
+
+/* ============================================================
+   SECTION 6 — LOGO COMPONENT
+   ============================================================ */
+
+.dtom-logo {
+  --dtom-logo-size: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dtom-space-3);
+  color: var(--dtom-color-text);
+  text-decoration: none;
+  isolation: isolate;
+}
+
+.dtom-logo--sm { --dtom-logo-size: 28px; }
+.dtom-logo--md { --dtom-logo-size: 42px; }
+.dtom-logo--lg { --dtom-logo-size: 72px; }
+.dtom-logo--hero { --dtom-logo-size: 112px; }
+
+.dtom-logo__mark {
+  width: var(--dtom-logo-size);
+  height: var(--dtom-logo-size);
+  color: var(--dtom-color-primary);
+  filter: drop-shadow(0 0 18px var(--dtom-color-primary-glow));
+  transform-origin: 50% 50%;
+  flex-shrink: 0;
+}
+
+.dtom-logo__mark--image {
+  width: var(--dtom-logo-size);
+  height: var(--dtom-logo-size);
+  object-fit: contain;
+  border-radius: var(--dtom-radius-sm);
+  flex-shrink: 0;
+}
+
+.dtom-logo__atmosphere {
+  stroke: currentColor;
+  stroke-width: 1.25;
+  opacity: 0.18;
+}
+
+.dtom-logo__orbits {
+  transform-origin: 32px 32px;
+  animation: dtom-spin-left var(--dtom-motion-orbit) linear infinite;
+}
+
+.dtom-logo__orbit {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.dtom-logo__orbit--a { opacity: 0.95; }
+.dtom-logo__orbit--b { opacity: 0.48; }
+.dtom-logo__orbit--c { opacity: 0.32; }
+
+.dtom-logo__nucleus {
+  fill: currentColor;
+  filter: drop-shadow(0 0 10px var(--dtom-color-primary));
+  animation: dtom-core-pulse 2.8s var(--dtom-ease-inout) infinite;
+}
+
+.dtom-logo__electron {
+  fill: currentColor;
+  opacity: 0.82;
+  transform-origin: 32px 32px;
+  animation: dtom-electron-flicker 2.4s var(--dtom-ease-inout) infinite;
+}
+
+.dtom-logo__wordmark {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-lg);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.dtom-logo--sm .dtom-logo__wordmark { font-size: var(--dtom-text-sm); }
+.dtom-logo--lg .dtom-logo__wordmark { font-size: var(--dtom-text-2xl); }
+.dtom-logo--hero .dtom-logo__wordmark { font-size: var(--dtom-text-3xl); }
+
+.dtom-logo__wordmark-o {
+  color: var(--dtom-color-primary);
+  text-shadow: 0 0 20px var(--dtom-color-primary-glow-strong);
+}
+
+@keyframes dtom-spin-left {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes dtom-core-pulse {
+  0%,  100% { transform: scale(1);    opacity: 1; }
+  50%        { transform: scale(1.18); opacity: 0.78; }
+}
+
+@keyframes dtom-electron-flicker {
+  0%,  100% { opacity: 0.88; }
+  45%        { opacity: 0.42; }
+  65%        { opacity: 1; }
+}
+
+/* ============================================================
+   SECTION 7 — BOOT LOADER
+   ============================================================ */
+
+.dtom-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, var(--dtom-color-primary-glow-strong), transparent 24%),
+    linear-gradient(180deg, #050607, var(--dtom-color-bg));
+  color: var(--dtom-color-text);
+  transition:
+    opacity 500ms var(--dtom-ease-in),
+    visibility 500ms var(--dtom-ease-in);
+}
+
+.dtom-loader--exiting {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Drifting grid field */
+.dtom-loader__field {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black, transparent 74%);
+  animation: dtom-grid-drift 10s linear infinite;
+}
+
+/* Orbital corner brackets */
+.dtom-loader__corner {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-color: var(--dtom-color-primary);
+  border-style: solid;
+  opacity: 0.35;
+}
+.dtom-loader__corner--tl {
+  top: var(--dtom-space-8);
+  left: var(--dtom-space-8);
+  border-width: 1px 0 0 1px;
+}
+.dtom-loader__corner--tr {
+  top: var(--dtom-space-8);
+  right: var(--dtom-space-8);
+  border-width: 1px 1px 0 0;
+}
+.dtom-loader__corner--bl {
+  bottom: var(--dtom-space-8);
+  left: var(--dtom-space-8);
+  border-width: 0 0 1px 1px;
+}
+.dtom-loader__corner--br {
+  bottom: var(--dtom-space-8);
+  right: var(--dtom-space-8);
+  border-width: 0 1px 1px 0;
+}
+
+/* Side telemetry rails */
+.dtom-loader__rail {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtom-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--dtom-font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.dtom-loader__rail--left  { left: var(--dtom-space-8); }
+.dtom-loader__rail--right { right: var(--dtom-space-8); text-align: right; }
+
+@media (max-width: 640px) {
+  .dtom-loader__rail { display: none; }
+}
+
+/* Core content */
+.dtom-loader__core {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--dtom-space-6);
+  justify-items: center;
+  padding: clamp(var(--dtom-space-8), 8vw, var(--dtom-space-16));
+}
+
+.dtom-loader__kicker {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+  animation: dtom-loader-status-in 600ms var(--dtom-ease-out) forwards;
+}
+
+.dtom-loader__logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dtom-space-4);
+  filter: drop-shadow(0 0 36px var(--dtom-color-primary-glow-strong));
+}
+
+.dtom-loader__logo-wrap .dtom-logo__mark {
+  --dtom-logo-size: clamp(72px, 12vw, 128px);
+}
+
+.dtom-loader__word {
+  font-family: var(--dtom-font-display);
+  font-size: clamp(2.5rem, 8vw, 7rem);
+  font-weight: 900;
+  letter-spacing: -0.07em;
+  line-height: 0.85;
+}
+
+.dtom-loader__word-o { color: var(--dtom-color-primary); }
+
+/* Scanline */
+.dtom-loader__scanline {
+  width: min(420px, 70vw);
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dtom-loader__scanline-beam {
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--dtom-color-primary), transparent);
+  animation: dtom-scan 1.25s var(--dtom-ease-inout) infinite;
+}
+
+/* Telemetry tags */
+.dtom-loader__telemetry {
+  display: flex;
+  gap: var(--dtom-space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dtom-loader__telemetry-tag {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: var(--dtom-space-1) var(--dtom-space-3);
+  border: 1px solid var(--dtom-color-border);
+  border-radius: var(--dtom-radius-full);
+  background: var(--dtom-color-surface-glass);
+  color: var(--dtom-color-primary);
+  animation: dtom-loader-status-in 520ms var(--dtom-ease-out) both;
+}
+
+.dtom-loader__telemetry-tag:nth-child(1) { animation-delay: 300ms; }
+.dtom-loader__telemetry-tag:nth-child(2) { animation-delay: 460ms; }
+
+/* Status lines */
+.dtom-loader__status {
+  display: grid;
+  gap: var(--dtom-space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-muted);
+  text-align: center;
+}
+
+.dtom-loader__status li {
+  opacity: 0;
+  animation: dtom-loader-status-in 520ms var(--dtom-ease-out) forwards;
+  animation-delay: calc(420ms + var(--dtom-i, 0) * 260ms);
+}
+
+@keyframes dtom-grid-drift {
+  to { background-position: 44px 44px; }
+}
+
+@keyframes dtom-scan {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(260%); }
+}
+
+@keyframes dtom-loader-status-in {
+  from { opacity: 0; filter: blur(8px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* ============================================================
+   SECTION 8 — HERO COMPONENT
+   ============================================================ */
+
+.dtom-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  display: grid;
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% -20%, var(--dtom-color-primary-glow), transparent 34rem),
+    linear-gradient(180deg, var(--dtom-color-bg), var(--dtom-color-bg-2));
+}
+
+.dtom-hero__field {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 72%);
+  pointer-events: none;
+}
+
+.dtom-hero__inner {
+  position: relative;
+  z-index: 1;
+}
+
+.dtom-hero__eyebrow {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+  margin-bottom: var(--dtom-space-5);
+}
+
+.dtom-hero__headline {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-hero);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+  max-width: 13ch;
+  margin-bottom: var(--dtom-space-6);
+}
+
+.dtom-hero__body {
+  font-size: var(--dtom-text-lg);
+  font-weight: 500;
+  color: var(--dtom-color-text-muted);
+  line-height: 1.6;
+  max-width: 52ch;
+  margin-bottom: var(--dtom-space-8);
+}
+
+/* Command capsule — telemetry strip under hero copy */
+.dtom-hero__capsule {
+  display: inline-grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, auto));
+  gap: var(--dtom-space-4);
+  padding: var(--dtom-space-4) var(--dtom-space-6);
+  border: 1px solid var(--dtom-color-border-strong);
+  border-radius: var(--dtom-radius-xl);
+  background: var(--dtom-color-surface-glass);
+  backdrop-filter: blur(18px);
+  margin-bottom: var(--dtom-space-10);
+}
+
+.dtom-hero__capsule-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtom-space-1);
+}
+
+.dtom-hero__capsule-label {
+  font-family: var(--dtom-font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+}
+
+.dtom-hero__capsule-value {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--dtom-color-primary);
+}
+
+/* Hero actions */
+.dtom-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--dtom-space-4);
+  flex-wrap: wrap;
+}
+
+/* Side telemetry rails — desktop only */
+.dtom-hero__rail {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  font-family: var(--dtom-font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+  opacity: 0.2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtom-space-6);
+}
+
+.dtom-hero__rail--left  { left: var(--dtom-space-6); }
+.dtom-hero__rail--right { right: var(--dtom-space-6); }
+
+@media (max-width: 900px) {
+  .dtom-hero__rail { display: none; }
+}
+
+/* ============================================================
+   SECTION 9 — BUTTONS
+   ============================================================ */
+
+.dtom-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: var(--dtom-space-2);
+  padding: var(--dtom-space-3) var(--dtom-space-6);
+  border-radius: var(--dtom-radius-full);
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-sm);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transform: translate3d(0, 0, 0);
+  border: 0;
+  transition:
+    transform var(--dtom-transition),
+    box-shadow var(--dtom-transition),
+    background var(--dtom-transition),
+    color var(--dtom-transition);
+}
+
+.dtom-btn-primary {
+  color: var(--dtom-color-text-inverse);
+  background: var(--dtom-color-primary);
+  box-shadow: 0 0 32px var(--dtom-color-primary-glow);
+}
+
+.dtom-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 64px var(--dtom-color-primary-glow-strong);
+}
+
+.dtom-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.dtom-btn-ghost {
+  color: var(--dtom-color-text-muted);
+  background: transparent;
+  border: 1px solid var(--dtom-color-border-strong);
+}
+
+.dtom-btn-ghost:hover {
+  color: var(--dtom-color-text);
+  border-color: var(--dtom-color-primary);
+  transform: translateY(-1px);
+}
+
+/* Live badge */
+.dtom-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dtom-space-2);
+  min-height: 32px;
+  padding: var(--dtom-space-1) var(--dtom-space-3);
+  border: 1px solid var(--dtom-color-border);
+  border-radius: var(--dtom-radius-full);
+  background: var(--dtom-color-surface-glass);
+  color: var(--dtom-color-text-muted);
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.dtom-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dtom-color-primary);
+  box-shadow: 0 0 0 0 var(--dtom-color-primary-glow-strong);
+  animation: dtom-live-pulse 2.2s var(--dtom-ease-inout) infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dtom-live-pulse {
+  0%,  100% { box-shadow: 0 0 0 0 var(--dtom-color-primary-glow-strong); opacity: 1; }
+  50%        { box-shadow: 0 0 0 9px rgba(0, 230, 211, 0);               opacity: 0.72; }
+}
+
+/* ============================================================
+   SECTION 10 — PINNED KEYNOTE / SALES DOMINATOR
+   ============================================================ */
+
+.dtom-keynote {
+  position: relative;
+}
+
+/* Sticky stage wrapper — JS sets height based on chapter count */
+.dtom-keynote__stage {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  background: var(--dtom-color-bg);
+  border: 1px solid var(--dtom-color-border);
+  border-radius: var(--dtom-radius-2xl);
+}
+
+@media (max-width: 860px) {
+  .dtom-keynote__stage {
+    position: static;
+    grid-template-columns: 1fr;
+    height: auto;
+    border-radius: var(--dtom-radius-lg);
+  }
+}
+
+/* Chapter brief panel — left rail */
+.dtom-keynote__brief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtom-space-3);
+  padding: var(--dtom-space-6);
+  border-right: 1px solid var(--dtom-color-border);
+  background: var(--dtom-color-surface);
+  overflow-y: auto;
+}
+
+.dtom-keynote__brief-header {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+  padding-bottom: var(--dtom-space-4);
+  border-bottom: 1px solid var(--dtom-color-divider);
+}
+
+/* Module nav items */
+.dtom-keynote__module-item {
+  display: flex;
+  align-items: center;
+  gap: var(--dtom-space-3);
+  padding: var(--dtom-space-3) var(--dtom-space-4);
+  border-radius: var(--dtom-radius-lg);
+  cursor: pointer;
+  transition: background var(--dtom-transition), border-color var(--dtom-transition);
+  border: 1px solid transparent;
+}
+
+.dtom-keynote__module-item:hover {
+  background: var(--dtom-color-surface-2);
+}
+
+.dtom-keynote__module-item--active {
+  background: var(--dtom-color-surface-2);
+  border-color: var(--dtom-color-primary-glow);
+  box-shadow: inset 0 0 18px var(--dtom-color-primary-glow);
+}
+
+.dtom-keynote__module-num {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  color: var(--dtom-color-primary);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.dtom-keynote__module-label {
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  color: var(--dtom-color-text-muted);
+  line-height: 1.3;
+}
+
+.dtom-keynote__module-item--active .dtom-keynote__module-label {
+  color: var(--dtom-color-text);
+}
+
+/* Main viewport */
+.dtom-keynote__viewport {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Chapter header */
+.dtom-keynote__chapter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--dtom-space-4) var(--dtom-space-6);
+  border-bottom: 1px solid var(--dtom-color-border);
+  gap: var(--dtom-space-4);
+  flex-shrink: 0;
+}
+
+.dtom-keynote__chapter-title {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-xl);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--dtom-color-text);
+}
+
+.dtom-keynote__chapter-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--dtom-space-3);
+  flex-shrink: 0;
+}
+
+/* Classified screenshot display */
+.dtom-keynote__classified-display {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  margin: var(--dtom-space-6);
+  border-radius: var(--dtom-radius-xl);
+  border: 1px solid var(--dtom-color-border-strong);
+  background: var(--dtom-color-surface);
+  cursor: pointer;
+}
+
+.dtom-keynote__classified-display::before {
+  content: "[ CLASSIFIED DISPLAY — CLICK TO EXPAND ]";
+  position: absolute;
+  top: var(--dtom-space-3);
+  left: var(--dtom-space-4);
+  z-index: 2;
+  font-family: var(--dtom-font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.dtom-keynote__screenshot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  display: block;
+  transition: transform 600ms var(--dtom-ease-out);
+}
+
+.dtom-keynote__classified-display:hover .dtom-keynote__screenshot {
+  transform: scale(1.018);
+}
+
+/* Caption */
+.dtom-keynote__caption {
+  padding: var(--dtom-space-3) var(--dtom-space-6);
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  color: var(--dtom-color-text-faint);
+  letter-spacing: 0.08em;
+  border-top: 1px solid var(--dtom-color-divider);
+  flex-shrink: 0;
+}
+
+/* Score ring */
+.dtom-keynote__score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dtom-space-1);
+}
+
+.dtom-keynote__score-value {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-lg);
+  font-weight: 900;
+  color: var(--dtom-color-primary);
+  letter-spacing: -0.04em;
+}
+
+.dtom-keynote__score-label {
+  font-family: var(--dtom-font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+}
+
+/* ============================================================
+   SECTION 11 — MISSION DOSSIER OVERLAY
+   ============================================================ */
+
+.dtom-dossier-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(5, 6, 7, 0.88);
+  backdrop-filter: blur(12px);
+  display: grid;
+  place-items: center;
+  padding: var(--dtom-space-6);
+  animation: dtom-dossier-in 280ms var(--dtom-ease-out) both;
+}
+
+@keyframes dtom-dossier-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dtom-dossier {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  max-height: 90dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  background: var(--dtom-color-surface);
+  border: 1px solid var(--dtom-color-border-strong);
+  border-radius: var(--dtom-radius-2xl);
+  box-shadow: var(--dtom-shadow-lg);
+  animation: dtom-dossier-panel-in 300ms var(--dtom-ease-out) both;
+}
+
+@keyframes dtom-dossier-panel-in {
+  from { opacity: 0; transform: scale(0.97) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dtom-dossier__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dtom-space-4);
+  padding: var(--dtom-space-5) var(--dtom-space-6);
+  border-bottom: 1px solid var(--dtom-color-border);
+  flex-shrink: 0;
+}
+
+.dtom-dossier__title {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-xl);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.dtom-dossier__mission-code {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dtom-color-primary);
+}
+
+.dtom-dossier__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--dtom-radius-full);
+  border: 1px solid var(--dtom-color-border);
+  color: var(--dtom-color-text-muted);
+  cursor: pointer;
+  background: transparent;
+  font-size: 1.1rem;
+  transition: background var(--dtom-transition), color var(--dtom-transition);
+  flex-shrink: 0;
+}
+
+.dtom-dossier__close:hover {
+  background: var(--dtom-color-surface-2);
+  color: var(--dtom-color-text);
+}
+
+.dtom-dossier__body {
+  overflow: auto;
+  padding: var(--dtom-space-6);
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: var(--dtom-space-6);
+}
+
+@media (max-width: 720px) {
+  .dtom-dossier__body { grid-template-columns: 1fr; }
+}
+
+.dtom-dossier__screenshot-wrap {
+  border-radius: var(--dtom-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--dtom-color-border);
+}
+
+.dtom-dossier__screenshot {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.dtom-dossier__intel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtom-space-4);
+}
+
+.dtom-dossier__intel-row {
+  display: grid;
+  gap: var(--dtom-space-1);
+}
+
+.dtom-dossier__intel-label {
+  font-family: var(--dtom-font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+}
+
+.dtom-dossier__intel-value {
+  font-size: var(--dtom-text-sm);
+  font-weight: 700;
+  color: var(--dtom-color-text);
+}
+
+.dtom-dossier__footer {
+  padding: var(--dtom-space-4) var(--dtom-space-6);
+  border-top: 1px solid var(--dtom-color-divider);
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  color: var(--dtom-color-text-faint);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   SECTION 12 — METRIC TILES AND COMMAND COMPONENTS
+   ============================================================ */
+
+.dtom-metric-tile {
+  display: grid;
+  gap: var(--dtom-space-3);
+  padding: var(--dtom-space-5);
+  border: 1px solid var(--dtom-color-border);
+  border-radius: var(--dtom-radius-xl);
+  background: var(--dtom-color-surface-glass);
+}
+
+.dtom-metric-value {
+  font-family: var(--dtom-font-display);
+  font-size: var(--dtom-text-2xl);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+  color: var(--dtom-color-text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.dtom-metric-label {
+  font-family: var(--dtom-font-mono);
+  font-size: var(--dtom-text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dtom-color-text-faint);
+}
+
+/* Navigation header */
+.dtom-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--dtom-color-border);
+  background: color-mix(in oklab, var(--dtom-color-bg) 78%, transparent);
+  backdrop-filter: blur(22px) saturate(1.35);
+}
+
+.dtom-site-header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--dtom-color-primary), transparent);
+  opacity: 0.45;
+}
+
+.dtom-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  gap: var(--dtom-space-6);
+}
+
+/* sr-only utility */
+.dtom-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* below-fold performance */
+.dtom-below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
+/* ============================================================
+   SECTION 13 — REVEAL ANIMATIONS
+   ============================================================ */
+
+[data-dtom-reveal] {
+  opacity: 0;
+  filter: blur(12px);
+  transition:
+    opacity 520ms var(--dtom-ease-out) var(--dtom-reveal-delay, 0ms),
+    filter 520ms var(--dtom-ease-out) var(--dtom-reveal-delay, 0ms);
+}
+
+[data-dtom-reveal].dtom-is-visible {
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* ============================================================
+   SECTION 14 — REDUCED-MOTION OVERRIDE
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .dtom-logo__orbits,
+  .dtom-logo__nucleus,
+  .dtom-logo__electron,
+  .dtom-loader__field,
+  .dtom-loader__scanline-beam,
+  .dtom-live-dot,
+  .dtom-animated-border {
+    animation: none !important;
+  }
+
+  .dtom-loader__status li {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .dtom-dossier,
+  .dtom-dossier-backdrop {
+    animation: none !important;
+  }
+}

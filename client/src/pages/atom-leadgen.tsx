@@ -28,7 +28,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
     }] : [];
     flagAsHVT(companyName, { source: "leadgen", stakeholders: stakeholders as any });
     setFlagged(true);
-    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ATOM War Room — Von Clausewitz Engine activated.` });
+    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ΔTOM War Room — Von Clausewitz Engine activated.` });
   };
 
   if (flagged) {
@@ -47,7 +47,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
     <button
       onClick={handleFlag}
       className="h-[46px] px-4 rounded-xl border border-white/[0.08] flex items-center gap-1.5 text-[12px] text-white/50 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all"
-      title="Flag as HVT — Send to ATOM War Room"
+      title="Flag as HVT — Send to ΔTOM War Room"
     >
       <Crosshair className="w-3.5 h-3.5" />Flag HVT
     </button>
@@ -432,7 +432,7 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
           className="text-[10px] mb-1 font-medium uppercase tracking-wider"
           style={{ color: isAtom ? "#00e6d3" : "var(--color-text-muted)" }}
         >
-          {isAtom ? "ATOM" : "Prospect"} · {formatTime(entry.ts)}
+          {isAtom ? "ΔTOM" : "Prospect"} · {formatTime(entry.ts)}
         </div>
         <div>{entry.text}</div>
       </div>
@@ -1610,7 +1610,7 @@ export default function ATOMLeadGen() {
         <div className="flex items-start justify-between gap-4 mb-2">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
-              ATOM Dial
+              ΔTOM Dial
             </h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
               AI-powered outbound calling with live analytics
@@ -1836,7 +1836,7 @@ export default function ATOMLeadGen() {
                     }}
                   />
                   <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
-                    Just the company name — ATOM will open with “Hey [name], this is Adam from [{productSlug || "AntimatterAI"}]”
+                    Just the company name — ΔTOM will open with “Hey [name], this is Adam from [{productSlug || "AntimatterAI"}]”
                   </p>
                 </div>
 
@@ -1859,7 +1859,7 @@ export default function ATOMLeadGen() {
                     }}
                   />
                   <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
-                    What you specifically want ATOM to bring up — surfaces in the call brief.
+                    What you specifically want ΔTOM to bring up — surfaces in the call brief.
                   </p>
                 </div>
 

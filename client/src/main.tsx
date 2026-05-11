@@ -1,4 +1,7 @@
 import { createRoot } from "react-dom/client";
+// ΔTOM brand system CSS — must load before app stylesheets so component
+// tokens are available everywhere and app-level utilities can override.
+import "@nirmata/dtom-brand-system/styles";
 import App from "./App";
 import "./index.css";
 
