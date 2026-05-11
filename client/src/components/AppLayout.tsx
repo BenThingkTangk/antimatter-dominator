@@ -3,7 +3,7 @@ import { useTenant } from "@/lib/useTenant";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Megaphone, Brain,
-  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Nirmata HQ at the very top for superAdmins
   if (session.isSuperAdmin) {
     dynamicNavItems.push({ href: "/admin/hq", icon: Crown, label: "Nirmata HQ" });
+    dynamicNavItems.push({ href: "/admin/hq/seat-costs", icon: Coins, label: "Seat Costs" });
     dynamicNavItems.push({ href: "/admin/vibranium-ga", icon: Zap, label: "Vibranium GA" });
   }
 

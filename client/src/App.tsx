@@ -19,6 +19,7 @@ import BillingPage from "./pages/billing";
 import InviteAcceptPage from "./pages/invite";
 import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
+import SeatCostsShell from "./admin/SeatCostsShell";
 import VibraniumShell from "./admin/VibraniumShell";
 import TenantDetailShell from "./admin/TenantDetailShell";
 import { useSessionContext } from "./auth/AuthGate";
@@ -176,6 +177,7 @@ function AuthenticatedRoutes() {
         <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
         <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>
         <Route path="/admin/hq">{() => <SuperAdminOnly><HqShell /></SuperAdminOnly>}</Route>
+        <Route path="/admin/hq/seat-costs">{() => <SuperAdminOnly><SeatCostsShell /></SuperAdminOnly>}</Route>
         <Route path="/admin/vibranium-ga">{() => <SuperAdminOnly><VibraniumShell /></SuperAdminOnly>}</Route>
         <Route path="/admin/t/:slug">{(params) => <SuperAdminOnly><TenantDetailShell params={params as any} /></SuperAdminOnly>}</Route>
         <Route path="/admin">{() => <SuperAdminOnly><AdminShell /></SuperAdminOnly>}</Route>
