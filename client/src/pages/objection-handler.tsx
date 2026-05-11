@@ -447,12 +447,12 @@ export default function ObjectionHandler() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Objection Details</h2>
+            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+              <h2 className="text-[11px] font-semibold text-amber-300 uppercase tracking-[0.18em]">Objection Details</h2>
 
               {/* Product */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
@@ -476,7 +476,7 @@ export default function ObjectionHandler() {
 
               {/* Objection */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">The Objection</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">The Objection</label>
                 <Textarea
                   placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
                   value={objectionText}
@@ -488,15 +488,15 @@ export default function ObjectionHandler() {
 
               {/* Quick Select */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Quick Select</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Quick Select</label>
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_OBJECTIONS.map(obj => (
                     <button key={obj}
                       onClick={() => setObjectionText(obj)}
-                      className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${
+                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${
                         objectionText === obj
-                          ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
-                          : "border-white/[0.07] text-white/30 hover:text-white/60 hover:border-white/15"
+                          ? "bg-amber-500/15 border-amber-500/45 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
+                          : "bg-[#161618] border-white/[0.14] text-white/75 hover:text-white hover:border-amber-500/45 hover:bg-amber-500/8"
                       }`}
                       data-testid={`button-quick-objection-${obj.slice(0, 10)}`}>
                       {obj}
@@ -507,7 +507,7 @@ export default function ObjectionHandler() {
 
               {/* Context */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Context <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
                   value={context}
@@ -518,7 +518,7 @@ export default function ObjectionHandler() {
               </div>
 
               <Button
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_28px_rgba(245,158,11,0.35)] transition-all"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_28px_rgba(245,158,11,0.45)] border border-amber-300/50 disabled:bg-amber-500/35 disabled:text-amber-100/70 disabled:opacity-100 transition-all"
                 onClick={() => handleObjection.mutate()}
                 disabled={!selectedProduct || !objectionText || handleObjection.isPending}
                 data-testid="button-handle-objection">
@@ -532,7 +532,7 @@ export default function ObjectionHandler() {
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {handleObjection.isPending ? (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-6">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
                   <p className="text-sm text-white/50">Analyzing objection and crafting counter-response...</p>
@@ -542,7 +542,7 @@ export default function ObjectionHandler() {
             ) : activeResult ? (
               <>
                 {/* Sentiment Dashboard */}
-                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Sentiment Analysis</p>
                     <div className="flex items-center gap-2">
@@ -592,7 +592,7 @@ export default function ObjectionHandler() {
                 </div>
 
                 {/* Primary Response */}
-                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" style={{ boxShadow: "0 0 6px #f59e0b" }} />
@@ -627,7 +627,7 @@ export default function ObjectionHandler() {
 
                 {/* Response Strategies */}
                 {activeResult.strategies?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Response Strategies</p>
 
                     {/* Strategy tabs */}
@@ -688,7 +688,7 @@ export default function ObjectionHandler() {
 
                 {/* Follow-Up Questions — clickable to deep-dive */}
                 {activeResult.followUpQuestions?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
                       <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-violet-400/40">· click to prepare response</span>
                     </p>
@@ -749,7 +749,7 @@ export default function ObjectionHandler() {
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
                 <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/15">
                   <Zap className="w-7 h-7 text-amber-500/40" />
                 </div>

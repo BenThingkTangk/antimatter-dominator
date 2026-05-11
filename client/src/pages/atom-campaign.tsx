@@ -595,7 +595,7 @@ function AdvancedTargetingPanel({
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
+        <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-violet-300 flex items-center gap-1">
           <User className="w-3 h-3" />Job Titles
         </label>
         <div className="flex flex-wrap gap-1.5">
@@ -605,10 +605,10 @@ function AdvancedTargetingPanel({
               <button
                 key={t}
                 onClick={() => toggleTitle(t)}
-                className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
                   active
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
-                    : "bg-white/[0.03] text-white/55 border-white/[0.12] hover:border-white/20 hover:text-white/55"
+                    ? "bg-violet-500/15 text-violet-300 border-violet-500/45 shadow-[0_0_10px_rgba(139,92,246,0.25)]"
+                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-violet-500/45 hover:text-white hover:bg-violet-500/8"
                 }`}
               >
                 {t}
@@ -1483,7 +1483,7 @@ export default function AtomCampaign() {
                 <Button
                   onClick={buildTargets}
                   disabled={!brief.trim() || isBuilding}
-                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all"
+                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 shadow-[0_0_24px_rgba(139,92,246,0.45)] border border-violet-400/50 disabled:bg-violet-600/40 disabled:text-white/70 disabled:opacity-100 transition-all"
                   style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
                 >
                   {isBuilding ? (
@@ -1497,7 +1497,7 @@ export default function AtomCampaign() {
 
             {/* Example briefs */}
             <div className="border-t border-white/[0.10] pt-4 space-y-2">
-              <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Example Briefs</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Example Briefs</p>
               <div className="grid gap-2">
                 {[
                   "Cloudflare CDN takeout for Akamai. Match pricing + eat 6 months of contract to switch.",
@@ -1714,13 +1714,13 @@ export default function AtomCampaign() {
                 {/* ── Column Headers ── */}
                 <div className="grid grid-cols-[28px_52px_minmax(160px,1.8fr)_minmax(140px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_100px_80px] gap-2 items-center px-4 py-2 border-b border-white/[0.04] min-w-[900px]">
                   <div />
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Score</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Company</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Contact</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Phone</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Email / LinkedIn</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Email</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Conf.</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Score</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Company</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Contact</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Phone</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Email / LinkedIn</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Email</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Conf.</p>
                 </div>
 
                 {/* ── Target Rows ── */}
@@ -2068,7 +2068,7 @@ export default function AtomCampaign() {
               {/* Table Headers */}
               <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-3 px-4 py-2 border-b border-white/[0.04]">
                 {["Company", "Contact", "Status", "Duration", "Sentiment", "Disposition"].map((h) => (
-                  <p key={h} className="text-[10px] font-mono uppercase tracking-wider text-white/40">{h}</p>
+                  <p key={h} className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">{h}</p>
                 ))}
               </div>
 

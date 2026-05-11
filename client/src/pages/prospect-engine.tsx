@@ -590,7 +590,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
     : "bg-white/5 text-white/40 border-white/10";
 
   return (
-    <Card className="bg-[#111113] border-white/[0.08] hover:border-violet-500/20 transition-all duration-200">
+    <Card className="bg-[#111113] border-white/[0.16] hover:border-violet-500/20 transition-all duration-200">
       <CardContent className="p-0">
         {/* ── COMPANY HEADER ── */}
         <div className="p-4 pb-3">
@@ -802,7 +802,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
 
 function SkeletonCard() {
   return (
-    <Card className="bg-[#111113] border-white/[0.08]">
+    <Card className="bg-[#111113] border-white/[0.16]">
       <CardContent className="p-4">
         <div className="flex gap-3">
           <Skeleton className="w-10 h-10 rounded-lg bg-white/5" />
@@ -950,7 +950,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       {/* Row 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <Briefcase className="w-3 h-3" />Industry
           </label>
           <Select value={filters.industry} onValueChange={(v) => set("industry", v)}>
@@ -964,7 +964,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <MapPin className="w-3 h-3" />Geography
           </label>
           <Select value={filters.geo} onValueChange={(v) => set("geo", v)}>
@@ -978,7 +978,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <Users className="w-3 h-3" />Company Size
           </label>
           <Select value={filters.employeeSize} onValueChange={(v) => set("employeeSize", v)}>
@@ -992,7 +992,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <DollarSign className="w-3 h-3" />Revenue
           </label>
           <Select value={filters.revenueRange} onValueChange={(v) => set("revenueRange", v)}>
@@ -1009,7 +1009,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       {/* Row 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <Tag className="w-3 h-3" />Product / Service Focus
           </label>
           <input
@@ -1021,7 +1021,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <Cpu className="w-3 h-3" />Tech Stack
           </label>
           <input
@@ -1033,7 +1033,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
             <Search className="w-3 h-3" />Keywords
           </label>
           <input
@@ -1048,7 +1048,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
+        <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-teal-300 flex items-center gap-1">
           <User className="w-3 h-3" />Target Job Titles
         </label>
         <div className="flex flex-wrap gap-1.5">
@@ -1058,10 +1058,10 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
               <button
                 key={t}
                 onClick={() => toggleTitle(t)}
-                className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
                   active
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
-                    : "bg-white/[0.03] text-white/40 border-white/[0.08] hover:border-white/20 hover:text-white/60"
+                    ? "bg-teal-500/15 text-teal-300 border-teal-500/45 shadow-[0_0_10px_rgba(20,184,166,0.25)]"
+                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-teal-500/45 hover:text-white hover:bg-teal-500/8"
                 }`}
               >
                 {t}
@@ -1238,7 +1238,7 @@ export default function ProspectEngine() {
 
       {/* FORM VIEW */}
       {view === "form" && (
-        <Card className="bg-[#111113] border-white/[0.08]">
+        <Card className="bg-[#111113] border-white/[0.16]">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-5">
               <SlidersHorizontal className="w-4 h-4 text-violet-400" />
@@ -1352,7 +1352,7 @@ export default function ProspectEngine() {
 
           {/* Prospect Cards */}
           {paginated.length === 0 ? (
-            <Card className="bg-[#111113] border-white/[0.08]">
+            <Card className="bg-[#111113] border-white/[0.16]">
               <CardContent className="py-16 flex flex-col items-center gap-3">
                 <Radar className="w-12 h-12 text-white/10" />
                 <p className="text-sm text-white/30">No prospects found for these filters</p>

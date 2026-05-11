@@ -276,11 +276,14 @@ const strengthColor = (s: string) => s === "strong" ? "bg-emerald-500/15 text-em
 // Was a flat saturated fill which violated 'energy belongs in small,
 // precise bursts'. Now a quiet luxury treatment: ~10% teal tint, soft glow,
 // teal text. Reads as a clear primary CTA without screaming at the user.
+// War Room runs on the canonical ΔTOM teal. We want the deploy button to
+// burn at the same intensity as the Generate Pitch / Scan for Prospects /
+// Generate Intelligence buttons — not a wash.
 const CRIMSON_BTN_STYLE = {
-  background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
-  border: "1px solid color-mix(in oklab, var(--color-primary) 32%, transparent)",
-  boxShadow: "0 0 18px color-mix(in oklab, var(--color-primary) 14%, transparent)",
-  color: "var(--color-primary)",
+  background: "linear-gradient(96deg, #2dd4bf 0%, #14b8a6 60%, #0d9488 100%)",
+  border: "1px solid rgba(20, 184, 166, 0.6)",
+  boxShadow: "0 0 28px rgba(20, 184, 166, 0.35), inset 0 0 2px rgba(255,255,255,0.25)",
+  color: "#04181a",
   fontWeight: 700 as const,
 };
 

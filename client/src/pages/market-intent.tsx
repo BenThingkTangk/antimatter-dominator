@@ -562,12 +562,12 @@ export default function MarketIntent() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Analysis Parameters</h2>
+            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+              <h2 className="text-[11px] font-semibold text-emerald-300 uppercase tracking-[0.18em]">Analysis Parameters</h2>
 
               {/* Product Focus */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product Focus</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product Focus</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select product" />
@@ -591,7 +591,7 @@ export default function MarketIntent() {
 
               {/* Industry */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Industry</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry</label>
                 <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-industry">
                     <SelectValue placeholder="All industries" />
@@ -604,7 +604,7 @@ export default function MarketIntent() {
 
               {/* Region */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Region</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Region</label>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-region">
                     <SelectValue placeholder="Select region" />
@@ -617,7 +617,7 @@ export default function MarketIntent() {
 
               {/* Analysis Type */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Analysis Type</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Analysis Type</label>
                 <div className="space-y-1">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
@@ -647,14 +647,14 @@ export default function MarketIntent() {
 
               {/* Time Horizon */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Time Horizon</label>
+                <label className="text-[11px] font-medium text-emerald-300 mb-1.5 block uppercase tracking-[0.18em]">Time Horizon</label>
                 <div className="flex gap-1.5">
                   {TIME_HORIZONS.map(th => (
                     <button key={th.value} onClick={() => setTimeHorizon(th.value)}
                       className={`flex-1 text-[11px] py-1.5 rounded-lg border font-medium transition-all ${
                         timeHorizon === th.value
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : "border-white/[0.07] text-white/30 hover:text-white/50 hover:border-white/15"
+                          ? "bg-emerald-500/15 border-emerald-500/45 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.25)]"
+                          : "bg-[#161618] border-white/[0.14] text-white/70 hover:text-white hover:border-emerald-500/45"
                       }`}
                       data-testid={`button-time-horizon-${th.value}`}>
                       {th.label}
@@ -665,7 +665,7 @@ export default function MarketIntent() {
 
               {/* Custom Query */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. Focus on HIPAA compliance spending trends in mid-market hospitals..."
                   value={customQuery}
@@ -676,7 +676,7 @@ export default function MarketIntent() {
               </div>
 
               <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_28px_rgba(16,185,129,0.35)] transition-all"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_28px_rgba(16,185,129,0.45)] border border-emerald-300/50 disabled:bg-emerald-500/35 disabled:text-emerald-100/70 disabled:opacity-100 transition-all"
                 onClick={() => analyzeIntent.mutate()}
                 disabled={analyzeIntent.isPending}
                 data-testid="button-generate-intel">
@@ -690,7 +690,7 @@ export default function MarketIntent() {
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {analyzeIntent.isPending ? (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-6">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                   <p className="text-sm text-white/50">Scanning market signals and competitive intelligence...</p>
@@ -700,7 +700,7 @@ export default function MarketIntent() {
             ) : activeResult ? (
               <>
                 {/* Market Sentiment Gauge */}
-                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Market Sentiment</p>
                     <div className="flex items-center gap-2">
@@ -778,7 +778,7 @@ export default function MarketIntent() {
                     {activeResult.keySignals?.length > 0 ? activeResult.keySignals.map((signal, i) => {
                       const cfg = URGENCY_CONFIG[signal.urgency] || URGENCY_CONFIG["medium"];
                       return (
-                        <div key={i} className="rounded-xl border border-white/[0.12] bg-[#111113] p-4 hover:border-white/[0.12] transition-all">
+                        <div key={i} className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 hover:border-white/[0.12] transition-all">
                           <div className="flex items-start gap-3">
                             <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${cfg.dot}`}
                               style={{ boxShadow: `0 0 6px currentColor` }} />
@@ -804,7 +804,7 @@ export default function MarketIntent() {
                 )}
 
                 {activeTab === "competition" && (
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] overflow-hidden">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] overflow-hidden">
                     {activeResult.competitiveMoves?.length > 0 ? (
                       <div className="overflow-x-auto">
                       <table className="w-full min-w-[400px]">
@@ -850,7 +850,7 @@ export default function MarketIntent() {
                 )}
 
                 {activeTab === "opportunities" && (
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-4 space-y-1">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 space-y-1">
                     {activeResult.opportunities?.length > 0 ? (
                       <>
                         <div className="flex items-center justify-between mb-3">
@@ -870,7 +870,7 @@ export default function MarketIntent() {
                 {activeTab === "actions" && (
                   <div className="space-y-2">
                     {activeResult.actionItems?.length > 0 ? activeResult.actionItems.map((item, i) => (
-                      <div key={i} className="rounded-xl border border-white/[0.12] bg-[#111113] p-4 flex items-start gap-3 hover:border-violet-500/15 transition-all group">
+                      <div key={i} className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 flex items-start gap-3 hover:border-violet-500/15 transition-all group">
                         <div className="w-6 h-6 rounded-full bg-violet-500/15 border border-violet-500/20 flex items-center justify-center shrink-0 text-[10px] font-bold text-violet-300">
                           {item.priority}
                         </div>
@@ -896,7 +896,7 @@ export default function MarketIntent() {
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
                 <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/15">
                   <Globe className="w-7 h-7 text-emerald-500/40" />
                 </div>

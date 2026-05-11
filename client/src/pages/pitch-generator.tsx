@@ -470,12 +470,12 @@ export default function PitchGenerator() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4" id="pitch-main-grid">
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Configuration</h2>
+            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+              <h2 className="text-[11px] font-semibold text-violet-300 uppercase tracking-[0.18em]">Configuration</h2>
 
               {/* Product */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
@@ -501,7 +501,7 @@ export default function PitchGenerator() {
 
               {/* Company Name */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Company Name <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Company Name <span className="text-white/50 normal-case">(optional)</span></label>
                 <Input
                   placeholder="e.g. Acme Health Systems"
                   value={companyName}
@@ -513,7 +513,7 @@ export default function PitchGenerator() {
 
               {/* Persona */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Target Persona</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Target Persona</label>
                 <Select value={persona} onValueChange={setPersona}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-persona">
                     <SelectValue placeholder="Who are you pitching?" />
@@ -526,7 +526,7 @@ export default function PitchGenerator() {
 
               {/* Industry */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Industry Context <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Input
                   placeholder="e.g. Healthcare, Finance, Real Estate"
                   value={industry}
@@ -538,7 +538,7 @@ export default function PitchGenerator() {
 
               {/* Pitch Type */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Pitch Type</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Pitch Type</label>
                 <div className="space-y-1">
                   {PITCH_TYPES.map(pt => {
                     const Icon = pt.icon;
@@ -568,7 +568,7 @@ export default function PitchGenerator() {
 
               {/* Tone */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Tone</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Tone</label>
                 <div className="flex flex-wrap gap-1.5">
                   {TONES.map(t => (
                     <button key={t.value} onClick={() => setTone(t.value)}
@@ -584,7 +584,7 @@ export default function PitchGenerator() {
 
               {/* Extra Context */}
               <div>
-                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Extra Context <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Extra Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. They just had a data breach, using legacy Epic system..."
                   value={customContext}
@@ -595,7 +595,7 @@ export default function PitchGenerator() {
               </div>
 
               <Button
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold shadow-[0_0_28px_rgba(139,92,246,0.4)] transition-all"
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold shadow-[0_0_28px_rgba(139,92,246,0.5)] border border-violet-400/50 disabled:bg-violet-600/40 disabled:text-white/70 disabled:opacity-100 transition-all"
                 onClick={() => generatePitch.mutate()}
                 disabled={!canGenerate}
                 data-testid="button-generate-pitch"
@@ -610,7 +610,7 @@ export default function PitchGenerator() {
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {generatePitch.isPending ? (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-6">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-violet-300" />
                   <p className="text-sm text-white/50">AI is crafting your precision pitch...</p>
@@ -622,7 +622,7 @@ export default function PitchGenerator() {
                 {/* Confidence + Emotion Analysis Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Confidence Gauge */}
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-4">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">AI Confidence Score</p>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       <div className="w-full max-w-[120px] mx-auto sm:mx-0 sm:w-auto">
@@ -642,7 +642,7 @@ export default function PitchGenerator() {
                   </div>
 
                   {/* Emotion Analysis */}
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-4">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Emotional Tone</p>
                     <div className="space-y-2">
                       {activeResult.emotions && Object.entries(activeResult.emotions).map(([key, val]) => (
@@ -653,7 +653,7 @@ export default function PitchGenerator() {
                 </div>
 
                 {/* Main Pitch Card */}
-                <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-violet-600" style={{ boxShadow: "0 0 6px #0d9488" }} />
@@ -718,7 +718,7 @@ export default function PitchGenerator() {
 
                 {/* Alternative Approaches — CLICKABLE to regenerate */}
                 {activeResult.alternatives?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-5">
+                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Alternative Approaches <span className="text-violet-400/50">· click to generate full pitch</span></p>
                     <div className="space-y-2">
                       {activeResult.alternatives.map((alt, i) => (
@@ -754,7 +754,7 @@ export default function PitchGenerator() {
                 {/* Follow-up + Objections Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {activeResult.suggestedFollowUp && (
-                    <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-4">
+                    <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4">
                       <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
                         <MessageCircle className="w-3 h-3" />Suggested Follow-Ups
                       </p>
@@ -770,7 +770,7 @@ export default function PitchGenerator() {
                     </div>
                   )}
                   {activeResult.detectedObjections?.length > 0 && (
-                    <div className="rounded-xl border border-white/[0.12] bg-[#111113] p-4">
+                    <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4">
                       <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
                         <AlertCircle className="w-3 h-3" />Likely Objections <span className="text-amber-400/40">· click to handle</span>
                       </p>
@@ -791,7 +791,7 @@ export default function PitchGenerator() {
                 </div>
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.12] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/60">
+              <div className="rounded-xl border border-white/[0.16] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/60">
                 <div className="w-16 h-16 rounded-2xl bg-violet-500/15 flex items-center justify-center mb-4 border border-violet-500/30">
                   <Sparkles className="w-7 h-7 text-violet-300" />
                 </div>
