@@ -563,7 +563,7 @@ export default function MarketIntent() {
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
             <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-[11px] font-semibold text-emerald-300 uppercase tracking-[0.18em]">Analysis Parameters</h2>
+              <h2 className="atom-section-eyebrow">Analysis Parameters</h2>
 
               {/* Product Focus */}
               <div>
@@ -618,27 +618,24 @@ export default function MarketIntent() {
               {/* Analysis Type */}
               <div>
                 <label className="atom-field-label">Analysis Type</label>
-                <div className="space-y-1">
+                <div className="flex flex-col gap-1.5">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
                     const isActive = analysisType === at.value;
                     return (
-                      <button key={at.value} onClick={() => setAnalysisType(at.value)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all border ${
-                          isActive
-                            ? "bg-emerald-500/10 border-emerald-500/40 text-white"
-                            : "bg-[#161618] border-white/[0.14] text-white/85 hover:border-emerald-500/45 hover:text-white"
-                        }`}
-                        data-testid={`button-analysis-type-${at.value}`}>
-                        <span className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
-                          isActive ? "bg-emerald-500/20 border-emerald-500/40" : "bg-white/[0.04] border-white/[0.08]"
-                        }`}>
-                          <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-300" : "text-white/60"}`} />
+                      <button
+                        key={at.value}
+                        type="button"
+                        data-active={isActive ? "true" : "false"}
+                        onClick={() => setAnalysisType(at.value)}
+                        className="atom-choice-row"
+                        data-testid={`button-analysis-type-${at.value}`}
+                      >
+                        <span className="atom-choice-row__icon"><Icon className="w-3.5 h-3.5" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="atom-choice-row__title block">{at.value}</span>
+                          <span className="atom-choice-row__desc block">{at.desc}</span>
                         </span>
-                        <div>
-                          <p className="text-xs font-medium">{at.value}</p>
-                          <p className="text-[10px] text-white/55">{at.desc}</p>
-                        </div>
                       </button>
                     );
                   })}
@@ -647,15 +644,14 @@ export default function MarketIntent() {
 
               {/* Time Horizon */}
               <div>
-                <label className="text-[11px] font-medium text-emerald-300 mb-1.5 block uppercase tracking-[0.18em]">Time Horizon</label>
-                <div className="flex gap-1.5">
+                <label className="atom-field-label">Time Horizon</label>
+                <div className="atom-chip-group">
                   {TIME_HORIZONS.map(th => (
-                    <button key={th.value} onClick={() => setTimeHorizon(th.value)}
-                      className={`flex-1 text-[11px] py-1.5 rounded-lg border font-medium transition-all ${
-                        timeHorizon === th.value
-                          ? "bg-emerald-500/15 border-emerald-500/45 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.25)]"
-                          : "bg-[#161618] border-white/[0.14] text-white/70 hover:text-white hover:border-emerald-500/45"
-                      }`}
+                    <button key={th.value}
+                      type="button"
+                      data-active={timeHorizon === th.value ? "true" : "false"}
+                      onClick={() => setTimeHorizon(th.value)}
+                      className="atom-tone-chip"
                       data-testid={`button-time-horizon-${th.value}`}>
                       {th.label}
                     </button>

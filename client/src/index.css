@@ -12,9 +12,9 @@
   color-scheme: dark light;
 
   /* ─── Typography ─────────────────────────────────────────────────────── */
-  --font-display: 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif;
-  --font-body:    'Satoshi', 'Inter', system-ui, sans-serif;
-  --font-sans:    'Satoshi', 'Inter', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-sans:    'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
 
   --text-xs:    clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
@@ -1175,9 +1175,10 @@
   height: 34px;
   padding: 0 16px;
   border-radius: 9999px;
-  border: 1px solid rgba(199, 200, 242, 0.18);
-  background: #14141c;
-  color: rgba(246, 246, 253, 0.82);
+  /* Stronger border so unselected chips read clearly as outlined pills */
+  border: 1px solid rgba(199, 200, 242, 0.32) !important;
+  background: rgba(20, 20, 28, 0.85) !important;
+  color: rgba(246, 246, 253, 0.88) !important;
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -1272,7 +1273,7 @@
   margin: 2px 0 0 0;
 }
 
-/* Primary CTA — bright, vivid lavender, premium feel.
+/* Primary CTA — BRIGHT, vivid lavender pill, premium feel.
    Use class .atom-cta on the Button component. */
 .atom-cta {
   position: relative;
@@ -1289,13 +1290,14 @@
   font-weight: 700;
   letter-spacing: 0.01em;
   color: #ffffff;
-  background: linear-gradient(93.92deg, #8587e3 -13.51%, #4c4dac 40.91%, #696aac 113.69%);
-  border: 1px solid rgba(165, 167, 255, 0.55);
+  /* Brighter lavender for a punchier, more premium look that pops on black. */
+  background: linear-gradient(93.92deg, #a5a7ff 0%, #7c7de5 45%, #8d8ee8 100%) !important;
+  border: 1px solid rgba(192, 194, 255, 0.7) !important;
   box-shadow:
-    0 0 14px rgba(105, 106, 172, 0.55),
-    0 0 36px rgba(133, 135, 227, 0.28),
-    0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+    0 0 18px rgba(133, 135, 227, 0.75),
+    0 0 48px rgba(165, 167, 255, 0.42),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 -1px 0 rgba(40, 38, 80, 0.35) inset !important;
   overflow: hidden;
   isolation: isolate;
   cursor: pointer;
@@ -1315,23 +1317,23 @@
 .atom-cta > * { position: relative; z-index: 2; }
 .atom-cta:hover {
   transform: translateY(-1px);
-  filter: saturate(1.08);
+  filter: saturate(1.12) brightness(1.06);
   box-shadow:
-    0 0 22px rgba(133, 135, 227, 0.7),
-    0 0 48px rgba(133, 135, 227, 0.4),
-    0 1px 0 rgba(255, 255, 255, 0.26) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+    0 0 26px rgba(165, 167, 255, 0.9),
+    0 0 60px rgba(165, 167, 255, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.42) inset,
+    0 -1px 0 rgba(40, 38, 80, 0.35) inset !important;
 }
 .atom-cta:hover::after { transform: translateX(120%); }
 .atom-cta:active { transform: translateY(0); }
 .atom-cta:disabled,
 .atom-cta[data-disabled="true"] {
   cursor: not-allowed;
-  background: linear-gradient(93.92deg, rgba(133, 135, 227, 0.5) -13.51%, rgba(76, 77, 172, 0.5) 40.91%, rgba(105, 106, 172, 0.5) 113.69%);
+  background: linear-gradient(93.92deg, rgba(165, 167, 255, 0.45) 0%, rgba(124, 125, 229, 0.45) 45%, rgba(141, 142, 232, 0.45) 100%) !important;
   box-shadow:
     0 0 8px rgba(105, 106, 172, 0.25),
-    0 1px 0 rgba(255, 255, 255, 0.1) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.25) inset;
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.25) inset !important;
   color: rgba(255, 255, 255, 0.7);
   filter: saturate(0.85);
 }

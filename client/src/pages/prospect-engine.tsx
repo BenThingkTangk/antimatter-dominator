@@ -1047,22 +1047,20 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       </div>
 
       {/* Job Titles */}
-      <div className="space-y-2">
-        <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-teal-300 flex items-center gap-1">
+      <div className="atom-field-group">
+        <label className="atom-field-label flex items-center gap-1">
           <User className="w-3 h-3" />Target Job Titles
         </label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="atom-chip-group">
           {JOB_TITLES.map((t) => {
             const active = filters.jobTitles.includes(t);
             return (
               <button
                 key={t}
+                type="button"
+                data-active={active ? "true" : "false"}
                 onClick={() => toggleTitle(t)}
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
-                  active
-                    ? "bg-teal-500/15 text-teal-300 border-teal-500/45 shadow-[0_0_10px_rgba(20,184,166,0.25)]"
-                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-teal-500/45 hover:text-white hover:bg-teal-500/8"
-                }`}
+                className="atom-tone-chip"
               >
                 {t}
               </button>

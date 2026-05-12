@@ -489,15 +489,13 @@ export default function ObjectionHandler() {
               {/* Quick Select */}
               <div>
                 <label className="atom-field-label">Quick Select</label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="atom-chip-group">
                   {QUICK_OBJECTIONS.map(obj => (
                     <button key={obj}
+                      type="button"
+                      data-active={objectionText === obj ? "true" : "false"}
                       onClick={() => setObjectionText(obj)}
-                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${
-                        objectionText === obj
-                          ? "bg-amber-500/15 border-amber-500/45 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
-                          : "bg-[#161618] border-white/[0.14] text-white/75 hover:text-white hover:border-amber-500/45 hover:bg-amber-500/8"
-                      }`}
+                      className="atom-tone-chip"
                       data-testid={`button-quick-objection-${obj.slice(0, 10)}`}>
                       {obj}
                     </button>
