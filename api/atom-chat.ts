@@ -353,7 +353,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ─── STREAMING PATH ─────────────────────────────────────────────────────
-    if (wantsStream && r.body) {
+    // Perplexity sometimes ignores stream:true and returns plain JSON (e.g. when
+    // search_context is small or temperature is low). Detect that upfront and
+    // fall through to the non-stream path. Otherwise SSE-decode the body.
+    const upstreamType = String(r.headers.get("content-type") || "");
+    const isUpstreamSSE = upstreamType.includes("text/event-stream");
+
+    if (wantsStream && r.body && isUpstreamSSE) {
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache, no-transform");
       res.setHeader("Connection", "keep-alive");
@@ -411,6 +417,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
       }
 
+      // If upstream returned no streamed tokens at all (yes, this happens —
+      // some Perplexity replies arrive whole inside a single chunk), emit the
+      // assembled content as one token event so the client sees text.
+      if (!assembled && buf.trim().length > 0) {
+        try {
+          const tail = JSON.parse(buf.replace(/^data:\s*/, "").trim());
+          const fallback =
+            tail?.choices?.[0]?.message?.content ||
+            tail?.choices?.[0]?.delta?.content ||
+            "";
+          if (fallback) {
+            assembled = fallback;
+            res.write(
+              `event: token\ndata: ${JSON.stringify({ delta: fallback })}\n\n`
+            );
+          }
+          if (Array.isArray(tail?.citations)) lastCitations = tail.citations;
+        } catch {}
+      }
+
       // Normalize citations same way as the non-stream path.
       const citations = (lastCitations as string[]).map((url, i) => {
         try {
@@ -465,6 +491,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } catch (e: any) {
             console.warn("[atom-chat] reply embed failed:", e?.message);
           }
+        }
+      })();
+      return;
+    }
+
+    // ─── STREAMING REQUESTED BUT UPSTREAM RETURNED JSON ───────────────────────
+    // Stream the whole reply as one token event so the client UI still updates.
+    if (wantsStream) {
+      const data: any = await r.json();
+      const content: string = data?.choices?.[0]?.message?.content || "";
+      const rawCitations: string[] = data?.citations || [];
+      const citations = rawCitations.map((url: string, i: number) => {
+        try {
+          const u = new URL(url);
+          return {
+            title:
+              u.hostname.replace(/^www\./, "") +
+              (u.pathname !== "/" ? u.pathname.slice(0, 40) : ""),
+            url,
+          };
+        } catch {
+          return { title: `Source ${i + 1}`, url };
+        }
+      });
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.write(
+        `event: meta\ndata: ${JSON.stringify({
+          sessionId,
+          model,
+          memoryUsed: recalled.length,
+        })}\n\n`
+      );
+      // Send content in 80-char chunks so the UI still animates progressively.
+      const CHUNK = 80;
+      for (let i = 0; i < content.length; i += CHUNK) {
+        const delta = content.slice(i, i + CHUNK);
+        res.write(`event: token\ndata: ${JSON.stringify({ delta })}\n\n`);
+      }
+      res.write(
+        `event: done\ndata: ${JSON.stringify({
+          citations,
+          latency_ms: Date.now() - t0,
+        })}\n\n`
+      );
+      res.end();
+
+      // Background persistence
+      void (async () => {
+        try { await memoryPromise; } catch {}
+        if (userEmbedding && userEmbeddingFitsMemory) {
+          await persistTurn({
+            tenantSlug, sessionId, context,
+            role: "user", content: message, embedding: userEmbedding,
+          });
+        }
+        if (content) {
+          try {
+            const replyEmbed = await embed(content.slice(0, 4000));
+            const v = replyEmbed.embeddings[0];
+            if (v && v.length === 1024) {
+              await persistTurn({
+                tenantSlug, sessionId, context,
+                role: "assistant", content, embedding: v,
+              });
+            }
+          } catch {}
         }
       })();
       return;

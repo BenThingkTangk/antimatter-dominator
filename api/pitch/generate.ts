@@ -1,11 +1,12 @@
-// GOLD STANDARD v2.0 — Edge Runtime
+// GOLD STANDARD v2.0
 //
-// M3: Converted from @vercel/node (Node runtime, ~600-1200ms cold start) to
-// Edge Runtime (~30-80ms cold start). The handler is pure fetch+JSON; no
-// Buffer / fs / crypto usage, so it ports cleanly to the Web standard
-// Request/Response API.
+// M3 revert: Edge Runtime conversion caused 504 FUNCTION_INVOCATION_TIMEOUT.
+// The handler chains Apollo (2.5s each, 2 calls) + RAG (6s) + OpenAI (10-30s)
+// which routinely exceeds Vercel Edge's 25-30s ceiling. Reverted to Node
+// serverless (300s Pro ceiling) and added an explicit maxDuration hint.
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export const config = { runtime: "edge" } as const;
+export const config = { maxDuration: 60 } as const;
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
@@ -75,23 +76,8 @@ async function getRAGContext(company: string, module: string): Promise<string> {
   } catch { return ""; }
 }
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "POST only" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  let body: any = {};
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "invalid json body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const {
     productSlug,
@@ -102,7 +88,7 @@ export default async function handler(req: Request): Promise<Response> {
     company,
     tone,
     customContext,
-  } = body;
+  } = req.body;
 
   const productName = product || productSlug || "";
   const target = company || productName || "";
@@ -201,29 +187,16 @@ Return ONLY this JSON structure (no markdown):
       };
     }
 
-    // M4: Pitch responses are user-specific (cached by client) — do not
-    // edge-cache the response since persona/company/product vary too much
-    // for HTTP cache to hit. Client cache handles re-renders.
-    return new Response(
-      JSON.stringify({
-        ...parsed,
-        content: parsed.mainPitch || raw,
-        hasRagContext: ragContext.length > 50,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-ATOM-Version": "gold-v2-edge",
-          "Cache-Control": "private, no-store",
-        },
-      }
-    );
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    // M4: Pitch responses are user-specific (no shared cache) — client cache only.
+    res.setHeader("X-ATOM-Version", "gold-v2");
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({
+      ...parsed,
+      content: parsed.mainPitch || raw,
+      hasRagContext: ragContext.length > 50,
     });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 }
 
