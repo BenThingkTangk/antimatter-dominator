@@ -107,8 +107,8 @@ const VIEW_META: Record<ViewAsRole, { label: string; icon: any; color: string; r
   manager: {
     label: "Manager",
     icon: Shield,
-    color: "#00e6d3",
-    rgba: "0,230,211",
+    color: "#696aac",
+    rgba: "105,106,172",
     desc: "Tenant admin view — all 8 ATOM weapons, no platform surfaces",
   },
   rep: {

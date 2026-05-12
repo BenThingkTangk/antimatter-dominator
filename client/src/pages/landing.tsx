@@ -23,7 +23,7 @@ export default function LandingPage() {
   return (
     <div
       className="min-h-screen"
-      style={{ background: "radial-gradient(120% 80% at 50% 18%, #0c2024 0%, #05090c 55%, #03060a 100%)" }}
+      style={{ background: "radial-gradient(120% 80% at 50% 18%, #14141c 0%, #08080c 55%, #020202 100%)" }}
     >
       {/* Top nav — canonical ΔTOM lockup */}
       <header className="flex items-center justify-between px-6 md:px-10 py-5">

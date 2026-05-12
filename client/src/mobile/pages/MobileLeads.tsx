@@ -96,7 +96,7 @@ export default function MobileLeads() {
 
         {!lead && (
           <div className="m-card" style={{ textAlign: "center", padding: "40px 20px" }}>
-            <Sparkles size={28} style={{ color: "#00e6d3", marginBottom: 10 }} />
+            <Sparkles size={28} style={{ color: "#696aac", marginBottom: 10 }} />
             <div className="m-card-title" style={{ fontSize: 20, marginBottom: 4 }}>Inbox zero</div>
             <div className="m-text-muted" style={{ fontSize: 14 }}>You worked through the queue. New intent signals will land here.</div>
           </div>
@@ -166,7 +166,7 @@ export default function MobileLeads() {
             {leads.map((_, i) => (
               <span key={i} style={{
                 width: i === active ? 22 : 6, height: 6, borderRadius: 999,
-                background: i === active ? "#00e6d3" : "rgba(255,255,255,0.18)",
+                background: i === active ? "#696aac" : "rgba(255,255,255,0.18)",
                 transition: "all 200ms ease",
               }} />
             ))}
@@ -176,7 +176,7 @@ export default function MobileLeads() {
         <div className="m-card">
           <div className="m-card-eyebrow">Tip</div>
           <div style={{ fontSize: 14, marginTop: 6, lineHeight: 1.5 }}>
-            Swipe <span style={{ color: "#00e6d3" }}>left</span> to dial with ΔTOM. Swipe <span style={{ color: "#ff6b8b" }}>right</span> to snooze. Tap a card for details.
+            Swipe <span style={{ color: "#696aac" }}>left</span> to dial with ΔTOM. Swipe <span style={{ color: "#ff6b8b" }}>right</span> to snooze. Tap a card for details.
           </div>
         </div>
       </div>

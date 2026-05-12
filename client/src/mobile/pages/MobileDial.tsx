@@ -51,8 +51,8 @@ function sentimentColor(v: number): string {
   return "#ff6b8b";
 }
 function intentColor(v: number): string {
-  if (v >= 70) return "#00e6d3";
-  if (v >= 40) return "#00a7ff";
+  if (v >= 70) return "#696aac";
+  if (v >= 40) return "#8587e3";
   return "#7b8b8a";
 }
 function intentLabel(v: number): string {
@@ -377,7 +377,7 @@ export default function MobileDial() {
               <div className="m-grid-2">
                 <div>
                   <div className="m-eyebrow">Elapsed</div>
-                  <div className="m-mono" style={{ fontSize: 22, marginTop: 4, color: "#00e6d3" }}>
+                  <div className="m-mono" style={{ fontSize: 22, marginTop: 4, color: "#696aac" }}>
                     {Math.floor(elapsedS / 60).toString().padStart(2, "0")}:{(elapsedS % 60).toString().padStart(2, "0")}
                   </div>
                 </div>

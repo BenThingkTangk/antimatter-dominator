@@ -48,7 +48,7 @@ export default function Compliance() {
           style={{
             padding: "6px 12px", borderRadius: 8,
             background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(0,230,211,0.32)",
+            border: "1px solid rgba(105,106,172,0.32)",
             color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12,
             outline: "none", cursor: "pointer",
           }}
@@ -93,7 +93,7 @@ export default function Compliance() {
           <button style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "8px 14px", borderRadius: 10,
-            background: "rgba(0,230,211,0.06)", border: "1px solid rgba(0,230,211,0.24)",
+            background: "rgba(105,106,172,0.06)", border: "1px solid rgba(105,106,172,0.24)",
             color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 11,
             letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, cursor: "pointer",
           }}>
@@ -297,7 +297,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div onClick={(e) => e.stopPropagation()} style={{
         width: "100%", maxWidth: 460,
         background: "linear-gradient(180deg, rgba(15,22,27,0.96), rgba(10,16,20,0.96))",
-        border: "1px solid rgba(0,230,211,0.18)",
+        border: "1px solid rgba(105,106,172,0.18)",
         borderRadius: 16, padding: 22,
       }}>
         <div style={{

@@ -82,32 +82,32 @@
   --dtom-content-narrow:  720px;
 }
 
-/* --- Black-site aerospace dark palette (default) --- */
+/* --- AntimatterAI black-site palette (default) --- */
 :root,
 [data-dtom-theme="dark"] {
-  --dtom-color-bg:            #08090a;
-  --dtom-color-bg-2:          #0b0d10;
-  --dtom-color-surface:       #101215;
-  --dtom-color-surface-2:     #15191d;
-  --dtom-color-surface-3:     #1b2026;
-  --dtom-color-surface-glass: color-mix(in oklab, #11151a 72%, transparent);
-  --dtom-color-border:        rgba(255, 255, 255, 0.08);
-  --dtom-color-border-strong: rgba(255, 255, 255, 0.16);
-  --dtom-color-divider:       rgba(255, 255, 255, 0.055);
+  --dtom-color-bg:            #020202;
+  --dtom-color-bg-2:          #08080c;
+  --dtom-color-surface:       #0d0d12;
+  --dtom-color-surface-2:     #14141c;
+  --dtom-color-surface-3:     #1c1c28;
+  --dtom-color-surface-glass: color-mix(in oklab, #14141c 72%, transparent);
+  --dtom-color-border:        rgba(199, 200, 242, 0.10);
+  --dtom-color-border-strong: rgba(199, 200, 242, 0.20);
+  --dtom-color-divider:       rgba(199, 200, 242, 0.07);
 
   /* --- Typography colors --- */
-  --dtom-color-text:         #edf8f8;
-  --dtom-color-text-muted:   #9ca8ad;
-  --dtom-color-text-faint:   #5e6970;
-  --dtom-color-text-inverse: #061011;
+  --dtom-color-text:         #f6f6fd;
+  --dtom-color-text-muted:   #a2a3e9;
+  --dtom-color-text-faint:   #6a6b8a;
+  --dtom-color-text-inverse: #020202;
 
-  /* --- Teal/cyan accent — ΔTOM primary energy --- */
-  --dtom-color-primary:            #00e6d3;
-  --dtom-color-primary-2:          #00a7ff;
-  --dtom-color-primary-dim:        #00a89e;
-  --dtom-color-primary-glow:       rgba(0, 230, 211, 0.18);
-  --dtom-color-primary-glow-strong: rgba(0, 230, 211, 0.32);
-  --dtom-color-primary-cinematic:  #00f0df;
+  /* --- AntimatterAI lavender accent — ΔTOM primary energy --- */
+  --dtom-color-primary:            #696aac;
+  --dtom-color-primary-2:          #8587e3;
+  --dtom-color-primary-dim:        #3e3f7e;
+  --dtom-color-primary-glow:       rgba(105, 106, 172, 0.22);
+  --dtom-color-primary-glow-strong: rgba(133, 135, 227, 0.38);
+  --dtom-color-primary-cinematic:  #a2a3e9;
 
   /* --- Semantic --- */
   --dtom-color-success: #72f2a1;
@@ -928,7 +928,7 @@
 
 @keyframes dtom-live-pulse {
   0%,  100% { box-shadow: 0 0 0 0 var(--dtom-color-primary-glow-strong); opacity: 1; }
-  50%        { box-shadow: 0 0 0 9px rgba(0, 230, 211, 0);               opacity: 0.72; }
+  50%        { box-shadow: 0 0 0 9px rgba(105, 106, 172, 0);               opacity: 0.72; }
 }
 
 /* ============================================================

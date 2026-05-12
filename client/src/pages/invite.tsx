@@ -226,7 +226,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: "radial-gradient(120% 80% at 50% 32%, #0c2024 0%, #05090c 58%, #03060a 100%)" }}
+      style={{ background: "radial-gradient(120% 80% at 50% 32%, #14141c 0%, #08080c 58%, #020202 100%)" }}
     >
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center gap-3 mb-8">
@@ -236,7 +236,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               background: "var(--color-primary)",
               boxShadow: "0 0 28px color-mix(in oklab, var(--color-primary) 35%, transparent)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#05090c", fontWeight: 800, fontSize: 22,
+              color: "#08080c", fontWeight: 800, fontSize: 22,
               fontFamily: "var(--font-display)",
             }}
           >Δ</div>

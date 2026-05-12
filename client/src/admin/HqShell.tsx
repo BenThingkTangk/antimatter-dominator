@@ -102,7 +102,7 @@ export default function HqShell() {
         </div>
         <button onClick={() => refetch()} style={{
           padding: "8px 14px", borderRadius: 10,
-          background: "rgba(0,230,211,0.06)", border: "1px solid rgba(0,230,211,0.24)",
+          background: "rgba(105,106,172,0.06)", border: "1px solid rgba(105,106,172,0.24)",
           color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700,
           cursor: "pointer",
         }}>Refresh feed</button>
@@ -171,7 +171,7 @@ export default function HqShell() {
                   </div>
                   <button onClick={() => navigate(`${tenantPrefix}/${r.slug}`)} style={{
                     padding: "6px 12px", borderRadius: 8, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700,
-                    background: "rgba(0,230,211,0.08)", border: "1px solid rgba(0,230,211,0.24)", color: ATOM_TEAL, cursor: "pointer",
+                    background: "rgba(105,106,172,0.08)", border: "1px solid rgba(105,106,172,0.24)", color: ATOM_TEAL, cursor: "pointer",
                     display: "inline-flex", alignItems: "center", gap: 4,
                   }}>Drill in <ArrowRight size={11} /></button>
                   <button
@@ -245,7 +245,7 @@ export default function HqShell() {
                 cursor: "pointer", color: "var(--color-text)",
                 transition: "transform 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(0,230,211,0.32)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(105,106,172,0.32)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.kill_switch ? "rgba(255,107,139,0.2)" : "rgba(255,255,255,0.06)"; e.currentTarget.style.transform = "translateY(0)"; }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                   <div>

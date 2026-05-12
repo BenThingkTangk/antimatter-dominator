@@ -128,8 +128,8 @@ export default function AdminShell() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "10px 16px", borderRadius: 10,
-                background: active ? "rgba(0,230,211,0.08)" : "transparent",
-                border: "1px solid " + (active ? "rgba(0,230,211,0.32)" : "transparent"),
+                background: active ? "rgba(105,106,172,0.08)" : "transparent",
+                border: "1px solid " + (active ? "rgba(105,106,172,0.32)" : "transparent"),
                 color: active ? ATOM_TEAL : ATOM_MUTED,
                 fontFamily: "var(--font-mono)", fontSize: 11,
                 letterSpacing: "0.12em", textTransform: "uppercase",
@@ -203,7 +203,7 @@ function AdminKeyControl({ currentKey, onSave }: { currentKey: string; onSave: (
         style={{
           padding: "8px 12px", borderRadius: 10, minWidth: 280,
           background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(0,230,211,0.32)",
+          border: "1px solid rgba(105,106,172,0.32)",
           color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12,
           outline: "none",
         }}

@@ -10,7 +10,7 @@
  * Defaults (used when fetch fails OR domain doesn't match a tenant):
  *   slug: "antimatter"
  *   name: "AntimatterAI"
- *   primary_hex: "#00e6d3"  (ATOM teal)
+ *   primary_hex: "#696aac"  (ATOM teal)
  *   accent_hex: "#06b6d4"
  */
 import { useEffect, useState } from "react";
@@ -31,8 +31,8 @@ const DEFAULT_TENANT: Tenant = {
   slug: "antimatter",
   name: "AntimatterAI",
   logo_url: "/logo-atom.svg",
-  primary_hex: "#00e6d3",
-  accent_hex: "#00a7ff",
+  primary_hex: "#696aac",
+  accent_hex: "#8587e3",
   plan: "enterprise",
   hume_config_id: null,
   twilio_subaccount_sid: null,
@@ -40,7 +40,7 @@ const DEFAULT_TENANT: Tenant = {
 };
 
 // v3 — bumped to invalidate stale RED brand caches from when DEFAULT_TENANT
-// in api/tenant.ts had primary_hex='#ef4444'. Server is now teal #00e6d3 and
+// in api/tenant.ts had primary_hex='#ef4444'. Server is now teal #696aac and
 // the antimatter Supabase row is also teal; this just clears any client cache
 // still holding red from before the fix.
 const SESSION_KEY = "atom_tenant_v3";

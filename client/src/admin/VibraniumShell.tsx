@@ -255,7 +255,7 @@ function TabVoice() {
                 <td style={{ ...TD_STYLE }}>
                   <code style={{
                     fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL,
-                    background: "rgba(0,230,211,0.06)", borderRadius: 4, padding: "2px 5px",
+                    background: "rgba(105,106,172,0.06)", borderRadius: 4, padding: "2px 5px",
                   }}>{row.param}</code>
                 </td>
               </tr>
@@ -313,9 +313,9 @@ function TabBlackwell() {
         <PanelTitle>Deployment Manifest — Linode GPU Instance</PanelTitle>
         <pre style={{
           fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL,
-          background: "rgba(0,230,211,0.04)", borderRadius: 10,
+          background: "rgba(105,106,172,0.04)", borderRadius: 10,
           padding: 16, margin: 0, overflowX: "auto",
-          border: "1px solid rgba(0,230,211,0.12)", lineHeight: 1.7,
+          border: "1px solid rgba(105,106,172,0.12)", lineHeight: 1.7,
         }}>
           {JSON.stringify(DEPLOYMENT_MANIFEST, null, 2)}
         </pre>
@@ -335,14 +335,14 @@ function TabBlackwell() {
               <div style={{
                 width: 26, height: 26, borderRadius: 8, flexShrink: 0,
                 display: "grid", placeItems: "center",
-                background: "rgba(0,230,211,0.1)", border: "1px solid rgba(0,230,211,0.2)",
+                background: "rgba(105,106,172,0.1)", border: "1px solid rgba(105,106,172,0.2)",
                 color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700,
               }}>{i + 1}</div>
               <span style={{ fontSize: 13, color: ATOM_TEXT, lineHeight: 1.5 }}>
                 {step.replace(/`([^`]+)`/g, (_, code) => code).split("`").map((part, j) =>
                   j % 2 === 0
                     ? <span key={j}>{part}</span>
-                    : <code key={j} style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL, background: "rgba(0,230,211,0.06)", borderRadius: 4, padding: "0 4px" }}>{part}</code>
+                    : <code key={j} style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL, background: "rgba(105,106,172,0.06)", borderRadius: 4, padding: "0 4px" }}>{part}</code>
                 )}
               </span>
             </div>
@@ -516,8 +516,8 @@ function TabMultiChannel() {
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: ATOM_FAINT, marginLeft: 6 }}>last 30d</span>
             </div>
             <button style={{
-              padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(0,230,211,0.24)`,
-              background: "rgba(0,230,211,0.06)", color: ATOM_TEAL,
+              padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(105,106,172,0.24)`,
+              background: "rgba(105,106,172,0.06)", color: ATOM_TEAL,
               fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em",
               textTransform: "uppercase", cursor: "pointer", fontWeight: 700,
             }}>Configure</button>
@@ -658,7 +658,7 @@ function TabCompetitive() {
                       <td key={col.key} style={{
                         ...TD_STYLE,
                         textAlign: "center",
-                        background: isAtom ? "rgba(0,230,211,0.04)" : undefined,
+                        background: isAtom ? "rgba(105,106,172,0.04)" : undefined,
                         color: val === "✅" ? ATOM_GREEN : val === "❌" ? ATOM_DANGER : ATOM_AMBER,
                       }}>{val}</td>
                     );
@@ -677,7 +677,7 @@ function TabCompetitive() {
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis dataKey="name" tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} width={36} />
-            <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(0,230,211,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
+            <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(105,106,172,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
             <Bar dataKey="funding" name="Funding ($M)" radius={[4, 4, 0, 0]}>
               {FUNDING_DATA.map((entry, i) => (
                 <rect key={i} fill={entry.name === "ΔTOM" ? ATOM_TEAL : ATOM_MUTED} />
@@ -785,7 +785,7 @@ function TabForecast() {
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="q" tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} width={42} />
-                <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(0,230,211,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
+                <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(105,106,172,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
                 <Legend wrapperStyle={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: ATOM_MUTED }} />
                 <Line type="monotone" dataKey="conservative" name="Conservative" stroke={LINE_COLORS.conservative} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
                 <Line type="monotone" dataKey="base" name="Base" stroke={LINE_COLORS.base} strokeWidth={2.5} dot={false} style={{ filter: `drop-shadow(0 0 6px ${ATOM_TEAL}88)` }} />
@@ -943,8 +943,8 @@ export default function VibraniumShell() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "10px 16px", borderRadius: 10,
-                background: active ? "rgba(0,230,211,0.08)" : "transparent",
-                border: "1px solid " + (active ? "rgba(0,230,211,0.32)" : "transparent"),
+                background: active ? "rgba(105,106,172,0.08)" : "transparent",
+                border: "1px solid " + (active ? "rgba(105,106,172,0.32)" : "transparent"),
                 color: active ? ATOM_TEAL : ATOM_MUTED,
                 fontFamily: "var(--font-mono)", fontSize: 11,
                 letterSpacing: "0.12em", textTransform: "uppercase",
@@ -1080,7 +1080,7 @@ function VibraniumAdminKeyControl({ currentKey, onSave }: { currentKey: string; 
         style={{
           padding: "8px 12px", borderRadius: 10, minWidth: 280,
           background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(0,230,211,0.32)",
+          border: "1px solid rgba(105,106,172,0.32)",
           color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12,
           outline: "none",
         }}

@@ -81,7 +81,7 @@ function MiniMarkdown({ text }: { text: string }) {
         if (p.startsWith("**") && p.endsWith("**"))
           return <strong key={i} style={{ fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
         if (p.startsWith("`") && p.endsWith("`"))
-          return <code key={i} style={{ fontFamily: "var(--font-mono)", fontSize: "0.86em", padding: "1px 5px", borderRadius: 4, background: "rgba(0,230,211,0.08)", color: ATOM_TEAL }}>{p.slice(1, -1)}</code>;
+          return <code key={i} style={{ fontFamily: "var(--font-mono)", fontSize: "0.86em", padding: "1px 5px", borderRadius: 4, background: "rgba(105,106,172,0.08)", color: ATOM_TEAL }}>{p.slice(1, -1)}</code>;
         if (p.startsWith("*") && p.endsWith("*"))
           return <em key={i}>{p.slice(1, -1)}</em>;
         return <span key={i}>{p}</span>;

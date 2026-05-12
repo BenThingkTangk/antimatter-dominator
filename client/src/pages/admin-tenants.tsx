@@ -39,10 +39,10 @@ const PLAN_TIERS = [
 // V4 brand-coordinated palette — first option is the canonical ΔTOM teal.
 // Tenants can pick from these or use the color pickers for full custom.
 const PRESET_COLORS = [
-  { primary: "#00e6d3", accent: "#00a7ff", label: "ΔTOM teal" },
+  { primary: "#696aac", accent: "#8587e3", label: "ΔTOM teal" },
   { primary: "#0ea5e9", accent: "#b987ff", label: "Cyan / violet" },
   { primary: "#10b981", accent: "#ffd166", label: "Emerald / amber" },
-  { primary: "#a78bfa", accent: "#00e6d3", label: "Violet / teal" },
+  { primary: "#a78bfa", accent: "#696aac", label: "Violet / teal" },
   { primary: "#ff7569", accent: "#ffd166", label: "Coral / amber" },
 ];
 

@@ -1,7 +1,7 @@
 /**
  * Chart primitives for the ΔTOM admin layer.
  *
- * Cohesive look: dark glass surface, teal `#00e6d3` plasma, Cabinet Grotesk
+ * Cohesive look: dark glass surface, teal `#696aac` plasma, Cabinet Grotesk
  * display numerals, JetBrains Mono axis labels, soft glow on actively-rising
  * values. All charts render at the size of their container — no fixed widths.
  *
@@ -19,8 +19,8 @@ import {
 // ──────────────────────────────────────────────────────────────────────────
 // Tokens
 // ──────────────────────────────────────────────────────────────────────────
-export const ATOM_TEAL    = "#00e6d3";
-export const ATOM_TEAL_2  = "#00a7ff";
+export const ATOM_TEAL    = "#696aac";
+export const ATOM_TEAL_2  = "#8587e3";
 export const ATOM_PURPLE  = "#9b7bff";
 export const ATOM_AMBER   = "#ffd166";
 export const ATOM_CORAL   = "#ff7569";
@@ -46,7 +46,7 @@ function ChartTooltip({ active, payload, label, valueFormatter }: any) {
   return (
     <div style={{
       background: "rgba(8,11,14,0.96)",
-      border: "1px solid rgba(0,230,211,0.18)",
+      border: "1px solid rgba(105,106,172,0.18)",
       borderRadius: 8,
       padding: "8px 12px",
       boxShadow: "0 12px 36px -8px rgba(0,0,0,0.7)",
@@ -253,7 +253,7 @@ export function BarStack({ data, xKey = "x", series, layout = "vertical" }:
         <CartesianGrid stroke={ATOM_GRID} vertical={false} />
         <XAxis dataKey={xKey} tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} />
         <YAxis tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} width={36} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(0,230,211,0.04)" }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(105,106,172,0.04)" }} />
         <Legend
           iconSize={8}
           wrapperStyle={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: ATOM_MUTED }}
@@ -334,7 +334,7 @@ export function HeatmapGrid({ data, hours = 24, days = 7, max }:
           const alpha = 0.05 + t * 0.95;
           return (
             <div key={`${day}-${hour}`} title={`Day ${day} ${hour}:00 — ${v}`} style={{
-              background: `rgba(0,230,211,${alpha})`,
+              background: `rgba(105,106,172,${alpha})`,
               borderRadius: 2,
               transition: "background 200ms",
             }} />

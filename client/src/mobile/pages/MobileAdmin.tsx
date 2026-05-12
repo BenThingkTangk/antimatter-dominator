@@ -91,10 +91,10 @@ export default function MobileAdmin() {
             <div className="m-row" style={{ gap: 12 }}>
               <span style={{
                 width: 40, height: 40, borderRadius: 10,
-                background: (t.primary_hex || "rgba(0,230,211,0.1)") + "22",
-                border: `1px solid ${(t.primary_hex || "#00e6d3")}33`,
+                background: (t.primary_hex || "rgba(105,106,172,0.1)") + "22",
+                border: `1px solid ${(t.primary_hex || "#696aac")}33`,
                 display: "grid", placeItems: "center",
-                color: t.primary_hex || "#00e6d3",
+                color: t.primary_hex || "#696aac",
               }}><Building2 size={18} /></span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700 }}>{t.name}</div>

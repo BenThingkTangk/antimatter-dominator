@@ -145,7 +145,7 @@ export default function Team() {
           <div onClick={(e) => e.stopPropagation()} style={{
             width: "100%", maxWidth: 420,
             background: "linear-gradient(180deg, rgba(15,22,27,0.96), rgba(10,16,20,0.96))",
-            border: "1px solid rgba(0,230,211,0.18)", borderRadius: 16, padding: 22,
+            border: "1px solid rgba(105,106,172,0.18)", borderRadius: 16, padding: 22,
           }}>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, marginBottom: 14, color: "var(--color-text)" }}>Invite member</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -178,7 +178,7 @@ export default function Team() {
 }
 
 const inputStyle: React.CSSProperties = { padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)", fontSize: 14, outline: "none", fontFamily: "var(--font-body)" };
-const selectStyle: React.CSSProperties = { padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,230,211,0.32)", color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12, outline: "none", cursor: "pointer" };
+const selectStyle: React.CSSProperties = { padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(105,106,172,0.32)", color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12, outline: "none", cursor: "pointer" };
 const miniSelectStyle: React.CSSProperties = { ...selectStyle, padding: "4px 8px", fontSize: 11 };
 const primaryBtn: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: ATOM_TEAL, color: "#041413", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const ghostBtn: React.CSSProperties = { padding: "10px 16px", borderRadius: 10, background: "transparent", color: ATOM_MUTED, border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 13 };

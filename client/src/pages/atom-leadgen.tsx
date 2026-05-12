@@ -363,7 +363,7 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
                 className="text-[10px] mt-1 text-center truncate w-full"
                 style={{
                   color: isActive
-                    ? "#00e6d3"
+                    ? "#696aac"
                     : isPast
                     ? "var(--color-text-muted)"
                     : "var(--color-text-faint)",
@@ -455,7 +455,7 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
       >
         <div
           className="text-[10px] mb-1 font-medium uppercase tracking-wider"
-          style={{ color: isAtom ? "#00e6d3" : "var(--color-text-muted)" }}
+          style={{ color: isAtom ? "#696aac" : "var(--color-text-muted)" }}
         >
           {isAtom ? "ΔTOM" : "Prospect"} · {formatTime(entry.ts)}
         </div>
@@ -763,7 +763,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
                 style={{
                   background: "rgba(105,106,172,0.2)",
                   border: "1px solid rgba(133,135,227,0.3)",
-                  color: "#00e6d3",
+                  color: "#696aac",
                 }}
               >
                 {sig}
@@ -1012,7 +1012,7 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
             <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
               Intent
             </div>
-            <div className="text-lg font-light" style={{ color: "#00e6d3" }}>
+            <div className="text-lg font-light" style={{ color: "#696aac" }}>
               {Math.round(entry.finalIntent)}
             </div>
           </div>
@@ -1677,7 +1677,7 @@ export default function ATOMLeadGen() {
               border: viewMode === "history"
                 ? "1px solid #696aac"
                 : "1px solid rgba(255,255,255,0.08)",
-              color: viewMode === "history" ? "#00e6d3" : "var(--color-text-muted)",
+              color: viewMode === "history" ? "#696aac" : "var(--color-text-muted)",
               cursor: "pointer",
               boxShadow: viewMode === "history" ? "0 0 12px rgba(105,106,172,0.2)" : "none",
             }}
@@ -1689,7 +1689,7 @@ export default function ATOMLeadGen() {
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                 style={{
                   background: "rgba(105,106,172,0.35)",
-                  color: "#00e6d3",
+                  color: "#696aac",
                 }}
               >
                 {callHistory.length}
@@ -2297,7 +2297,7 @@ export default function ATOMLeadGen() {
                           style={{
                             background: "rgba(105,106,172,0.2)",
                             border: "1px solid rgba(133,135,227,0.3)",
-                            color: "#00e6d3",
+                            color: "#696aac",
                             animation: "slideIn 0.3s ease",
                           }}
                         >
@@ -2338,7 +2338,7 @@ export default function ATOMLeadGen() {
                       </div>
                       <div>
                         <div className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Final Intent</div>
-                        <div className="text-sm font-medium" style={{ color: "#00e6d3" }}>
+                        <div className="text-sm font-medium" style={{ color: "#696aac" }}>
                           {intentLabel(summary.finalIntent)} ({Math.round(summary.finalIntent)})
                         </div>
                       </div>

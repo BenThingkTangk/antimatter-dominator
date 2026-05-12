@@ -169,8 +169,8 @@ export default function SeatCostsShell() {
           {(Object.keys(SEAT_PROFILES) as SeatProfile[]).map((p) => (
             <button key={p} onClick={() => setProfile(p)} style={{
               padding: "8px 14px", borderRadius: 10,
-              background: profile === p ? "rgba(0,230,211,0.12)" : "rgba(255,255,255,0.03)",
-              border: `1px solid ${profile === p ? "rgba(0,230,211,0.36)" : "rgba(255,255,255,0.08)"}`,
+              background: profile === p ? "rgba(105,106,172,0.12)" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${profile === p ? "rgba(105,106,172,0.36)" : "rgba(255,255,255,0.08)"}`,
               color: profile === p ? ATOM_TEAL : ATOM_MUTED,
               fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700,
               cursor: "pointer",
@@ -190,8 +190,8 @@ export default function SeatCostsShell() {
 
       <div style={{
         padding: 14, borderRadius: 12,
-        background: "rgba(0,230,211,0.04)",
-        border: "1px solid rgba(0,230,211,0.18)",
+        background: "rgba(105,106,172,0.04)",
+        border: "1px solid rgba(105,106,172,0.18)",
       }}>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: ATOM_TEAL, marginBottom: 6 }}>
           Current profile assumptions
@@ -377,8 +377,8 @@ export default function SeatCostsShell() {
           {(["monthly","annual"] as const).map((b) => (
             <button key={b} onClick={() => setBilling(b)} style={{
               padding: "6px 14px", borderRadius: 999,
-              background: billing === b ? "rgba(0,230,211,0.16)" : "rgba(255,255,255,0.03)",
-              border: `1px solid ${billing === b ? "rgba(0,230,211,0.4)" : "rgba(255,255,255,0.08)"}`,
+              background: billing === b ? "rgba(105,106,172,0.16)" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${billing === b ? "rgba(105,106,172,0.4)" : "rgba(255,255,255,0.08)"}`,
               color: billing === b ? ATOM_TEAL : ATOM_MUTED,
               fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700,
               cursor: "pointer",
@@ -397,8 +397,8 @@ export default function SeatCostsShell() {
             return (
               <div key={t.id} style={{
                 padding: 16, borderRadius: 14, position: "relative",
-                background: t.highlight ? "linear-gradient(180deg, rgba(0,230,211,0.06), rgba(0,230,211,0.015))" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${t.highlight ? "rgba(0,230,211,0.4)" : "rgba(255,255,255,0.08)"}`,
+                background: t.highlight ? "linear-gradient(180deg, rgba(105,106,172,0.06), rgba(105,106,172,0.015))" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${t.highlight ? "rgba(105,106,172,0.4)" : "rgba(255,255,255,0.08)"}`,
               }}>
                 {t.highlight && (
                   <span style={{

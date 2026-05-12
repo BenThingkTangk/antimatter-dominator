@@ -78,7 +78,7 @@ export default function System() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "6px 12px", borderRadius: 8,
-                background: "rgba(0,230,211,0.08)", border: "1px solid rgba(0,230,211,0.32)",
+                background: "rgba(105,106,172,0.08)", border: "1px solid rgba(105,106,172,0.32)",
                 color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 10,
                 letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700,
                 cursor: "pointer",
@@ -186,8 +186,8 @@ export default function System() {
                 </div>
                 <div style={{
                   padding: 12, borderRadius: 8,
-                  background: "rgba(0,230,211,0.04)",
-                  border: "1px solid rgba(0,230,211,0.16)",
+                  background: "rgba(105,106,172,0.04)",
+                  border: "1px solid rgba(105,106,172,0.16)",
                   marginBottom: 8,
                 }}>
                   <div style={{

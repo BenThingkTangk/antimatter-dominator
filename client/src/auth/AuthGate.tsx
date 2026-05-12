@@ -22,7 +22,7 @@ function AtomSplash() {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ background: "radial-gradient(120% 80% at 50% 32%, #0c2024 0%, #05090c 58%, #03060a 100%)" }}
+      style={{ background: "radial-gradient(120% 80% at 50% 32%, #14141c 0%, #08080c 58%, #020202 100%)" }}
     >
       <svg
         className="atom-mark"

@@ -90,7 +90,7 @@ export default function SignupPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: "radial-gradient(120% 80% at 50% 32%, #0c2024 0%, #05090c 58%, #03060a 100%)" }}
+      style={{ background: "radial-gradient(120% 80% at 50% 32%, #14141c 0%, #08080c 58%, #020202 100%)" }}
     >
       <div className="w-full max-w-lg space-y-8">
         {/* Logo */}

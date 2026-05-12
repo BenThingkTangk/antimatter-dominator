@@ -76,27 +76,28 @@
 :root,
 [data-theme="dark"],
 .dark {
-  --color-bg:            #08090a;
-  --color-bg-2:          #0b0d10;
-  --color-surface:       #101215;
-  --color-surface-2:     #15191d;
-  --color-surface-3:     #1b2026;
-  --color-surface-glass: color-mix(in oklab, #11151a 72%, transparent);
-  --color-border:        rgba(255,255,255,0.08);
-  --color-border-strong: rgba(255,255,255,0.16);
-  --color-divider:       rgba(255,255,255,0.055);
+  /* AntimatterAI surfaces — pure black field with lavender overlays */
+  --color-bg:            #020202;
+  --color-bg-2:          #08080c;
+  --color-surface:       #0d0d12;
+  --color-surface-2:     #14141c;
+  --color-surface-3:     #1c1c28;
+  --color-surface-glass: color-mix(in oklab, #14141c 72%, transparent);
+  --color-border:        rgba(199,200,242,0.10);
+  --color-border-strong: rgba(199,200,242,0.20);
+  --color-divider:       rgba(199,200,242,0.07);
 
-  --color-text:         #edf8f8;
-  --color-text-muted:   #9ca8ad;
-  --color-text-faint:   #5e6970;
-  --color-text-inverse: #061011;
+  --color-text:         #f6f6fd;
+  --color-text-muted:   #a2a3e9;
+  --color-text-faint:   #6a6b8a;
+  --color-text-inverse: #020202;
 
-  /* ATOM teal plasma */
-  --color-primary:             #00e6d3;
-  --color-primary-2:           #00a7ff;
-  --color-primary-dim:         #00a89e;
-  --color-primary-glow:        rgba(0,230,211,0.18);
-  --color-primary-glow-strong: rgba(0,230,211,0.32);
+  /* AntimatterAI lavender plasma */
+  --color-primary:             #696aac;
+  --color-primary-2:           #8587e3;
+  --color-primary-dim:         #3e3f7e;
+  --color-primary-glow:        rgba(105,106,172,0.22);
+  --color-primary-glow-strong: rgba(133,135,227,0.38);
 
   /* Model accents (used for chips / data viz only) */
   --color-claude:  #b987ff;
@@ -113,40 +114,40 @@
   --shadow-glow:        0 0 48px var(--color-primary-glow);
   --shadow-glow-strong: 0 0 80px var(--color-primary-glow-strong);
 
-  /* ─── Tailwind / shadcn HSL bridge tokens ──────────────────────────────── */
-  --background:            240 6% 4%;
-  --foreground:            180 50% 96%;
-  --card:                  240 8% 7%;
-  --card-foreground:       180 50% 96%;
-  --popover:               240 8% 7%;
-  --popover-foreground:    180 50% 96%;
-  --primary:               174 100% 45%;
-  --primary-foreground:    180 100% 4%;
-  --secondary:             240 6% 11%;
-  --secondary-foreground:  180 50% 96%;
-  --muted:                 240 5% 14%;
-  --muted-foreground:      200 6% 64%;
-  --accent:                174 100% 45%;
-  --accent-foreground:     180 100% 4%;
+  /* ─── Tailwind / shadcn HSL bridge tokens (AntimatterAI palette) ───────── */
+  --background:            0 0% 1%;             /* #020202 */
+  --foreground:            240 60% 98%;         /* #f6f6fd */
+  --card:                  240 10% 5%;
+  --card-foreground:       240 60% 98%;
+  --popover:               240 10% 5%;
+  --popover-foreground:    240 60% 98%;
+  --primary:               239 33% 37%;         /* #3e3f7e */
+  --primary-foreground:    240 60% 98%;
+  --secondary:             239 67% 78%;         /* #a2a3e9 */
+  --secondary-foreground:  240 10% 5%;
+  --muted:                 240 8% 12%;
+  --muted-foreground:      239 20% 70%;
+  --accent:                239 28% 54%;         /* #696aac */
+  --accent-foreground:     240 60% 98%;
   --destructive:           346 100% 71%;
   --destructive-foreground: 0 0% 100%;
-  --border:                240 5% 14%;
-  --input:                 240 5% 14%;
-  --ring:                  174 100% 45%;
+  --border:                239 15% 18%;
+  --input:                 239 15% 18%;
+  --ring:                  239 28% 54%;
   --radius:                0.75rem;
 
-  --sidebar:               240 7% 3%;
-  --sidebar-foreground:    180 30% 86%;
-  --sidebar-border:        240 5% 8%;
-  --sidebar-primary:       174 100% 45%;
-  --sidebar-primary-foreground: 180 100% 4%;
-  --sidebar-accent:        240 6% 9%;
-  --sidebar-accent-foreground: 180 50% 96%;
-  --sidebar-ring:          174 100% 45%;
+  --sidebar:               0 0% 1%;
+  --sidebar-foreground:    240 50% 92%;
+  --sidebar-border:        239 15% 12%;
+  --sidebar-primary:       239 28% 54%;
+  --sidebar-primary-foreground: 240 60% 98%;
+  --sidebar-accent:        239 15% 10%;
+  --sidebar-accent-foreground: 240 60% 98%;
+  --sidebar-ring:          239 28% 54%;
 
-  --chart-1: 174 100% 45%; /* teal */
-  --chart-2: 270 100% 76%; /* claude lavender */
-  --chart-3: 142 70% 70%;  /* success green */
+  --chart-1: 239 28% 54%;  /* AntimatterAI accent */
+  --chart-2: 239 67% 78%;  /* secondary lavender */
+  --chart-3: 239 80% 88%;  /* tertiary lavender */
   --chart-4: 45 100% 70%;  /* warning amber */
   --chart-5: 6 100% 71%;   /* hume coral */
 }
@@ -350,31 +351,60 @@
    Buttons (cinematic primary)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* AntimatterAI primary CTA — pill (40px radius), tri-stop lavender gradient,
+   outer glow, inset highlight, shimmer on hover. */
 .atom-btn-primary {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-xl);
+  border-radius: 40px;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-sm);
   letter-spacing: 0.01em;
   word-spacing: 0.05em;
-  color: var(--color-text-inverse);
-  background: linear-gradient(96deg, var(--color-primary), var(--color-primary-2));
-  box-shadow: var(--shadow-md), var(--shadow-glow);
-  border: 1px solid color-mix(in oklab, var(--color-primary) 60%, transparent);
+  color: #f6f6fd;
+  background: linear-gradient(93.92deg, #8587e3 -13.51%, #4c4dac 40.91%, #696aac 113.69%);
+  box-shadow:
+    0 0 10px #696aac,
+    0 1px 0 rgba(255,255,255,0.18) inset,
+    0 -1px 0 rgba(0,0,0,0.25) inset;
+  border: 1px solid rgba(133,135,227,0.55);
+  overflow: hidden;
+  isolation: isolate;
   transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+}
+.atom-btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 35%, rgba(246,246,253,0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.65s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 .atom-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-strong);
-  filter: saturate(1.05);
+  box-shadow:
+    0 0 18px #696aac,
+    0 0 32px rgba(133,135,227,0.45),
+    0 1px 0 rgba(255,255,255,0.22) inset,
+    0 -1px 0 rgba(0,0,0,0.25) inset;
+  filter: saturate(1.08);
 }
+.atom-btn-primary:hover::after { transform: translateX(120%); }
 .atom-btn-primary:active { transform: translateY(0); }
-.atom-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.atom-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.atom-btn-primary > * { position: relative; z-index: 2; }
 
 .atom-btn-ghost {
   display: inline-flex;
@@ -528,22 +558,22 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .atom-mobile-root {
-  --m-bg:          #05090c;
-  --m-bg-2:        #0a1014;
-  --m-surface:     #0f161b;
-  --m-surface-2:   #131b22;
-  --m-border:      rgba(0,230,211,0.12);
-  --m-border-soft: rgba(255,255,255,0.06);
-  --m-divider:     rgba(255,255,255,0.04);
-  --m-teal:        #00e6d3;
-  --m-teal-soft:   rgba(0,230,211,0.18);
-  --m-teal-glow:   rgba(0,230,211,0.42);
+  --m-bg:          #020202;
+  --m-bg-2:        #08080c;
+  --m-surface:     #0d0d12;
+  --m-surface-2:   #14141c;
+  --m-border:      rgba(105,106,172,0.18);
+  --m-border-soft: rgba(199,200,242,0.08);
+  --m-divider:     rgba(199,200,242,0.05);
+  --m-teal:        #696aac;
+  --m-teal-soft:   rgba(105,106,172,0.22);
+  --m-teal-glow:   rgba(133,135,227,0.42);
   --m-warn:        #ff8a65;
   --m-warn-soft:   rgba(255,138,101,0.16);
   --m-danger:      #ff6b8b;
-  --m-text:        #e8f4f3;
-  --m-text-muted:  #7b8b8a;
-  --m-text-faint:  #54625f;
+  --m-text:        #f6f6fd;
+  --m-text-muted:  #a2a3e9;
+  --m-text-faint:  #6a6b8a;
   --m-safe-top:    env(safe-area-inset-top, 0px);
   --m-safe-bot:    env(safe-area-inset-bottom, 0px);
 
@@ -552,7 +582,7 @@
   width: 100vw;
   min-height: 100vh;
   min-height: 100dvh;
-  background: radial-gradient(120% 80% at 50% 0%, #0b1f25 0%, #05090c 55%, #03060a 100%);
+  background: radial-gradient(120% 80% at 50% 0%, #14141c 0%, #08080c 55%, #020202 100%);
   color: var(--m-text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -582,7 +612,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, rgba(5,9,12,0.92) 0%, rgba(5,9,12,0.7) 68%, rgba(5,9,12,0) 100%);
+  background: linear-gradient(180deg, rgba(2,2,2,0.92) 0%, rgba(2,2,2,0.7) 68%, rgba(2,2,2,0) 100%);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   z-index: 20;
@@ -607,7 +637,7 @@
   cursor: pointer;
   transition: transform 140ms var(--ease-out), background 140ms var(--ease-out);
 }
-.atom-mobile-root .m-icon-btn:active { transform: scale(0.92); background: rgba(0,230,211,0.08); color: var(--m-teal); }
+.atom-mobile-root .m-icon-btn:active { transform: scale(0.92); background: rgba(105,106,172,0.08); color: var(--m-teal); }
 
 /* ─── Bottom tab bar ─────────────────────────────────────────────────────── */
 .atom-mobile-root .m-tabbar {
@@ -699,7 +729,7 @@
 .atom-mobile-root .m-pill-live {
   color: var(--m-teal);
   border-color: var(--m-teal-soft);
-  background: rgba(0,230,211,0.06);
+  background: rgba(105,106,172,0.06);
 }
 .atom-mobile-root .m-pill-live .m-pill-dot {
   width: 7px; height: 7px; border-radius: 999px;
@@ -740,7 +770,7 @@
 .atom-mobile-root .m-btn-primary {
   background: var(--m-teal);
   color: #041413;
-  box-shadow: 0 0 40px -6px var(--m-teal-glow), 0 8px 30px -10px rgba(0,230,211,0.45);
+  box-shadow: 0 0 40px -6px var(--m-teal-glow), 0 8px 30px -10px rgba(105,106,172,0.45);
 }
 .atom-mobile-root .m-btn-primary:active { box-shadow: 0 0 20px -4px var(--m-teal-glow); }
 .atom-mobile-root .m-btn-ghost {
@@ -770,7 +800,7 @@
 }
 .atom-mobile-root .m-input:focus {
   border-color: var(--m-teal-soft);
-  box-shadow: 0 0 0 4px rgba(0,230,211,0.08);
+  box-shadow: 0 0 0 4px rgba(105,106,172,0.08);
 }
 .atom-mobile-root .m-input::placeholder { color: var(--m-text-faint); }
 .atom-mobile-root .m-label {
@@ -800,7 +830,7 @@
 .atom-mobile-root .m-boot {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: radial-gradient(120% 80% at 50% 32%, #0c2024 0%, #05090c 58%, #03060a 100%);
+  background: radial-gradient(120% 80% at 50% 32%, #14141c 0%, #08080c 58%, #020202 100%);
   z-index: 50;
   animation: m-boot-out 400ms var(--ease-out) forwards;
   animation-play-state: paused;
@@ -926,7 +956,7 @@
   padding: 0 28px;
   pointer-events: none;
   border-radius: 20px;
-  background: linear-gradient(90deg, rgba(0,230,211,0.12) 0%, transparent 30%, transparent 70%, rgba(255,107,139,0.14) 100%);
+  background: linear-gradient(90deg, rgba(105,106,172,0.12) 0%, transparent 30%, transparent 70%, rgba(255,107,139,0.14) 100%);
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.14em;
@@ -946,7 +976,7 @@
   background: var(--m-teal);
   color: #041413;
   display: grid; place-items: center;
-  box-shadow: 0 0 48px -4px var(--m-teal-glow), 0 18px 44px -12px rgba(0,230,211,0.55);
+  box-shadow: 0 0 48px -4px var(--m-teal-glow), 0 18px 44px -12px rgba(105,106,172,0.55);
   border: none;
   cursor: pointer;
   z-index: 22;
