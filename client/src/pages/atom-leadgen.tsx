@@ -1791,7 +1791,7 @@ export default function ATOMLeadGen() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Phone Number <span style={{ color: "var(--color-error)" }}>*</span>
                   </label>
                   <input
@@ -1811,7 +1811,7 @@ export default function ATOMLeadGen() {
 
                 {/* Contact First Name */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Contact First Name
                   </label>
                   <input
@@ -1831,7 +1831,7 @@ export default function ATOMLeadGen() {
 
                 {/* Contact Last Name */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Contact Last Name
                   </label>
                   <input
@@ -1851,7 +1851,7 @@ export default function ATOMLeadGen() {
 
                 {/* Company */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Company Name
                   </label>
                   <input
@@ -1871,7 +1871,7 @@ export default function ATOMLeadGen() {
 
                 {/* Seller company (becomes "Adam from {{this}}" in the call opener) */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Pitching On Behalf Of <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(seller company)</span>
                   </label>
                   <input
@@ -1894,7 +1894,7 @@ export default function ATOMLeadGen() {
 
                 {/* Pitch topic / talking point (informational — fed to brief, not the opener) */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
                     Pitch Topic <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(optional)</span>
                   </label>
                   <input

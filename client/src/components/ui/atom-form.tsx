@@ -203,7 +203,7 @@ export const AtomChip = React.forwardRef<HTMLButtonElement, AtomChipProps>(
         "text-[11px] px-3 py-1 rounded-full border font-medium transition-all",
         active
           ? ACTIVE_CHIP[accent]
-          : "bg-transparent border-white/10 text-white/60 hover:border-white/20 hover:text-white/80",
+          : "bg-white/[0.02] border-white/15 text-white/70 hover:bg-white/[0.04] hover:border-white/25 hover:text-white/90",
         className
       )}
       {...props}
@@ -368,7 +368,10 @@ export const AtomCta = React.forwardRef<HTMLButtonElement, AtomCtaProps>(
         "w-full h-10 inline-flex items-center justify-center gap-2 rounded-md",
         "text-sm font-medium transition-all",
         CTA_BG[accent],
-        "disabled:opacity-40 disabled:cursor-not-allowed",
+        // Keep the accent fill visible in disabled state — matches the
+        // April 15 baseline where a disabled CTA still reads as a clear
+        // accent-color pill, just dimmer. Avoid going below ~60% opacity.
+        "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[unset]",
         className
       )}
       {...props}
