@@ -20,6 +20,15 @@ import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { ATOM_PRODUCTS_INCL_ALL, resolveProductLabel, isCustom } from "@/lib/atom-products";
+import {
+  AtomConfigCard,
+  AtomField,
+  AtomChip,
+  AtomChipGroup,
+  AtomChoiceRow,
+  AtomCta,
+  ATOM_FIELD_CLASS,
+} from "@/components/ui/atom-form";
 import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 
 // ─── HVT Flag Button ───────────────────────────────────────────────────────────
@@ -562,14 +571,11 @@ export default function MarketIntent() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-[11px] font-semibold text-emerald-300 uppercase tracking-[0.18em]">Analysis Parameters</h2>
-
+            <AtomConfigCard eyebrow="Analysis Parameters">
               {/* Product Focus */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product Focus</label>
+              <AtomField label="Product Focus">
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
+                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-product">
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -582,109 +588,94 @@ export default function MarketIntent() {
                     placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className="mt-2 bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
-                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
+                    className={`mt-2 ${ATOM_FIELD_CLASS}`}
                     data-testid="input-custom-product"
                   />
                 )}
-              </div>
+              </AtomField>
 
               {/* Industry */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry</label>
+              <AtomField label="Industry">
                 <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
-                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-industry">
+                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-industry">
                     <SelectValue placeholder="All industries" />
                   </SelectTrigger>
                   <SelectContent>
                     {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              </AtomField>
 
               {/* Region */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Region</label>
+              <AtomField label="Region">
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-region">
+                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-region">
                     <SelectValue placeholder="Select region" />
                   </SelectTrigger>
                   <SelectContent>
                     {REGIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              </AtomField>
 
               {/* Analysis Type */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Analysis Type</label>
+              <AtomField label="Analysis Type">
                 <div className="space-y-1">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
-                    const isActive = analysisType === at.value;
                     return (
-                      <button key={at.value} onClick={() => setAnalysisType(at.value)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all border ${
-                          isActive
-                            ? "bg-emerald-500/10 border-emerald-500/40 text-white"
-                            : "bg-[#161618] border-white/[0.14] text-white/85 hover:border-emerald-500/45 hover:text-white"
-                        }`}
-                        data-testid={`button-analysis-type-${at.value}`}>
-                        <span className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
-                          isActive ? "bg-emerald-500/20 border-emerald-500/40" : "bg-white/[0.04] border-white/[0.08]"
-                        }`}>
-                          <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-300" : "text-white/60"}`} />
-                        </span>
-                        <div>
-                          <p className="text-xs font-medium">{at.value}</p>
-                          <p className="text-[10px] text-white/55">{at.desc}</p>
-                        </div>
-                      </button>
+                      <AtomChoiceRow
+                        key={at.value}
+                        active={analysisType === at.value}
+                        accent="emerald"
+                        icon={<Icon className="w-3.5 h-3.5" />}
+                        title={at.value}
+                        description={at.desc}
+                        onClick={() => setAnalysisType(at.value)}
+                        data-testid={`button-analysis-type-${at.value}`}
+                      />
                     );
                   })}
                 </div>
-              </div>
+              </AtomField>
 
               {/* Time Horizon */}
-              <div>
-                <label className="text-[11px] font-medium text-emerald-300 mb-1.5 block uppercase tracking-[0.18em]">Time Horizon</label>
-                <div className="flex gap-1.5">
+              <AtomField label="Time Horizon">
+                <AtomChipGroup>
                   {TIME_HORIZONS.map(th => (
-                    <button key={th.value} onClick={() => setTimeHorizon(th.value)}
-                      className={`flex-1 text-[11px] py-1.5 rounded-lg border font-medium transition-all ${
-                        timeHorizon === th.value
-                          ? "bg-emerald-500/15 border-emerald-500/45 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.25)]"
-                          : "bg-[#161618] border-white/[0.14] text-white/70 hover:text-white hover:border-emerald-500/45"
-                      }`}
+                    <AtomChip
+                      key={th.value}
+                      active={timeHorizon === th.value}
+                      accent="emerald"
+                      onClick={() => setTimeHorizon(th.value)}
                       data-testid={`button-time-horizon-${th.value}`}>
                       {th.label}
-                    </button>
+                    </AtomChip>
                   ))}
-                </div>
-              </div>
+                </AtomChipGroup>
+              </AtomField>
 
               {/* Custom Query */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
+              <AtomField label="Custom Query" optional>
                 <Textarea
                   placeholder="e.g. Focus on HIPAA compliance spending trends in mid-market hospitals..."
                   value={customQuery}
                   onChange={e => setCustomQuery(e.target.value)}
-                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[60px] resize-none"
+                  className={`${ATOM_FIELD_CLASS} min-h-[60px] resize-none`}
                   data-testid="textarea-custom-query"
                 />
-              </div>
+              </AtomField>
 
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_28px_rgba(16,185,129,0.45)] border border-emerald-300/50 disabled:bg-emerald-500/35 disabled:text-emerald-100/70 disabled:opacity-100 transition-all"
+              <AtomCta
+                accent="emerald"
                 onClick={() => analyzeIntent.mutate()}
                 disabled={analyzeIntent.isPending}
                 data-testid="button-generate-intel">
                 {analyzeIntent.isPending
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning signals...</>
-                  : <><Brain className="w-4 h-4 mr-2" />Generate Intelligence</>}
-              </Button>
-            </div>
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning signals…</>
+                  : <><Brain className="w-4 h-4" />Generate Intelligence</>}
+              </AtomCta>
+            </AtomConfigCard>
           </div>
 
           {/* Output Panel */}

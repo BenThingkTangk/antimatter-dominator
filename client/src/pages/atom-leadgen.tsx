@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useProductIntel } from "@/hooks/use-product-intel";
 import { useToast } from "@/hooks/use-toast";
 import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair, Play, Pause, Download, Mic } from "lucide-react";
+import { AtomCta } from "@/components/ui/atom-form";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 
@@ -1959,29 +1960,18 @@ export default function ATOMLeadGen() {
               {/* CTA row */}
               {callStatus === "idle" || callStatus === "dialing" ? (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button
+                  <AtomCta
+                    accent="emerald"
                     onClick={handleDial}
                     disabled={callStatus === "dialing"}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm transition-all"
-                    style={{
-                      background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",
-                      color: "var(--color-text-inverse)",
-                      boxShadow: "0 0 18px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.25)",
-                      border: "1px solid color-mix(in oklab, var(--color-primary) 60%, transparent)",
-                      opacity: callStatus === "dialing" ? 0.7 : 1,
-                      cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
-                      fontFamily: "var(--font-display)",
-                      fontWeight: 700,
-                      letterSpacing: "0.01em",       // positive tracking for short labels
-                      wordSpacing: "0.05em",         // breathing room between Dial / with / ATOM
-                    }}
+                    className="w-full sm:w-auto px-6"
                   >
                     {callStatus === "dialing" ? (
                       <><Loader2 size={16} className="animate-spin" />Connecting…</>
                     ) : (
                       <><PhoneCall size={16} />Dial with ΔTOM</>
                     )}
-                  </button>
+                  </AtomCta>
                   <HVTFlagButton companyName={companyName} contactName={contactName} phone={phone} />
                 </div>
               ) : callStatus === "active" ? (

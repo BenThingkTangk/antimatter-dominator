@@ -3,6 +3,7 @@ import { Markdown } from "@/mobile/Markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { AtomCta } from "@/components/ui/atom-form";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Eye,
@@ -445,13 +446,13 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
           <p className="text-[15px] font-semibold text-[#f6f6fd]">No active deals.</p>
           <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ΔTOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
         </div>
-        <button
+        <AtomCta
+          accent="teal"
           onClick={() => onTabChange("pipeline")}
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-[12px] font-medium transition-all hover:scale-[1.02]"
-          style={CRIMSON_BTN_STYLE}
+          className="w-auto px-4"
         >
           <Plus size={13} /> Add First Deal
-        </button>
+        </AtomCta>
       </div>
     );
   }

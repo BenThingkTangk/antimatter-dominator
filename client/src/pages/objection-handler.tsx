@@ -19,6 +19,14 @@ import { useLocation } from "wouter";
 import type { Product } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "@/lib/atom-products";
+import {
+  AtomConfigCard,
+  AtomField,
+  AtomChip,
+  AtomChipGroup,
+  AtomCta,
+  ATOM_FIELD_CLASS,
+} from "@/components/ui/atom-form";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -447,14 +455,11 @@ export default function ObjectionHandler() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
-              <h2 className="text-[11px] font-semibold text-amber-300 uppercase tracking-[0.18em]">Objection Details</h2>
-
+            <AtomConfigCard eyebrow="Objection Details">
               {/* Product */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product</label>
+              <AtomField label="Product">
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
+                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,66 +472,60 @@ export default function ObjectionHandler() {
                     placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className="mt-2 bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
-                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
+                    className={`mt-2 ${ATOM_FIELD_CLASS}`}
                     data-testid="input-custom-product"
                   />
                 )}
-              </div>
+              </AtomField>
 
               {/* Objection */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">The Objection</label>
+              <AtomField label="The Objection">
                 <Textarea
                   placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
                   value={objectionText}
                   onChange={e => setObjectionText(e.target.value)}
-                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[100px] resize-none"
+                  className={`${ATOM_FIELD_CLASS} min-h-[100px] resize-none`}
                   data-testid="textarea-objection"
                 />
-              </div>
+              </AtomField>
 
               {/* Quick Select */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Quick Select</label>
-                <div className="flex flex-wrap gap-1.5">
+              <AtomField label="Quick Select">
+                <AtomChipGroup>
                   {QUICK_OBJECTIONS.map(obj => (
-                    <button key={obj}
+                    <AtomChip
+                      key={obj}
+                      active={objectionText === obj}
+                      accent="amber"
                       onClick={() => setObjectionText(obj)}
-                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${
-                        objectionText === obj
-                          ? "bg-amber-500/15 border-amber-500/45 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
-                          : "bg-[#161618] border-white/[0.14] text-white/75 hover:text-white hover:border-amber-500/45 hover:bg-amber-500/8"
-                      }`}
                       data-testid={`button-quick-objection-${obj.slice(0, 10)}`}>
                       {obj}
-                    </button>
+                    </AtomChip>
                   ))}
-                </div>
-              </div>
+                </AtomChipGroup>
+              </AtomField>
 
               {/* Context */}
-              <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Context <span className="text-white/50 normal-case">(optional)</span></label>
+              <AtomField label="Context" optional>
                 <Textarea
                   placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
                   value={context}
                   onChange={e => setContext(e.target.value)}
-                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[60px] resize-none"
+                  className={`${ATOM_FIELD_CLASS} min-h-[60px] resize-none`}
                   data-testid="textarea-context"
                 />
-              </div>
+              </AtomField>
 
-              <Button
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_28px_rgba(245,158,11,0.45)] border border-amber-300/50 disabled:bg-amber-500/35 disabled:text-amber-100/70 disabled:opacity-100 transition-all"
+              <AtomCta
+                accent="amber"
                 onClick={() => handleObjection.mutate()}
                 disabled={!selectedProduct || !objectionText || handleObjection.isPending}
                 data-testid="button-handle-objection">
                 {handleObjection.isPending
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Crafting response...</>
-                  : <><Zap className="w-4 h-4 mr-2" />Destroy This Objection</>}
-              </Button>
-            </div>
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Crafting response…</>
+                  : <><Zap className="w-4 h-4" />Destroy This Objection</>}
+              </AtomCta>
+            </AtomConfigCard>
           </div>
 
           {/* Output Panel */}

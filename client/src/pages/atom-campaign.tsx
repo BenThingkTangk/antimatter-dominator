@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AtomChip, AtomChipGroup, AtomCta } from "@/components/ui/atom-form";
 import {
   Select,
   SelectContent,
@@ -595,27 +596,21 @@ function AdvancedTargetingPanel({
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-violet-300 flex items-center gap-1">
+        <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider flex items-center gap-1">
           <User className="w-3 h-3" />Job Titles
         </label>
-        <div className="flex flex-wrap gap-1.5">
-          {JOB_TITLE_PRESETS.map((t) => {
-            const active = filters.jobTitles.includes(t);
-            return (
-              <button
-                key={t}
-                onClick={() => toggleTitle(t)}
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
-                  active
-                    ? "bg-violet-500/15 text-violet-300 border-violet-500/45 shadow-[0_0_10px_rgba(139,92,246,0.25)]"
-                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-violet-500/45 hover:text-white hover:bg-violet-500/8"
-                }`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
+        <AtomChipGroup>
+          {JOB_TITLE_PRESETS.map((t) => (
+            <AtomChip
+              key={t}
+              active={filters.jobTitles.includes(t)}
+              accent="violet"
+              onClick={() => toggleTitle(t)}
+            >
+              {t}
+            </AtomChip>
+          ))}
+        </AtomChipGroup>
       </div>
     </div>
   );
@@ -1480,18 +1475,18 @@ export default function AtomCampaign() {
                 <p className="text-xs text-white/40">
                   {brief.length} chars · the richer your brief, the better ΔTOM can target
                 </p>
-                <Button
+                <AtomCta
+                  accent="violet"
                   onClick={buildTargets}
                   disabled={!brief.trim() || isBuilding}
-                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 shadow-[0_0_24px_rgba(139,92,246,0.45)] border border-violet-400/50 disabled:bg-violet-600/40 disabled:text-white/70 disabled:opacity-100 transition-all"
-                  style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
+                  className="w-auto px-6"
                 >
                   {isBuilding ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Building...</>
+                    <><Loader2 className="w-4 h-4 animate-spin" />Building…</>
                   ) : (
                     <><Zap className="w-4 h-4" />Build Campaign</>
                   )}
-                </Button>
+                </AtomCta>
               </div>
             </div>
 

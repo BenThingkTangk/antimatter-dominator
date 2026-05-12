@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { AtomCta } from "@/components/ui/atom-form";
 import {
   Brain,
   Search,
@@ -1043,16 +1044,16 @@ export default function CompanyIntelligence() {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-white/15 font-mono pointer-events-none">REQUIRED</span>
             </div>
-            <Button
+            <AtomCta
+              accent="indigo"
               onClick={handleBuild}
               disabled={isLoading || !company.trim() || !website.trim()}
-              className="gap-2 px-8 py-3 rounded-full font-semibold text-[14px] transition-all disabled:opacity-50 hover:scale-[1.02]"
-              style={{ background: "linear-gradient(93.92deg, #818cf8 -13.51%, #6366f1 40.91%, #4f46e5 113.69%)", color: "#fff", boxShadow: "0 0 15px rgba(99,102,241,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
+              className="w-auto px-8"
               data-testid="button-build-warbook"
             >
               {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
-              {isLoading ? "Building..." : "Build WarBook"}
-            </Button>
+              {isLoading ? "Building…" : "Build WarBook"}
+            </AtomCta>
           </div>
 
           {/* Quick suggestions — properly outlined chips */}

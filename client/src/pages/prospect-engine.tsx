@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { AtomChip, AtomChipGroup, AtomCta } from "@/components/ui/atom-form";
 import {
   Radar,
   Loader2,
@@ -1048,42 +1049,31 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-teal-300 flex items-center gap-1">
+        <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider flex items-center gap-1">
           <User className="w-3 h-3" />Target Job Titles
         </label>
-        <div className="flex flex-wrap gap-1.5">
-          {JOB_TITLES.map((t) => {
-            const active = filters.jobTitles.includes(t);
-            return (
-              <button
-                key={t}
-                onClick={() => toggleTitle(t)}
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
-                  active
-                    ? "bg-teal-500/15 text-teal-300 border-teal-500/45 shadow-[0_0_10px_rgba(20,184,166,0.25)]"
-                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-teal-500/45 hover:text-white hover:bg-teal-500/8"
-                }`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
+        <AtomChipGroup>
+          {JOB_TITLES.map((t) => (
+            <AtomChip
+              key={t}
+              active={filters.jobTitles.includes(t)}
+              accent="cyan"
+              onClick={() => toggleTitle(t)}
+            >
+              {t}
+            </AtomChip>
+          ))}
+        </AtomChipGroup>
       </div>
 
       {/* Scan Button */}
-      <Button
-        onClick={onScan}
-        disabled={isScanning}
-        className="w-full h-12 text-sm font-semibold text-white gap-2 transition-all rounded-full hover:scale-[1.01]"
-        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", background: "linear-gradient(93.92deg, #22d3ee -13.51%, #06b6d4 40.91%, #0891b2 113.69%)", boxShadow: "0 0 20px rgba(6,182,212,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
-      >
+      <AtomCta accent="cyan" onClick={onScan} disabled={isScanning}>
         {isScanning ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence...</>
+          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence…</>
         ) : (
           <><Radar className="w-4 h-4" />Scan for Prospects</>
         )}
-      </Button>
+      </AtomCta>
     </div>
   );
 }
