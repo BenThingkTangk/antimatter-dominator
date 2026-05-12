@@ -331,7 +331,7 @@ function Gauge({ value, label, color }: { value: number; label: string; color: s
           <span className="text-[9px] text-white/30 font-mono">/100</span>
         </div>
       </div>
-      <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">{label}</p>
+      <p className="atom-field-label">{label}</p>
     </div>
   );
 }

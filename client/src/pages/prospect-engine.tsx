@@ -1072,18 +1072,13 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       </div>
 
       {/* Scan Button */}
-      <Button
-        onClick={onScan}
-        disabled={isScanning}
-        className="w-full h-12 text-sm font-semibold text-white gap-2 transition-all rounded-full hover:scale-[1.01]"
-        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", background: "linear-gradient(93.92deg, #22d3ee -13.51%, #06b6d4 40.91%, #0891b2 113.69%)", boxShadow: "0 0 20px rgba(6,182,212,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
-      >
+      <button onClick={onScan} disabled={isScanning} className="atom-cta">
         {isScanning ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence...</>
+          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence…</>
         ) : (
           <><Radar className="w-4 h-4" />Scan for Prospects</>
         )}
-      </Button>
+      </button>
     </div>
   );
 }

@@ -567,7 +567,7 @@ export default function MarketIntent() {
 
               {/* Product Focus */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product Focus</label>
+                <label className="atom-field-label">Product Focus</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select product" />
@@ -591,7 +591,7 @@ export default function MarketIntent() {
 
               {/* Industry */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry</label>
+                <label className="atom-field-label">Industry</label>
                 <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-industry">
                     <SelectValue placeholder="All industries" />
@@ -604,7 +604,7 @@ export default function MarketIntent() {
 
               {/* Region */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Region</label>
+                <label className="atom-field-label">Region</label>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-region">
                     <SelectValue placeholder="Select region" />
@@ -617,7 +617,7 @@ export default function MarketIntent() {
 
               {/* Analysis Type */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Analysis Type</label>
+                <label className="atom-field-label">Analysis Type</label>
                 <div className="space-y-1">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
@@ -665,7 +665,7 @@ export default function MarketIntent() {
 
               {/* Custom Query */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="atom-field-label">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. Focus on HIPAA compliance spending trends in mid-market hospitals..."
                   value={customQuery}
@@ -675,15 +675,15 @@ export default function MarketIntent() {
                 />
               </div>
 
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_28px_rgba(16,185,129,0.45)] border border-emerald-300/50 disabled:bg-emerald-500/35 disabled:text-emerald-100/70 disabled:opacity-100 transition-all"
+              <button
+                className="atom-cta"
                 onClick={() => analyzeIntent.mutate()}
                 disabled={analyzeIntent.isPending}
                 data-testid="button-generate-intel">
                 {analyzeIntent.isPending
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning signals...</>
-                  : <><Brain className="w-4 h-4 mr-2" />Generate Intelligence</>}
-              </Button>
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning signals…</>
+                  : <><Brain className="w-4 h-4" />Generate Intelligence</>}
+              </button>
             </div>
           </div>
 

@@ -1115,3 +1115,235 @@
   min-height: 40px;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AntimatterAI shared form system
+   Reusable classes that ALL ATOM modules use so every screen renders identically.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Standard config card surface (the container that wraps a form column) */
+.atom-config-card {
+  border-radius: 14px;
+  border: 1px solid rgba(199, 200, 242, 0.12);
+  background: linear-gradient(180deg, #0d0d12 0%, #0a0a0f 100%);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset,
+              0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Section eyebrow (CONFIGURATION, etc.) */
+.atom-section-eyebrow {
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a2a3e9;
+  margin: 0;
+}
+
+/* Field label (PRODUCT, COMPANY NAME, etc.) */
+.atom-field-label {
+  display: block;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 246, 253, 0.72);
+  margin: 0 0 8px 0;
+}
+.atom-field-label .atom-optional {
+  margin-left: 6px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: rgba(246, 246, 253, 0.4);
+}
+
+/* Field group spacing (label + control) */
+.atom-field-group { display: flex; flex-direction: column; }
+
+/* Tone / persona / generic pill chip (single-select group) */
+.atom-tone-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(199, 200, 242, 0.18);
+  background: #14141c;
+  color: rgba(246, 246, 253, 0.82);
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease;
+}
+.atom-tone-chip:hover {
+  border-color: rgba(133, 135, 227, 0.55);
+  color: #f6f6fd;
+}
+.atom-tone-chip[data-active="true"],
+.atom-tone-chip.is-active {
+  border-color: rgba(133, 135, 227, 0.85);
+  background: linear-gradient(180deg, rgba(105, 106, 172, 0.32) 0%, rgba(62, 63, 126, 0.45) 100%);
+  color: #f6f6fd;
+  box-shadow: 0 0 0 1px rgba(133, 135, 227, 0.35),
+              0 0 18px rgba(105, 106, 172, 0.32);
+}
+.atom-tone-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Tone chip group wrap */
+.atom-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Choice card row (e.g. Pitch Type list with icon + title + description) */
+.atom-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(199, 200, 242, 0.14);
+  background: #14141c;
+  color: rgba(246, 246, 253, 0.85);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease;
+}
+.atom-choice-row:hover {
+  border-color: rgba(133, 135, 227, 0.5);
+  color: #f6f6fd;
+}
+.atom-choice-row[data-active="true"],
+.atom-choice-row.is-active {
+  border-color: rgba(133, 135, 227, 0.78);
+  background: linear-gradient(180deg, rgba(105, 106, 172, 0.18) 0%, rgba(62, 63, 126, 0.22) 100%);
+  color: #f6f6fd;
+  box-shadow: 0 0 0 1px rgba(133, 135, 227, 0.28),
+              0 0 16px rgba(105, 106, 172, 0.18);
+}
+.atom-choice-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(199, 200, 242, 0.12);
+  background: rgba(199, 200, 242, 0.05);
+  flex-shrink: 0;
+}
+.atom-choice-row[data-active="true"] .atom-choice-row__icon,
+.atom-choice-row.is-active .atom-choice-row__icon {
+  border-color: rgba(133, 135, 227, 0.55);
+  background: rgba(105, 106, 172, 0.22);
+}
+.atom-choice-row__title {
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f6f6fd;
+  line-height: 1.2;
+  margin: 0;
+}
+.atom-choice-row__desc {
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: rgba(246, 246, 253, 0.5);
+  line-height: 1.3;
+  margin: 2px 0 0 0;
+}
+
+/* Primary CTA — bright, vivid lavender, premium feel.
+   Use class .atom-cta on the Button component. */
+.atom-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 9999px;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  background: linear-gradient(93.92deg, #8587e3 -13.51%, #4c4dac 40.91%, #696aac 113.69%);
+  border: 1px solid rgba(165, 167, 255, 0.55);
+  box-shadow:
+    0 0 14px rgba(105, 106, 172, 0.55),
+    0 0 36px rgba(133, 135, 227, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.atom-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 35%, rgba(246, 246, 253, 0.38) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.atom-cta > * { position: relative; z-index: 2; }
+.atom-cta:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+  box-shadow:
+    0 0 22px rgba(133, 135, 227, 0.7),
+    0 0 48px rgba(133, 135, 227, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.26) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+}
+.atom-cta:hover::after { transform: translateX(120%); }
+.atom-cta:active { transform: translateY(0); }
+.atom-cta:disabled,
+.atom-cta[data-disabled="true"] {
+  cursor: not-allowed;
+  background: linear-gradient(93.92deg, rgba(133, 135, 227, 0.5) -13.51%, rgba(76, 77, 172, 0.5) 40.91%, rgba(105, 106, 172, 0.5) 113.69%);
+  box-shadow:
+    0 0 8px rgba(105, 106, 172, 0.25),
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.25) inset;
+  color: rgba(255, 255, 255, 0.7);
+  filter: saturate(0.85);
+}
+
+/* Helper text under a field */
+.atom-helper-text {
+  display: block;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: rgba(246, 246, 253, 0.45);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+

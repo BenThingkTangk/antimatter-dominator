@@ -336,7 +336,7 @@ function TruthGauge({ score }: { score: number }) {
           <span className="text-[10px] text-white/30 font-mono">/100</span>
         </div>
       </div>
-      <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Truth Score™</p>
+      <p className="atom-field-label">Truth Score™</p>
     </div>
   );
 }

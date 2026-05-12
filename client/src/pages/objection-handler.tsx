@@ -452,7 +452,7 @@ export default function ObjectionHandler() {
 
               {/* Product */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product</label>
+                <label className="atom-field-label">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
@@ -476,7 +476,7 @@ export default function ObjectionHandler() {
 
               {/* Objection */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">The Objection</label>
+                <label className="atom-field-label">The Objection</label>
                 <Textarea
                   placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
                   value={objectionText}
@@ -488,7 +488,7 @@ export default function ObjectionHandler() {
 
               {/* Quick Select */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Quick Select</label>
+                <label className="atom-field-label">Quick Select</label>
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_OBJECTIONS.map(obj => (
                     <button key={obj}
@@ -507,7 +507,7 @@ export default function ObjectionHandler() {
 
               {/* Context */}
               <div>
-                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Context <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="atom-field-label">Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
                   value={context}
@@ -517,15 +517,15 @@ export default function ObjectionHandler() {
                 />
               </div>
 
-              <Button
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_28px_rgba(245,158,11,0.45)] border border-amber-300/50 disabled:bg-amber-500/35 disabled:text-amber-100/70 disabled:opacity-100 transition-all"
+              <button
+                className="atom-cta"
                 onClick={() => handleObjection.mutate()}
                 disabled={!selectedProduct || !objectionText || handleObjection.isPending}
                 data-testid="button-handle-objection">
                 {handleObjection.isPending
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Crafting response...</>
-                  : <><Zap className="w-4 h-4 mr-2" />Destroy This Objection</>}
-              </Button>
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Crafting response…</>
+                  : <><Zap className="w-4 h-4" />Destroy This Objection</>}
+              </button>
             </div>
           </div>
 
