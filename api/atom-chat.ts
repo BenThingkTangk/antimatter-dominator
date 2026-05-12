@@ -248,29 +248,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const tenantSlug = incomingTenantSlug ? String(incomingTenantSlug) : null;
 
   // ─── Embed user message + recall similar past turns ─────────────────────────
+  // M2 optimization: race embed → recall against a 1.5s budget so the chat
+  // reply never waits more than 1.5s on memory context. If memory is slow,
+  // we ship the reply WITHOUT recalled context rather than block streaming.
   // The chat_memory.embedding column is vector(1024) so we only persist
-  // matching-dim embeddings. Perplexity pplx-embed-v1 = 1024d → fits.
-  // OpenAI text-embedding-3-small = 1536d → doesn't fit; we still use it for
-  // the immediate reply context, but skip persisting until we migrate columns.
+  // matching-dim embeddings.
   let userEmbedding: number[] | null = null;
   let userEmbeddingFitsMemory = false;
   let recalled: Array<{ role: string; content: string; similarity: number }> = [];
-  try {
+
+  const MEMORY_BUDGET_MS = 1500;
+  const memoryPromise = (async () => {
     const e = await embed(message);
-    if (e.embeddings.length > 0) {
-      userEmbedding = e.embeddings[0];
-      userEmbeddingFitsMemory = userEmbedding.length === 1024;
-      if (userEmbeddingFitsMemory) {
-        recalled = await recallSimilar({
-          queryEmbedding: userEmbedding,
-          tenantSlug,
-          matchCount: 5,
-        });
-      }
-    }
-  } catch (e: any) {
-    console.warn("[atom-chat] embed failed:", e?.message);
-  }
+    if (!e.embeddings.length) return;
+    userEmbedding = e.embeddings[0];
+    userEmbeddingFitsMemory = userEmbedding.length === 1024;
+    if (!userEmbeddingFitsMemory) return;
+    recalled = await recallSimilar({
+      queryEmbedding: userEmbedding,
+      tenantSlug,
+      matchCount: 5,
+    });
+  })().catch((e: any) => {
+    console.warn("[atom-chat] embed+recall failed:", e?.message);
+  });
+
+  await Promise.race([
+    memoryPromise,
+    new Promise((resolve) => setTimeout(resolve, MEMORY_BUDGET_MS)),
+  ]);
+  // memoryPromise keeps running in background to populate userEmbedding for
+  // persistence after the stream completes.
 
   const systemPrompt = SYSTEM_PROMPTS[context] || SYSTEM_PROMPTS.general;
   const model = pickModel(context);
@@ -303,15 +311,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     { role: "user", content: message },
   ];
 
+  // Should we stream? Client opts in via { stream: true }.
+  // Default: stream when client accepts text/event-stream (modern UI).
+  const wantsStream =
+    req.body?.stream === true ||
+    String(req.headers.accept || "").includes("text/event-stream");
+
   try {
     const t0 = Date.now();
     const body: any = {
       model,
       messages,
-      // Real-time first; recency >= "month" lets the assistant include
-      // last-30-day news, which is usually what a sales op cares about.
-      search_recency_filter: context === "warbook" || context === "market" ? "month" : undefined,
-      search_context_size: context === "warbook" || context === "market" ? "high" : "low",
+      stream: wantsStream,
+      search_recency_filter:
+        context === "warbook" || context === "market" ? "month" : undefined,
+      search_context_size:
+        context === "warbook" || context === "market" ? "high" : "low",
       temperature: 0.4,
       max_tokens: 800,
       return_citations: true,
@@ -325,7 +340,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(wantsStream ? 60000 : 20000),
     });
 
     if (!r.ok) {
@@ -337,26 +352,151 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // ─── STREAMING PATH ─────────────────────────────────────────────────────
+    if (wantsStream && r.body) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no"); // disable nginx-style buffering
+      // Emit the session meta envelope first so the client can hook up history.
+      res.write(
+        `event: meta\ndata: ${JSON.stringify({
+          sessionId,
+          model,
+          memoryUsed: recalled.length,
+        })}\n\n`
+      );
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let assembled = "";
+      let lastCitations: any[] = [];
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          // Perplexity returns OpenAI-compatible `data: {…}\n\n` SSE frames.
+          let nl;
+          while ((nl = buf.indexOf("\n\n")) !== -1) {
+            const frame = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 2);
+            if (!frame.startsWith("data:")) continue;
+            const payload = frame.slice(5).trim();
+            if (payload === "[DONE]") continue;
+            try {
+              const j = JSON.parse(payload);
+              const delta: string = j?.choices?.[0]?.delta?.content || "";
+              if (delta) {
+                assembled += delta;
+                res.write(
+                  `event: token\ndata: ${JSON.stringify({ delta })}\n\n`
+                );
+              }
+              if (Array.isArray(j?.citations) && j.citations.length) {
+                lastCitations = j.citations;
+              }
+            } catch {
+              // skip malformed frame
+            }
+          }
+        }
+      } catch (e: any) {
+        res.write(
+          `event: error\ndata: ${JSON.stringify({
+            error: e?.message || "stream_failed",
+          })}\n\n`
+        );
+      }
+
+      // Normalize citations same way as the non-stream path.
+      const citations = (lastCitations as string[]).map((url, i) => {
+        try {
+          const u = new URL(url);
+          return {
+            title:
+              u.hostname.replace(/^www\./, "") +
+              (u.pathname !== "/" ? u.pathname.slice(0, 40) : ""),
+            url,
+          };
+        } catch {
+          return { title: `Source ${i + 1}`, url };
+        }
+      });
+      res.write(
+        `event: done\ndata: ${JSON.stringify({
+          citations,
+          latency_ms: Date.now() - t0,
+        })}\n\n`
+      );
+      res.end();
+
+      // Background: persist memory after the stream is closed.
+      void (async () => {
+        try {
+          await memoryPromise;
+        } catch {}
+        if (userEmbedding && userEmbeddingFitsMemory) {
+          await persistTurn({
+            tenantSlug,
+            sessionId,
+            context,
+            role: "user",
+            content: message,
+            embedding: userEmbedding,
+          });
+        }
+        if (assembled) {
+          try {
+            const replyEmbed = await embed(assembled.slice(0, 4000));
+            const v = replyEmbed.embeddings[0];
+            if (v && v.length === 1024) {
+              await persistTurn({
+                tenantSlug,
+                sessionId,
+                context,
+                role: "assistant",
+                content: assembled,
+                embedding: v,
+              });
+            }
+          } catch (e: any) {
+            console.warn("[atom-chat] reply embed failed:", e?.message);
+          }
+        }
+      })();
+      return;
+    }
+
+    // ─── NON-STREAMING PATH (legacy clients) ────────────────────────────────
     const data: any = await r.json();
     const content: string = data?.choices?.[0]?.message?.content || "";
     const rawCitations: string[] = data?.citations || [];
 
-    // Normalize citations into { title, url }. Perplexity returns URLs as a
-    // flat array; we infer title from hostname for now.
     const citations = rawCitations.map((url: string, i: number) => {
       try {
         const u = new URL(url);
-        return { title: u.hostname.replace(/^www\./, "") + (u.pathname !== "/" ? u.pathname.slice(0, 40) : ""), url };
+        return {
+          title:
+            u.hostname.replace(/^www\./, "") +
+            (u.pathname !== "/" ? u.pathname.slice(0, 40) : ""),
+          url,
+        };
       } catch {
         return { title: `Source ${i + 1}`, url };
       }
     });
 
-    // Persist this turn to memory (fire-and-forget) only if dimensions match.
     if (userEmbedding && userEmbeddingFitsMemory) {
       void persistTurn({
-        tenantSlug, sessionId, context,
-        role: "user", content: message, embedding: userEmbedding,
+        tenantSlug,
+        sessionId,
+        context,
+        role: "user",
+        content: message,
+        embedding: userEmbedding,
       });
     }
     if (content) {
@@ -365,8 +505,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const v = replyEmbed.embeddings[0];
         if (v && v.length === 1024) {
           void persistTurn({
-            tenantSlug, sessionId, context,
-            role: "assistant", content, embedding: v,
+            tenantSlug,
+            sessionId,
+            context,
+            role: "assistant",
+            content,
+            embedding: v,
           });
         }
       } catch (e: any) {
@@ -378,8 +522,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       content,
       citations,
       model,
-      sessionId,                                 // surfaced for client to thread
-      memoryUsed: recalled.length,               // surfaced so UI can show "recalled N past"
+      sessionId,
+      memoryUsed: recalled.length,
       latency_ms: Date.now() - t0,
       usage: data?.usage || null,
     });
