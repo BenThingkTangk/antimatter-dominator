@@ -25,7 +25,7 @@ export interface RateLimitConfig {
 
 const RATE_LIMITS: Array<{ prefix: string; config: RateLimitConfig }> = [
   { prefix: "/signals/", config: { capacity: 10,  refillRate: 10  / 60 } },
-  { prefix: "/pitch/",   config: { config: null, capacity: 5,   refillRate: 5   / 60 } as unknown as RateLimitConfig },
+  { prefix: "/pitch/",   config: { capacity: 5,   refillRate: 5   / 60 } },
 ];
 const DEFAULT_RATE: RateLimitConfig = { capacity: 60, refillRate: 60 / 60 };
 

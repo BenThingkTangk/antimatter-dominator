@@ -137,7 +137,7 @@ export async function streamSignals(
   return createResponse(
     upstreamResp.status,
     respHeaders,
-    upstreamResp.body as unknown as ReadableStream,
+    upstreamResp.body as unknown as string,
   );
 }
 
