@@ -18,14 +18,6 @@ import {
 import type { Product } from "@shared/schema";
 import { useLocation } from "wouter";
 import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "@/lib/atom-products";
-import {
-  AtomField,
-  AtomConfigCard,
-  AtomChip,
-  AtomChipGroup,
-  AtomChoiceRow,
-  AtomCta,
-} from "@/components/ui/atom-field";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -93,10 +85,10 @@ const PERSONAS = [
 ];
 
 const TONES = [
-  { value: "Professional" },
-  { value: "Casual" },
-  { value: "Aggressive" },
-  { value: "Consultative" },
+  { value: "Professional", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  { value: "Casual", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  { value: "Aggressive", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
+  { value: "Consultative", color: "bg-violet-500/20 text-violet-300 border-violet-500/30" },
 ];
 
 const EMOTION_COLORS: Record<string, { bar: string; text: string }> = {
@@ -478,11 +470,14 @@ export default function PitchGenerator() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4" id="pitch-main-grid">
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <AtomConfigCard eyebrow="Configuration">
+            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+              <h2 className="text-[11px] font-semibold text-violet-300 uppercase tracking-[0.18em]">Configuration</h2>
+
               {/* Product */}
-              <AtomField label="Product">
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger data-testid="select-product">
+                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,100 +492,119 @@ export default function PitchGenerator() {
                     placeholder="Type the product to pitch — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className="mt-2"
+                    className="mt-2 bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
                     data-testid="input-custom-product"
                   />
                 )}
-              </AtomField>
+              </div>
 
               {/* Company Name */}
-              <AtomField label="Company Name" optional>
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Company Name <span className="text-white/50 normal-case">(optional)</span></label>
                 <Input
                   placeholder="e.g. Acme Health Systems"
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
+                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
                   data-testid="input-company-name"
                 />
-              </AtomField>
+              </div>
 
               {/* Persona */}
-              <AtomField label="Target Persona">
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Target Persona</label>
                 <Select value={persona} onValueChange={setPersona}>
-                  <SelectTrigger data-testid="select-persona">
+                  <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-persona">
                     <SelectValue placeholder="Who are you pitching?" />
                   </SelectTrigger>
                   <SelectContent>
                     {PERSONAS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </AtomField>
+              </div>
 
               {/* Industry */}
-              <AtomField label="Industry Context" optional>
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Input
                   placeholder="e.g. Healthcare, Finance, Real Estate"
                   value={industry}
                   onChange={e => setIndustry(e.target.value)}
+                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm h-9"
                   data-testid="input-industry"
                 />
-              </AtomField>
+              </div>
 
               {/* Pitch Type */}
-              <AtomField label="Pitch Type">
-                <div className="flex flex-col gap-1.5">
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Pitch Type</label>
+                <div className="space-y-1">
                   {PITCH_TYPES.map(pt => {
                     const Icon = pt.icon;
+                    const isActive = pitchType === pt.value;
                     return (
-                      <AtomChoiceRow
-                        key={pt.value}
-                        active={pitchType === pt.value}
-                        icon={<Icon className="w-3.5 h-3.5" />}
-                        title={pt.label}
-                        description={pt.desc}
-                        onClick={() => setPitchType(pt.value)}
-                        data-testid={`button-pitch-type-${pt.value}`}
-                      />
+                      <button key={pt.value} onClick={() => setPitchType(pt.value)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all border ${
+                          isActive
+                            ? "bg-violet-500/10 border-violet-500/40 text-white"
+                            : "bg-[#161618] border-white/[0.14] text-white/85 hover:border-violet-500/45 hover:text-white"
+                        }`}
+                        data-testid={`button-pitch-type-${pt.value}`}>
+                        <span className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
+                          isActive ? "bg-violet-500/20 border-violet-500/40" : "bg-white/[0.04] border-white/[0.08]"
+                        }`}>
+                          <Icon className={`w-3.5 h-3.5 ${isActive ? "text-violet-300" : "text-white/60"}`} />
+                        </span>
+                        <div>
+                          <p className="text-xs font-medium">{pt.label}</p>
+                          <p className="text-[10px] text-white/45">{pt.desc}</p>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
-              </AtomField>
+              </div>
 
               {/* Tone */}
-              <AtomField label="Tone">
-                <AtomChipGroup>
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Tone</label>
+                <div className="flex flex-wrap gap-1.5">
                   {TONES.map(t => (
-                    <AtomChip
-                      key={t.value}
-                      active={tone === t.value}
-                      onClick={() => setTone(t.value)}
-                      data-testid={`button-tone-${t.value}`}
-                    >
+                    <button key={t.value} onClick={() => setTone(t.value)}
+                      className={`text-[11px] px-3 py-1 rounded-full border font-medium transition-all ${
+                        tone === t.value ? t.color : "bg-[#161618] border-white/[0.14] text-white/75 hover:border-violet-500/45 hover:text-white"
+                      }`}
+                      data-testid={`button-tone-${t.value}`}>
                       {t.value}
-                    </AtomChip>
+                    </button>
                   ))}
-                </AtomChipGroup>
-              </AtomField>
+                </div>
+              </div>
 
               {/* Extra Context */}
-              <AtomField label="Extra Context" optional>
+              <div>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Extra Context <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. They just had a data breach, using legacy Epic system..."
                   value={customContext}
                   onChange={e => setCustomContext(e.target.value)}
+                  className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm min-h-[72px] resize-none"
                   data-testid="textarea-context"
                 />
-              </AtomField>
+              </div>
 
-              <AtomCta
+              <Button
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold shadow-[0_0_28px_rgba(139,92,246,0.5)] border border-violet-400/50 disabled:bg-violet-600/40 disabled:text-white/70 disabled:opacity-100 transition-all"
                 onClick={() => generatePitch.mutate()}
                 disabled={!canGenerate}
                 data-testid="button-generate-pitch"
               >
                 {generatePitch.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Generating…</>
-                  : <><Sparkles className="w-4 h-4" />Generate Pitch</>}
-              </AtomCta>
-            </AtomConfigCard>
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</>
+                  : <><Sparkles className="w-4 h-4 mr-2" />Generate Pitch</>}
+              </Button>
+            </div>
           </div>
 
           {/* Output Panel */}

@@ -563,11 +563,11 @@ export default function MarketIntent() {
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
             <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
-              <h2 className="atom-section-eyebrow">Analysis Parameters</h2>
+              <h2 className="text-[11px] font-semibold text-emerald-300 uppercase tracking-[0.18em]">Analysis Parameters</h2>
 
               {/* Product Focus */}
               <div>
-                <label className="atom-field-label">Product Focus</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Product Focus</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select product" />
@@ -591,7 +591,7 @@ export default function MarketIntent() {
 
               {/* Industry */}
               <div>
-                <label className="atom-field-label">Industry</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Industry</label>
                 <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-industry">
                     <SelectValue placeholder="All industries" />
@@ -604,7 +604,7 @@ export default function MarketIntent() {
 
               {/* Region */}
               <div>
-                <label className="atom-field-label">Region</label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Region</label>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                   <SelectTrigger className="bg-[#161618] border-white/[0.14] hover:border-violet-500/45 transition-colors text-sm" data-testid="select-region">
                     <SelectValue placeholder="Select region" />
@@ -617,25 +617,28 @@ export default function MarketIntent() {
 
               {/* Analysis Type */}
               <div>
-                <label className="atom-field-label">Analysis Type</label>
-                <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Analysis Type</label>
+                <div className="space-y-1">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
                     const isActive = analysisType === at.value;
                     return (
-                      <button
-                        key={at.value}
-                        type="button"
-                        data-active={isActive ? "true" : "false"}
-                        onClick={() => setAnalysisType(at.value)}
-                        className="atom-choice-row"
-                        data-testid={`button-analysis-type-${at.value}`}
-                      >
-                        <span className="atom-choice-row__icon"><Icon className="w-3.5 h-3.5" /></span>
-                        <span className="min-w-0 flex-1">
-                          <span className="atom-choice-row__title block">{at.value}</span>
-                          <span className="atom-choice-row__desc block">{at.desc}</span>
+                      <button key={at.value} onClick={() => setAnalysisType(at.value)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all border ${
+                          isActive
+                            ? "bg-emerald-500/10 border-emerald-500/40 text-white"
+                            : "bg-[#161618] border-white/[0.14] text-white/85 hover:border-emerald-500/45 hover:text-white"
+                        }`}
+                        data-testid={`button-analysis-type-${at.value}`}>
+                        <span className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
+                          isActive ? "bg-emerald-500/20 border-emerald-500/40" : "bg-white/[0.04] border-white/[0.08]"
+                        }`}>
+                          <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-300" : "text-white/60"}`} />
                         </span>
+                        <div>
+                          <p className="text-xs font-medium">{at.value}</p>
+                          <p className="text-[10px] text-white/55">{at.desc}</p>
+                        </div>
                       </button>
                     );
                   })}
@@ -644,14 +647,15 @@ export default function MarketIntent() {
 
               {/* Time Horizon */}
               <div>
-                <label className="atom-field-label">Time Horizon</label>
-                <div className="atom-chip-group">
+                <label className="text-[11px] font-medium text-emerald-300 mb-1.5 block uppercase tracking-[0.18em]">Time Horizon</label>
+                <div className="flex gap-1.5">
                   {TIME_HORIZONS.map(th => (
-                    <button key={th.value}
-                      type="button"
-                      data-active={timeHorizon === th.value ? "true" : "false"}
-                      onClick={() => setTimeHorizon(th.value)}
-                      className="atom-tone-chip"
+                    <button key={th.value} onClick={() => setTimeHorizon(th.value)}
+                      className={`flex-1 text-[11px] py-1.5 rounded-lg border font-medium transition-all ${
+                        timeHorizon === th.value
+                          ? "bg-emerald-500/15 border-emerald-500/45 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.25)]"
+                          : "bg-[#161618] border-white/[0.14] text-white/70 hover:text-white hover:border-emerald-500/45"
+                      }`}
                       data-testid={`button-time-horizon-${th.value}`}>
                       {th.label}
                     </button>
@@ -661,7 +665,7 @@ export default function MarketIntent() {
 
               {/* Custom Query */}
               <div>
-                <label className="atom-field-label">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
+                <label className="text-[10px] font-mono text-white/65 mb-1.5 block uppercase tracking-[0.16em]">Custom Query <span className="text-white/50 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. Focus on HIPAA compliance spending trends in mid-market hospitals..."
                   value={customQuery}
@@ -671,15 +675,15 @@ export default function MarketIntent() {
                 />
               </div>
 
-              <button
-                className="atom-cta"
+              <Button
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_28px_rgba(16,185,129,0.45)] border border-emerald-300/50 disabled:bg-emerald-500/35 disabled:text-emerald-100/70 disabled:opacity-100 transition-all"
                 onClick={() => analyzeIntent.mutate()}
                 disabled={analyzeIntent.isPending}
                 data-testid="button-generate-intel">
                 {analyzeIntent.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning signals…</>
-                  : <><Brain className="w-4 h-4" />Generate Intelligence</>}
-              </button>
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning signals...</>
+                  : <><Brain className="w-4 h-4 mr-2" />Generate Intelligence</>}
+              </Button>
             </div>
           </div>
 

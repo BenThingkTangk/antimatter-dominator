@@ -500,14 +500,14 @@ function AdvancedTargetingPanel({
 
   return (
     <div className="space-y-4 pt-3 border-t border-white/[0.10]">
-      <p className="atom-field-label">
+      <p className="text-[10px] font-mono uppercase tracking-wider text-white/50">
         Advanced Targeting — override AI filters
       </p>
 
       {/* Row 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <Briefcase className="w-3 h-3" />Industry
           </label>
           <Select value={filters.industry} onValueChange={(v) => set("industry", v)}>
@@ -521,7 +521,7 @@ function AdvancedTargetingPanel({
         </div>
 
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <MapPin className="w-3 h-3" />Geography
           </label>
           <Select value={filters.geography} onValueChange={(v) => set("geography", v)}>
@@ -537,7 +537,7 @@ function AdvancedTargetingPanel({
         </div>
 
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <Users className="w-3 h-3" />Company Size
           </label>
           <Select value={filters.companySize} onValueChange={(v) => set("companySize", v)}>
@@ -551,7 +551,7 @@ function AdvancedTargetingPanel({
         </div>
 
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <DollarSign className="w-3 h-3" />Revenue
           </label>
           <Select value={filters.revenueRange} onValueChange={(v) => set("revenueRange", v)}>
@@ -568,7 +568,7 @@ function AdvancedTargetingPanel({
       {/* Row 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <Cpu className="w-3 h-3" />Tech Stack
           </label>
           <input
@@ -580,7 +580,7 @@ function AdvancedTargetingPanel({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="atom-field-label flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
             <Search className="w-3 h-3" />Keywords
           </label>
           <input
@@ -604,10 +604,12 @@ function AdvancedTargetingPanel({
             return (
               <button
                 key={t}
-                type="button"
-                data-active={active ? "true" : "false"}
                 onClick={() => toggleTitle(t)}
-                className="atom-tone-chip"
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
+                  active
+                    ? "bg-violet-500/15 text-violet-300 border-violet-500/45 shadow-[0_0_10px_rgba(139,92,246,0.25)]"
+                    : "bg-[#161618] text-white/75 border-white/[0.14] hover:border-violet-500/45 hover:text-white hover:bg-violet-500/8"
+                }`}
               >
                 {t}
               </button>
@@ -1478,18 +1480,18 @@ export default function AtomCampaign() {
                 <p className="text-xs text-white/40">
                   {brief.length} chars · the richer your brief, the better ΔTOM can target
                 </p>
-                <button
+                <Button
                   onClick={buildTargets}
                   disabled={!brief.trim() || isBuilding}
-                  className="atom-cta"
-                  style={{ width: "auto", paddingLeft: 28, paddingRight: 28 }}
+                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 shadow-[0_0_24px_rgba(139,92,246,0.45)] border border-violet-400/50 disabled:bg-violet-600/40 disabled:text-white/70 disabled:opacity-100 transition-all"
+                  style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
                 >
                   {isBuilding ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Building…</>
+                    <><Loader2 className="w-4 h-4 animate-spin" />Building...</>
                   ) : (
                     <><Zap className="w-4 h-4" />Build Campaign</>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -1566,7 +1568,7 @@ export default function AtomCampaign() {
 
               {/* Max Targets selector */}
               <div className="shrink-0 flex flex-col gap-1.5">
-                <label className="atom-field-label flex items-center gap-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
                   <ListFilter className="w-3 h-3" />Max Targets
                 </label>
                 <Select value={String(maxTargets)} onValueChange={(v) => setMaxTargets(Number(v))}>
