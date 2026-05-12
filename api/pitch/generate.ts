@@ -1,5 +1,11 @@
-// GOLD STANDARD v2.0
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// GOLD STANDARD v2.0 — Edge Runtime
+//
+// M3: Converted from @vercel/node (Node runtime, ~600-1200ms cold start) to
+// Edge Runtime (~30-80ms cold start). The handler is pure fetch+JSON; no
+// Buffer / fs / crypto usage, so it ports cleanly to the Web standard
+// Request/Response API.
+
+export const config = { runtime: "edge" } as const;
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
@@ -69,8 +75,23 @@ async function getRAGContext(company: string, module: string): Promise<string> {
   } catch { return ""; }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "POST only" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid json body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   const {
     productSlug,
@@ -81,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     company,
     tone,
     customContext,
-  } = req.body;
+  } = body;
 
   const productName = product || productSlug || "";
   const target = company || productName || "";
@@ -180,15 +201,29 @@ Return ONLY this JSON structure (no markdown):
       };
     }
 
-    // Also include legacy 'content' field for backward compatibility
-    res.setHeader('X-ATOM-Version', 'gold-v2');
-    return res.json({
-      ...parsed,
-      content: parsed.mainPitch || raw,
-      hasRagContext: ragContext.length > 50,
-    });
+    // M4: Pitch responses are user-specific (cached by client) — do not
+    // edge-cache the response since persona/company/product vary too much
+    // for HTTP cache to hit. Client cache handles re-renders.
+    return new Response(
+      JSON.stringify({
+        ...parsed,
+        content: parsed.mainPitch || raw,
+        hasRagContext: ragContext.length > 50,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-ATOM-Version": "gold-v2-edge",
+          "Cache-Control": "private, no-store",
+        },
+      }
+    );
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 

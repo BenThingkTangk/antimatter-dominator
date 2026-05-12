@@ -1,4 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// M3: Edge Runtime — OpenAI + Apollo + RAG fetches only, no node-only APIs.
+export const config = { runtime: "edge" } as const;
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
@@ -68,8 +69,23 @@ async function getRAGContext(company: string, module: string): Promise<string> {
   } catch { return ""; }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "POST only" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid json body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   const {
     productSlug,
@@ -78,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     objectionText,
     context,
     company,
-  } = req.body;
+  } = body;
 
   const productName = selectedProduct || productSlug || "";
   const objText = objection || objectionText || "";
@@ -189,16 +205,28 @@ Analyze the objection and return ONLY this JSON structure (no markdown):
       };
     }
 
-    // Legacy compatibility fields
-    return res.json({
-      ...parsed,
-      response: parsed.primaryResponse || raw,
-      content: parsed.primaryResponse || raw,
-      category: parsed.detectedCategory || "general",
-      hasRagContext: ragContext.length > 50,
-    });
+    return new Response(
+      JSON.stringify({
+        ...parsed,
+        response: parsed.primaryResponse || raw,
+        content: parsed.primaryResponse || raw,
+        category: parsed.detectedCategory || "general",
+        hasRagContext: ragContext.length > 50,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-ATOM-Version": "gold-v2-edge",
+          "Cache-Control": "private, no-store",
+        },
+      }
+    );
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 

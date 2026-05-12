@@ -213,7 +213,12 @@ Return ONLY this JSON structure (no markdown):
       };
     }
 
-    // Legacy compatibility
+    // M4: Market intent analysis is stable for ~6h.
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=900, s-maxage=21600, stale-while-revalidate=10800"
+    );
+    res.setHeader("X-ATOM-Cache-Hint", "market-6h");
     return res.json({
       ...parsed,
       id: Date.now(),

@@ -1,0 +1,17 @@
+{
+  "name": "atom-akamai-edge-layers",
+  "version": "1.0.0",
+  "description": "ATOM Sales Dominator 6-layer Akamai EdgeWorker bundle",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --outfile=dist/main.js --format=esm --target=es2022 --platform=neutral --external:log --external:cookies --external:url-search-params --external:streams --external:http-request",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist bundle.tgz"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

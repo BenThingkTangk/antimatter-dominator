@@ -328,6 +328,14 @@ IMPORTANT: Return at least 4-5 competitors, 5-6 pain points, 5-6 buying signals,
       };
     }
 
+    // M4: WarBook research is expensive (30-60s, multi-Sonar) and the company
+    // intel is stable for ~24h. Allow shared CDN cache + browser cache so a
+    // re-open is instant. stale-while-revalidate keeps perceived freshness.
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=3600, s-maxage=86400, stale-while-revalidate=43200"
+    );
+    res.setHeader("X-ATOM-Cache-Hint", "warbook-24h");
     return res.json({
       company, warbook, contacts, companyProfile: profile,
       citations: [...overviewRes.citations, ...competitiveRes.citations, ...newsRes.citations, ...painSignalsRes.citations, ...battleCardRes.citations],
