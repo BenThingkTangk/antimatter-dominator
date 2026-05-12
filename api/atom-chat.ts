@@ -379,36 +379,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let assembled = "";
       let lastCitations: any[] = [];
 
+      const processFrame = (frame: string) => {
+        const dataLines: string[] = [];
+        for (const line of frame.split("\n")) {
+          const trimmed = line.replace(/^\r/, "");
+          if (trimmed.startsWith("data:")) {
+            dataLines.push(trimmed.slice(5).trim());
+          }
+        }
+        if (!dataLines.length) return;
+        const payload = dataLines.join("\n");
+        if (payload === "[DONE]") return;
+        try {
+          const j = JSON.parse(payload);
+          const delta: string =
+            j?.choices?.[0]?.delta?.content ||
+            j?.choices?.[0]?.message?.content ||
+            "";
+          if (delta) {
+            assembled += delta;
+            res.write(
+              `event: token\ndata: ${JSON.stringify({ delta })}\n\n`
+            );
+          }
+          if (Array.isArray(j?.citations) && j.citations.length) {
+            lastCitations = j.citations;
+          }
+        } catch {
+          // skip malformed frame
+        }
+      };
+
       try {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          // Perplexity returns OpenAI-compatible `data: {…}\n\n` SSE frames.
+          // Normalize CRLF -> LF so the \n\n splitter always matches.
+          buf += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
           let nl;
           while ((nl = buf.indexOf("\n\n")) !== -1) {
-            const frame = buf.slice(0, nl).trim();
+            const frame = buf.slice(0, nl);
             buf = buf.slice(nl + 2);
-            if (!frame.startsWith("data:")) continue;
-            const payload = frame.slice(5).trim();
-            if (payload === "[DONE]") continue;
-            try {
-              const j = JSON.parse(payload);
-              const delta: string = j?.choices?.[0]?.delta?.content || "";
-              if (delta) {
-                assembled += delta;
-                res.write(
-                  `event: token\ndata: ${JSON.stringify({ delta })}\n\n`
-                );
-              }
-              if (Array.isArray(j?.citations) && j.citations.length) {
-                lastCitations = j.citations;
-              }
-            } catch {
-              // skip malformed frame
-            }
+            processFrame(frame);
           }
         }
+        // Flush any final frame remaining (some upstreams omit trailing \n\n).
+        if (buf.trim().length > 0) processFrame(buf);
       } catch (e: any) {
         res.write(
           `event: error\ndata: ${JSON.stringify({
