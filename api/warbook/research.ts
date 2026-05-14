@@ -7,7 +7,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY;
-const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
+// Sanitize — see api/_lib/apollo.ts for the same fix.
+const APOLLO_API_KEY = (process.env.APOLLO_API_KEY || "")
+  .replace(/\\n/g, "")
+  .trim() || undefined;
 const PDL_API_KEY = process.env.PDL_API_KEY;
 
 async function sonarResearch(query: string, ctx: "low" | "medium" | "high" = "medium") {

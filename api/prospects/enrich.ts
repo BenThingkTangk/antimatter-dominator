@@ -1,7 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
+// Sanitize the env value — Vercel sometimes stores it with a trailing \n which
+// Apollo rejects as "Invalid access credentials" (HTTP 401).
+const APOLLO_API_KEY = (process.env.APOLLO_API_KEY || "")
+  .replace(/\\n/g, "")
+  .trim() || undefined;
 const PDL_API_KEY = process.env.PDL_API_KEY;
 
 // ─── Types ───────────────────────────────────────────────────────────────────

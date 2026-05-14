@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
+// Vercel sometimes stores the env value with a trailing literal `\n` (or a real
+// newline). Apollo rejects either with HTTP 401 "Invalid access credentials".
+// Strip both before use — the rest of the codebase already does this in
+// api/_lib/apollo.ts, this consumer was missing it.
+const APOLLO_API_KEY = (process.env.APOLLO_API_KEY || "")
+  .replace(/\\n/g, "")
+  .trim() || undefined;
 const PDL_API_KEY = process.env.PDL_API_KEY;
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 const THEIRSTACK_API_KEY = process.env.THEIRSTACK_API_KEY;
