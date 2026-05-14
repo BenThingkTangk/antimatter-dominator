@@ -247,11 +247,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === "update") {
-      const { slug, ...patch } = req.body || {};
+      // Bug: spreading req.body with `...patch` previously included `action`
+      // itself, which Supabase rejected with PGRST204 “Could not find the
+      // 'action' column of 'tenants'”. Strip every non-column field before PATCH.
+      const {
+        slug,
+        action: _action,  // protocol field, not a column
+        ...patch
+      } = (req.body || {}) as Record<string, any>;
       if (!slug) return res.status(400).json({ error: "slug required" });
+
+      // Allow-list the actual `tenants` columns (verified against the live
+      // Supabase schema). Add a column here when you add one to the table.
+      const ALLOWED_COLUMNS = new Set([
+        "name",
+        "plan",
+        "primary_hex",
+        "accent_hex",
+        "logo_url",
+        "admin_email",
+        "owner_email",
+        "hero_tagline",
+        "custom_domain",
+        "hume_config_id",
+        "twilio_subaccount_sid",
+        "twilio_phone_number",
+        "stripe_customer_id",
+        "stripe_subscription_id",
+        "subscription_status",
+        "current_plan_price_cents",
+        "seats_purchased",
+        "seats_used",
+        "token_budget_cents",
+        "token_spent_cents",
+        "kill_switch",
+        "trial_ends_at",
+        "deleted_at",
+      ]);
+      const cleanPatch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(patch)) {
+        if (ALLOWED_COLUMNS.has(k)) cleanPatch[k] = v;
+      }
+
+      if (!Object.keys(cleanPatch).length) {
+        return res.status(400).json({ error: "no updatable fields supplied" });
+      }
+
       const updated = await supabaseQuery(
         `tenants?slug=eq.${encodeURIComponent(slug)}`,
-        { method: "PATCH", body: JSON.stringify(patch) }
+        { method: "PATCH", body: JSON.stringify(cleanPatch) }
       );
       return res.status(200).json({ ok: true, tenant: updated?.[0] ?? null });
     }
