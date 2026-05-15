@@ -98,8 +98,9 @@ const SUPABASE_KEY       = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const PERPLEXITY_API_KEY = clean(process.env.PERPLEXITY_API_KEY);
 const PINECONE_API_KEY   = clean(process.env.PINECONE_API_KEY);
 const PINECONE_INDEX     = clean(process.env.PINECONE_INDEX) || "atom-intelligence-pplx";
+const ANTHROPIC_API_KEY  = clean(process.env.ANTHROPIC_API_KEY);
 
-const a = new Anthropic();
+const a = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 // ─── Supabase helper ────────────────────────────────────────────────────────
 async function sb(path: string, init: RequestInit = {}): Promise<any> {
@@ -184,8 +185,10 @@ async function extractEvidenceSonar(account: any, pack: any): Promise<{ ok: bool
       headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "sonar-pro",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "Respond ONLY with a single valid JSON object. No prose, no markdown, no code fences." },
+          { role: "user", content: prompt },
+        ],
       }),
       signal: AbortSignal.timeout(20000),
     });
