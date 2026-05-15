@@ -89,14 +89,28 @@ const FIELD_LABELS: Record<string, string> = {
   accountName: "Account Name *",
   domain: "Domain",
   state: "State",
-  subVertical: "Sub-Vertical",
+  subVertical: "Sub-Vertical / Segment",
   revenue: "Revenue (USD)",
+  // Healthcare template
   akafit: "AkaFit (A/B/C)",
   walletGrade: "Wallet Grade",
   targetLists: "Target Lists",
+  // Cloud / AI-infra template (1-5 each)
+  latencyScore: "Latency Score (1-5)",
+  securityScore: "Security Score (1-5)",
+  gpuScore: "GPU/Inference Score (1-5)",
+  egressScore: "Egress Score (1-5)",
+  multicloudScore: "Multicloud Score (1-5)",
+  triggerScore: "Trigger Score (1-5)",
 };
 
-const FIELD_ORDER = ["accountName", "domain", "state", "subVertical", "revenue", "akafit", "walletGrade", "targetLists"];
+const FIELD_ORDER_HEALTHCARE = ["accountName", "domain", "state", "subVertical", "revenue", "akafit", "walletGrade", "targetLists"];
+const FIELD_ORDER_CLOUD = ["accountName", "domain", "state", "subVertical", "revenue", "latencyScore", "securityScore", "gpuScore", "egressScore", "multicloudScore", "triggerScore"];
+
+function fieldOrderFor(templateSlug: string): string[] {
+  if (templateSlug === "cloud-ai-infrastructure-v1") return FIELD_ORDER_CLOUD;
+  return FIELD_ORDER_HEALTHCARE;
+}
 
 function guessMapping(headers: string[]): Record<string, number> {
   const map: Record<string, number> = {};
@@ -108,14 +122,23 @@ function guessMapping(headers: string[]): Record<string, number> {
     }
     return -1;
   };
+  // Shared
   map.accountName = find("account name", "company", "account");
   map.domain = find("domain", "website", "url");
   map.state = find("state", "region");
-  map.subVertical = find("sub-vertical", "sub vertical", "subvertical", "vertical");
+  map.subVertical = find("sub-vertical", "sub vertical", "subvertical", "segment", "vertical");
   map.revenue = find("revenue");
+  // Healthcare template
   map.akafit = find("akafit", "fit");
   map.walletGrade = find("wallet");
   map.targetLists = find("target list", "tal", "lists");
+  // Cloud / AI-infra template (ΔTOM TARGET 4L+4S+4G+3E+3M+2T)
+  map.latencyScore = find("latency_score", "latency");
+  map.securityScore = find("security_score", "security");
+  map.gpuScore = find("gpu_score", "gpu_inference", "gpu");
+  map.egressScore = find("egress_score", "egress");
+  map.multicloudScore = find("multicloud_score", "multicloud");
+  map.triggerScore = find("trigger_score", "trigger");
   return map;
 }
 
@@ -355,6 +378,28 @@ function NewCampaignWizard({
         const revStr = get("revenue").replace(/[$,]/g, "");
         const rev = revStr ? Number(revStr) : null;
         const targetLists = get("targetLists");
+        // Cloud/AI-infra dimensions — only populated if columns are mapped
+        const extra: Record<string, any> = {};
+        if (targetLists) extra.target_lists = targetLists;
+        const cloudKeys: Array<[string, string]> = [
+          ["latencyScore", "latency_score"],
+          ["securityScore", "security_score"],
+          ["gpuScore", "gpu_score"],
+          ["egressScore", "egress_score"],
+          ["multicloudScore", "multicloud_score"],
+          ["triggerScore", "trigger_score"],
+        ];
+        for (const [k, jsonKey] of cloudKeys) {
+          const raw = get(k);
+          if (raw) {
+            const n = parseInt(raw, 10);
+            if (!isNaN(n)) extra[jsonKey] = n;
+          }
+        }
+        // Capture segment for cloud-infra fallback ("ai_saas", "voice_ai", etc.)
+        const segHint = get("subVertical");
+        if (segHint && templateSlug === "cloud-ai-infrastructure-v1") extra.segment = segHint;
+
         return {
           accountName: get("accountName"),
           domain: get("domain") || null,
@@ -363,7 +408,7 @@ function NewCampaignWizard({
           revenue: rev && !isNaN(rev) ? rev : null,
           akafit: get("akafit") || null,
           walletGrade: get("walletGrade") || null,
-          extraTags: targetLists ? { target_lists: targetLists } : undefined,
+          extraTags: Object.keys(extra).length > 0 ? extra : undefined,
         };
       }).filter((a) => a.accountName);
       // 3. Import
@@ -457,7 +502,7 @@ function NewCampaignWizard({
             <div className="text-xs text-[#a2a3e9]/70 mb-2">
               Detected {csvRows.length} rows. Map each ΔTOM field to a CSV column.
             </div>
-            {FIELD_ORDER.map((field) => (
+            {fieldOrderFor(templateSlug).map((field) => (
               <div key={field} className="flex items-center gap-3">
                 <Label className="w-40 text-sm text-[#a2a3e9]">{FIELD_LABELS[field]}</Label>
                 <Select
