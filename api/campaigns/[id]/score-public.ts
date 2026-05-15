@@ -1,21 +1,81 @@
-// ΔTOM public-signal scorer v2 — rule packs loaded from versioned JSON in git.
+// ΔTOM public-signal scorer v2 — rule packs versioned in git.
 //
-// Rule packs live at /api/_rules/*.json and are imported statically so Vercel
-// bundles them into this function (no remote fetch at runtime). The DB row
-// atom_scoring_templates is now just a registry pointer; the math + thresholds
-// live in git so we get diffs, PR review, and rollback for free.
+// Canonical rule packs live as JSON at /api/_rules/*.json so they get diffs,
+// PR review, and rollback. But Vercel nft tracing is unreliable for sibling
+// file imports (see api/_lib/apollo.ts), so the actual scorer inlines the
+// pack data here. Keep these literals in sync with the JSON spec — the
+// RULE_PACK_VERSION_CHECK at the bottom will scream during local dev if you
+// edit one but forget the other.
 //
 // Two engines today:
 //   1. engine = "healthcare-hipaa-v1"   (4-dim public + 3-dim ATOM)
 //   2. engine = "cloud-ai-infra-v1"     (4L + 4S + 4G + 3E + 3M + 2T)
-//
-// Self-contained — Vercel nft can't trace sibling .ts imports, but it DOES
-// trace JSON imports correctly because they're inlined at build time.
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import healthcarePack from "../../_rules/healthcare-segmentation-hipaa.v1.json";
-import cloudPack from "../../_rules/cloud-ai-infrastructure.v1.json";
+// ── INLINED RULE PACKS (mirror /api/_rules/*.v1.json) ──────────────────────
+const healthcarePack = {
+  slug: "healthcare-segmentation-hipaa",
+  version: "v1.0.0",
+  engine: "healthcare-hipaa-v1",
+  weights: {
+    regulatory: 25, breach: 20, account_fit: 15, list_density: 5, segmentation: 5,
+    atom_intent: 12, atom_personas: 10, atom_freshness: 8,
+  },
+  sub_vertical_profile: {
+    "Healthcare Provider":           { phi: 1.0,  seg: 1.0,  note: "Largest PHI volume + EHR/IoT segmentation pain; mandated by 2025 HIPAA rule" },
+    "Healthcare Payer":              { phi: 0.95, seg: 0.9,  note: "Massive PHI; claims systems; high regulatory scrutiny" },
+    "Pharma and Biotech":            { phi: 0.55, seg: 0.85, note: "Clinical-trial data + IP; OT/lab segmentation" },
+    "Medical Devices and Equipment": { phi: 0.45, seg: 0.95, note: "Connected devices = lateral-movement crown jewels" },
+    "Health Tech":                   { phi: 0.7,  seg: 0.8,  note: "PHI handling varies; HIPAA BAA exposure" },
+  } as Record<string, { phi: number; seg: number; note: string }>,
+  revenue_factors: [
+    { min: 50_000_000_000, factor: 1.0 },
+    { min: 10_000_000_000, factor: 0.92 },
+    { min: 2_000_000_000,  factor: 0.78 },
+    { min: 500_000_000,    factor: 0.62 },
+    { min: 100_000_000,    factor: 0.45 },
+    { min: 0,              factor: 0.25 },
+  ],
+  akafit_multipliers: { A: 1.0, B: 0.65, C: 0.3 } as Record<string, number>,
+  wallet_multipliers: { "Mega Strategic": 1.0, "Strategic": 0.85, "Large Enterprise": 0.65 } as Record<string, number>,
+  high_value_lists: {
+    "2026 NC Must Win TAL": 1.0, "North America ESG 2026 TAL Prospects": 0.9, "2026 Bain Money Map": 0.85,
+    "2026-H1 SDR Security Focus - Core": 1.0, "North America API 2026 TAL Prospects": 0.7,
+    "API Sec NC Noname Tier 1.2 TAL": 0.6, "2023 Unified Threat Shield": 0.5, "ESG Focus 30": 0.95,
+    "2025 NC Must Win TAL": 0.6, "2024 NC Must Win TAL": 0.4,
+  } as Record<string, number>,
+  tiers: {
+    T1: { min: 75, action: "executive_play — direct CISO outreach + Akamai Guardicore segmentation pitch" },
+    T2: { min: 60, action: "automated_sequence — ATOM Voice Bridge + nurture" },
+    T3: { min: 45, action: "nurture — content drip, watch for breach/regulatory triggers" },
+    T4: { min: 0,  action: "hold — not a fit today" },
+  } as Record<string, { min: number; action: string }>,
+};
+
+const cloudPack = {
+  slug: "cloud-ai-infrastructure-v1",
+  version: "v1.0.0",
+  engine: "cloud-ai-infra-v1",
+  weights: {
+    latency: 4, security: 4, gpu_inference: 4, egress: 3, multicloud: 3, trigger: 2,
+  } as Record<string, number>,
+  sub_vertical_profile: {
+    ai_saas:         { latency: 4, security: 4, gpu_inference: 5, egress: 3, multicloud: 3, trigger: 3, note: "Core inference product, heavy GPU + RAG/LLM dependency" },
+    fintech_fraud:   { latency: 5, security: 5, gpu_inference: 3, egress: 2, multicloud: 3, trigger: 3, note: "Real-time fraud detection, regulated, latency-critical" },
+    voice_ai:        { latency: 5, security: 4, gpu_inference: 5, egress: 3, multicloud: 3, trigger: 4, note: "Real-time voice + GPU inference, edge-native" },
+    healthcare_ai:   { latency: 4, security: 5, gpu_inference: 4, egress: 2, multicloud: 4, trigger: 3, note: "PHI + HIPAA + sovereignty mandate" },
+    sports_media:    { latency: 4, security: 3, gpu_inference: 3, egress: 5, multicloud: 3, trigger: 3, note: "Heavy media/files/global traffic, latency-sensitive playback" },
+    enterprise_saas: { latency: 3, security: 4, gpu_inference: 3, egress: 3, multicloud: 3, trigger: 2, note: "General enterprise workloads, moderate everything" },
+    gov_defense:     { latency: 3, security: 5, gpu_inference: 3, egress: 2, multicloud: 5, trigger: 3, note: "Sovereignty mandate, regulated, multicloud-required" },
+  } as Record<string, { latency: number; security: number; gpu_inference: number; egress: number; multicloud: number; trigger: number; note: string }>,
+  tiers: {
+    T1: { min: 80, action: "executive_play — direct CISO/CTO outreach + Akamai+Linode joint pitch" },
+    T2: { min: 65, action: "automated_sequence — ATOM Voice Bridge + nurture" },
+    T3: { min: 50, action: "nurture — content drip, watch for trigger events" },
+    T4: { min: 0,  action: "hold — not a fit today" },
+  } as Record<string, { min: number; action: string }>,
+};
 
 type RulePack = typeof healthcarePack | typeof cloudPack;
 
