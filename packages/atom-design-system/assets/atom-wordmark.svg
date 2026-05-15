@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" role="img" aria-labelledby="atom-wm-title atom-wm-desc" width="320" height="80">
+  <title id="atom-wm-title">ATOM wordmark</title>
+  <desc id="atom-wm-desc">Wordmark reading Δ T O M, where the first character is the Greek capital Delta. Δ, T and M are rendered in light cream; the O is a teal ring accent.</desc>
+  <style>
+    .wm { font-family: 'Cabinet Grotesk', 'Satoshi', 'Inter', system-ui, sans-serif; font-weight: 800; font-size: 64px; letter-spacing: -0.02em; fill: #e8e8ea; }
+  </style>
+  <!-- Δ T _ M -->
+  <text class="wm" x="6" y="60">Δ T</text>
+  <text class="wm" x="232" y="60">M</text>
+  <!-- O as teal ring (positioned between T and M) -->
+  <g transform="translate(178 28)">
+    <circle cx="22" cy="22" r="20" fill="none" stroke="#00c8c8" stroke-width="6"/>
+    <circle cx="22" cy="22" r="20" fill="none" stroke="#00c8c8" stroke-width="6" opacity="0.25" filter="blur(2px)"/>
+  </g>
+</svg>

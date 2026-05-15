@@ -1,0 +1,5 @@
+node_modules/
+.git/
+_qa_*.png
+.DS_Store
+npm-debug.log*

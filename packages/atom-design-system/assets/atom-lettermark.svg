@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-labelledby="atom-lm-title atom-lm-desc" width="80" height="80">
+  <title id="atom-lm-title">ATOM lettermark</title>
+  <desc id="atom-lm-desc">Greek capital Delta letterform used as a compact ATOM mark.</desc>
+  <style>
+    .lm { font-family: 'Cabinet Grotesk', 'Satoshi', 'Inter', system-ui, sans-serif; font-weight: 800; font-size: 72px; letter-spacing: -0.02em; fill: #e8e8ea; }
+  </style>
+  <text class="lm" x="50%" y="62" text-anchor="middle">Δ</text>
+</svg>

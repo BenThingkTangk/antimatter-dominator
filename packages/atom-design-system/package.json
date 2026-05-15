@@ -1,0 +1,64 @@
+{
+  "name": "@nirmata/atom-design-system",
+  "version": "1.0.0",
+  "private": false,
+  "description": "ΔTOM Brand & Design System — Nirmata Holdings. Tokens, CSS components, motion primitives, loader, and brand assets.",
+  "type": "module",
+  "main": "./js/atom-loader.module.js",
+  "types": "./types/index.d.ts",
+  "style": "./atom.css",
+  "files": [
+    "atom.css",
+    "css/",
+    "js/",
+    "components/",
+    "assets/",
+    "tokens/",
+    "types/",
+    "index.html",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./js/atom-loader.module.js"
+    },
+    "./css": "./atom.css",
+    "./atom.css": "./atom.css",
+    "./tokens.css": "./css/atom-tokens.css",
+    "./components.css": "./css/atom-components.css",
+    "./animations.css": "./css/atom-animations.css",
+    "./loader": {
+      "types": "./types/index.d.ts",
+      "default": "./js/atom-loader.module.js"
+    },
+    "./loader.browser": "./js/atom-loader.js",
+    "./loader.html": "./components/atom-loader.html",
+    "./tokens": "./tokens/atom.tokens.json",
+    "./tokens.json": "./tokens/atom.tokens.json",
+    "./assets/*": "./assets/*"
+  },
+  "scripts": {
+    "start":   "npx --yes serve@latest -l 4173 .",
+    "preview": "npx --yes serve@latest -l 4173 .",
+    "serve":   "python3 -m http.server 4173",
+    "pack:dry": "npm pack --dry-run",
+    "check:package": "npm pack --dry-run"
+  },
+  "sideEffects": [
+    "*.css",
+    "css/*.css",
+    "js/atom-loader.js"
+  ],
+  "keywords": [
+    "atom",
+    "delta",
+    "design-system",
+    "nirmata",
+    "tokens",
+    "css",
+    "figma",
+    "loader"
+  ],
+  "license": "UNLICENSED"
+}

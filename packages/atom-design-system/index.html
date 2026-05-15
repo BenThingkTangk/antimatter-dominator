@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ΔTOM · Brand &amp; Design System</title>
+  <meta name="description" content="ATOM Brand & Design System — Nirmata Holdings. Tokens, components, motion, and usage guidelines." />
+  <link rel="icon" type="image/svg+xml" href="assets/atom-icon.svg" />
+
+  <!-- Fonts: Cabinet Grotesk + Satoshi via Fontshare; JetBrains Mono via Google -->
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/atom-tokens.css" />
+  <link rel="stylesheet" href="css/atom-animations.css" />
+  <link rel="stylesheet" href="css/atom-components.css" />
+
+  <style>
+    /* Page-only styles for this usage guide */
+    .hero {
+      position: relative;
+      padding-block: clamp(4rem, 12vw, 8rem);
+      overflow: hidden;
+    }
+    .hero__inner { position: relative; z-index: 1; max-width: 920px; }
+    .hero h1 {
+      font-size: var(--text-3xl);
+      letter-spacing: -0.03em;
+      margin-bottom: var(--space-5);
+    }
+    .hero p.lede {
+      font-size: var(--text-lg);
+      color: var(--atom-text-muted);
+      max-width: 64ch;
+      line-height: 1.55;
+      margin-bottom: var(--space-8);
+    }
+    .hero__actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+    .swatch {
+      display: grid;
+      gap: var(--space-2);
+    }
+    .swatch__chip {
+      aspect-ratio: 4/3;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--atom-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .swatch__chip::after {
+      content: attr(data-hex);
+      position: absolute; left: 12px; bottom: 10px;
+      font-family: var(--atom-font-mono);
+      font-size: var(--text-xs);
+      color: var(--atom-text);
+      background: rgba(0,0,0,0.4);
+      padding: 0.2rem 0.45rem;
+      border-radius: var(--radius-sm);
+      backdrop-filter: blur(4px);
+    }
+    :root[data-theme='light'] .swatch__chip::after { color: #fff; background: rgba(20,24,26,0.55); }
+    .swatch__name { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+    .swatch__var  { font-family: var(--atom-font-mono); font-size: var(--text-xs); color: var(--atom-text-muted); }
+
+    /* Type specimen */
+    .type-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: var(--space-6);
+      align-items: baseline;
+      padding-block: var(--space-4);
+      border-bottom: 1px solid var(--atom-border);
+    }
+    .type-row__meta { color: var(--atom-text-muted); font-family: var(--atom-font-mono); font-size: var(--text-xs); }
+    .type-row__sample { color: var(--atom-text); }
+
+    /* Logo specimen surfaces */
+    .logo-tile {
+      display: grid;
+      place-items: center;
+      aspect-ratio: 3/2;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--atom-border);
+      overflow: hidden;
+      position: relative;
+    }
+    .logo-tile--dark  { background: #0b0b0c; }
+    .logo-tile--light { background: #f4f3ef; }
+    .logo-tile__label {
+      position: absolute; top: 10px; left: 12px;
+      font-family: var(--atom-font-mono); font-size: var(--text-xs);
+      color: var(--atom-text-muted);
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .logo-tile--light .logo-tile__label { color: #5b6066; }
+
+    .footer { padding-block: var(--space-12); color: var(--atom-text-muted); font-size: var(--text-sm); text-align: center; }
+    .footer .atom-wordmark { font-size: var(--text-base); }
+
+    /* Provider hover demo: ripple bursts on tag */
+    .provider-tile {
+      padding: var(--space-5);
+      border: 1px solid var(--atom-border);
+      border-radius: var(--radius-lg);
+      background: var(--atom-surface-1);
+      transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+    .provider-tile:hover {
+      transform: translateY(-2px);
+      border-color: var(--atom-border-strong);
+      box-shadow: var(--shadow-md);
+    }
+    .provider-tile h4 { font-size: var(--text-md); margin-bottom: var(--space-1); }
+    .provider-tile p { color: var(--atom-text-muted); font-size: var(--text-sm); }
+
+    /* Sticky table-of-contents on wide screens */
+    @media (min-width: 1100px) {
+      .with-toc { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-12); align-items: start; }
+      .toc { position: sticky; top: 88px; }
+    }
+    .toc a {
+      display: block;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--atom-text-muted);
+      font-size: var(--text-sm);
+    }
+    .toc a:hover { color: var(--atom-text); background: var(--atom-surface-2); }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <!-- Cinematic boot loader -->
+  <style>
+    #atom-loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+      background: radial-gradient(circle at 50% 45%, #15161a 0%, #0b0b0c 60%, #060607 100%);
+      color: var(--atom-text); transition: opacity 320ms var(--ease-atom), visibility 320ms; }
+    #atom-loader[aria-hidden='true'] { opacity: 0; visibility: hidden; pointer-events: none; }
+    #atom-loader .stage { width: min(420px, 86vw); text-align: center; }
+    #atom-loader .rings { position: relative; width: 180px; height: 180px; margin: 0 auto 1.5rem; }
+    #atom-loader .rings svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #atom-loader .r-a { animation: atom-orbit-spin 14s linear infinite; transform-origin: center; }
+    #atom-loader .r-b { animation: atom-orbit-counter 10s linear infinite; transform-origin: center; }
+    #atom-loader .r-c { animation: atom-orbit-spin 7s linear infinite; transform-origin: center; }
+    #atom-loader .nuc { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%,-50%);
+      border-radius: 50%; background: radial-gradient(circle, #fff 0%, #fff 35%, rgba(0,200,200,0) 70%);
+      box-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 36px rgba(0,200,200,0.6), 0 0 80px rgba(0,200,200,0.35);
+      animation: atom-pulse-dot 2.2s ease-in-out infinite; }
+    #atom-loader .mark { font-family: var(--atom-font-display); font-weight: 800;
+      font-size: clamp(2rem, 6vw, 3rem); letter-spacing: -0.02em; line-height: 1;
+      color: var(--atom-text); display: inline-flex; gap: 0.04em; margin-bottom: 1rem; }
+    #atom-loader .mark span:nth-child(3) { color: var(--atom-primary); text-shadow: 0 0 18px rgba(0,200,200,0.5); }
+    #atom-loader .mark span { opacity: 0; transform: translateY(0.4em); animation: atom-reveal-fade 600ms var(--ease-atom) forwards; }
+    #atom-loader .mark span:nth-child(1) { animation-delay: 200ms; }
+    #atom-loader .mark span:nth-child(2) { animation-delay: 340ms; }
+    #atom-loader .mark span:nth-child(3) { animation-delay: 480ms; }
+    #atom-loader .mark span:nth-child(4) { animation-delay: 620ms; }
+    #atom-loader .cap { font-family: var(--atom-font-mono); font-size: 0.75rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--atom-text-muted); opacity: 0;
+      animation: atom-reveal-fade 600ms var(--ease-atom) 800ms forwards; }
+    #atom-loader .bar { margin: 1.5rem auto 0; width: 240px; height: 2px;
+      background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; position: relative; }
+    #atom-loader .bar::after { content: ''; position: absolute; inset: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, var(--atom-primary), transparent);
+      box-shadow: 0 0 18px rgba(0,200,200,0.55); animation: atom-loader-sweep 1.4s ease-in-out infinite; }
+  </style>
+  <div id="atom-loader" role="status" aria-live="polite" aria-label="Loading ATOM">
+    <div class="stage">
+      <div class="rings" aria-hidden="true">
+        <svg viewBox="0 0 180 180" class="r-a"><ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" stroke-width="1.4" opacity="0.9"/></svg>
+        <svg viewBox="0 0 180 180" class="r-b" style="transform: rotate(60deg)"><ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" stroke-width="1.4" opacity="0.55"/></svg>
+        <svg viewBox="0 0 180 180" class="r-c" style="transform: rotate(120deg)"><ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" stroke-width="1.4" opacity="0.35"/></svg>
+        <div class="nuc"></div>
+      </div>
+      <div class="mark" aria-label="ΔTOM"><span>Δ</span><span>T</span><span>O</span><span>M</span></div>
+      <div class="cap">Initialising voice stack · Nirmata</div>
+      <div class="bar" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Sticky header -->
+  <header class="atom-header" role="banner">
+    <div class="atom-header__inner">
+      <a class="atom-header__brand" href="#top" aria-label="ΔTOM home">
+        <img src="assets/atom-icon.svg" alt="" width="28" height="28" />
+        <span class="atom-wordmark" aria-label="ΔTOM">
+          <span>Δ</span><span>T</span><span class="atom-wordmark__o">O</span><span>M</span>
+        </span>
+      </a>
+      <nav class="atom-header__nav" aria-label="Section">
+        <a class="nav-tab is-active" href="#tokens">Tokens</a>
+        <a class="nav-tab" href="#logo">Logo</a>
+        <a class="nav-tab" href="#components">Components</a>
+        <a class="nav-tab" href="#motion">Motion</a>
+        <a class="nav-tab" href="#dataviz">Data viz</a>
+        <a class="nav-tab" href="#a11y">A11y</a>
+      </nav>
+      <div class="row">
+        <span class="status-badge"><span class="status-badge__dot" aria-hidden="true"></span>ΔTOM Live</span>
+        <button class="btn btn--ghost btn--sm" id="theme-toggle" aria-pressed="false" aria-label="Toggle theme">
+          <span id="theme-toggle-label">Light mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- HERO -->
+    <section class="hero section" id="top">
+      <div class="ambient-glow" aria-hidden="true"></div>
+      <div class="container hero__inner atom-stagger">
+        <span class="eyebrow">Nirmata Holdings · ΔTOM Suite</span>
+        <h1>The brand &amp; design system powering <span class="atom-wordmark" aria-label="ΔTOM"><span>Δ</span><span>T</span><span class="atom-wordmark__o">O</span><span>M</span></span>.</h1>
+        <p class="lede">A dark-first, cinematic visual language for enterprise AI. One teal accent. Eight grids. Two typefaces. Motion that means something. This page is the canonical reference — every token, component, and rule, drop-in ready.</p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="#tokens">Browse tokens</a>
+          <a class="btn btn--ghost" href="#components">View components</a>
+          <button class="btn btn--quiet" id="replay-loader" type="button">Replay loader →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOKENS -->
+    <section class="section" id="tokens">
+      <div class="container with-toc">
+        <aside class="toc" aria-label="Table of contents">
+          <p class="eyebrow" style="margin-bottom: var(--space-3)">On this page</p>
+          <a href="#tokens">01 · Tokens</a>
+          <a href="#logo">02 · Logo &amp; wordmark</a>
+          <a href="#components">03 · Components</a>
+          <a href="#motion">04 · Motion</a>
+          <a href="#dataviz">05 · Data viz</a>
+          <a href="#a11y">06 · Accessibility</a>
+          <a href="#implement">07 · Implement</a>
+        </aside>
+
+        <div>
+          <div class="section-label">
+            <span class="section-label__num">01</span>
+            <span>Design tokens</span>
+            <span class="section-label__rule"></span>
+          </div>
+          <h2>Color, type, spacing, radius, shadow, motion.</h2>
+          <p class="muted" style="margin-top: var(--space-3); max-width: 64ch;">
+            All component CSS resolves to these custom properties. Dark canonical first; light cream variant via <code class="mono">[data-theme="light"]</code>.
+          </p>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Color · surfaces</h3>
+          <div class="grid grid-4">
+            <div class="swatch"><div class="swatch__chip" data-hex="#0b0b0c" style="background:#0b0b0c"></div><div class="swatch__name">Background</div><div class="swatch__var">--atom-bg</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#111113" style="background:#111113"></div><div class="swatch__name">Surface 1</div><div class="swatch__var">--atom-surface-1</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#161618" style="background:#161618"></div><div class="swatch__name">Surface 2</div><div class="swatch__var">--atom-surface-2</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#1c1c1f" style="background:#1c1c1f"></div><div class="swatch__name">Surface 3</div><div class="swatch__var">--atom-surface-3</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#222226" style="background:#222226"></div><div class="swatch__name">Surface 4</div><div class="swatch__var">--atom-surface-4</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#f4f3ef" style="background:#f4f3ef"></div><div class="swatch__name">Cream (light)</div><div class="swatch__var">--atom-bg · light</div></div>
+          </div>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Color · primary teal</h3>
+          <div class="grid grid-4">
+            <div class="swatch"><div class="swatch__chip" data-hex="#00c8c8" style="background:#00c8c8"></div><div class="swatch__name">Primary</div><div class="swatch__var">--atom-primary</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#00989c" style="background:#00989c"></div><div class="swatch__name">Primary Dim</div><div class="swatch__var">--atom-primary-dim</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#007b7b" style="background:#007b7b"></div><div class="swatch__name">Light Primary</div><div class="swatch__var">--atom-primary · light</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="rgba(0,200,200,0.25)" style="background:rgba(0,200,200,0.25)"></div><div class="swatch__name">Primary Strong</div><div class="swatch__var">--atom-primary-strong</div></div>
+          </div>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Color · provider accents</h3>
+          <p class="muted" style="margin-bottom: var(--space-4); max-width: 64ch;">
+            Used only for tags, charts, or provider identification — never as a UI primary. Teal remains the sole power accent.
+          </p>
+          <div class="grid grid-4">
+            <div class="swatch"><div class="swatch__chip" data-hex="#c084fc" style="background:#c084fc"></div><div class="swatch__name">Claude Purple</div><div class="swatch__var">--atom-accent-claude</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#ff7b6b" style="background:#ff7b6b"></div><div class="swatch__name">Hume Coral</div><div class="swatch__var">--atom-accent-hume</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#f5c842" style="background:#f5c842"></div><div class="swatch__name">Samba Gold</div><div class="swatch__var">--atom-accent-samba</div></div>
+            <div class="swatch"><div class="swatch__chip" data-hex="#74c0fc" style="background:#74c0fc"></div><div class="swatch__name">GPT Blue</div><div class="swatch__var">--atom-accent-gpt</div></div>
+          </div>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Typography</h3>
+          <div class="type-row">
+            <div class="type-row__meta">Display 3xl<br/>Cabinet Grotesk 800</div>
+            <div class="type-row__sample" style="font-family: var(--atom-font-display); font-weight: 800; font-size: var(--text-3xl); line-height: 1.05; letter-spacing: -0.03em;">ΔTOM is the voice stack.</div>
+          </div>
+          <div class="type-row">
+            <div class="type-row__meta">Display 2xl</div>
+            <div class="type-row__sample" style="font-family: var(--atom-font-display); font-weight: 700; font-size: var(--text-2xl); letter-spacing: -0.02em;">Real-time agents, grounded in your call data.</div>
+          </div>
+          <div class="type-row">
+            <div class="type-row__meta">Heading xl</div>
+            <div class="type-row__sample" style="font-family: var(--atom-font-display); font-weight: 700; font-size: var(--text-xl);">Cabinet Grotesk fallback Satoshi.</div>
+          </div>
+          <div class="type-row">
+            <div class="type-row__meta">Body md</div>
+            <div class="type-row__sample" style="font-size: var(--text-md); line-height: 1.55;">Body copy uses Satoshi 300–700, fallback Inter. Read measure 60–75 characters. Never set the display family below 24px.</div>
+          </div>
+          <div class="type-row">
+            <div class="type-row__meta">Body sm muted</div>
+            <div class="type-row__sample muted" style="font-size: var(--text-sm);">Supporting prose, captions, helper text. Color resolves to --atom-text-muted.</div>
+          </div>
+          <div class="type-row">
+            <div class="type-row__meta">Mono sm</div>
+            <div class="type-row__sample mono" style="font-size: var(--text-sm);">--atom-font-mono · JetBrains Mono 300–500</div>
+          </div>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Spacing · 8-point grid</h3>
+          <div class="grid grid-4">
+            <div><div class="swatch__var">--space-1 · 4px</div><div style="background:var(--atom-primary); height:4px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-2 · 8px</div><div style="background:var(--atom-primary); height:8px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-4 · 16px</div><div style="background:var(--atom-primary); height:16px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-6 · 24px</div><div style="background:var(--atom-primary); height:24px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-8 · 32px</div><div style="background:var(--atom-primary); height:32px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-12 · 48px</div><div style="background:var(--atom-primary); height:48px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-16 · 64px</div><div style="background:var(--atom-primary); height:64px; margin-top:8px;"></div></div>
+            <div><div class="swatch__var">--space-24 · 96px</div><div style="background:var(--atom-primary); height:96px; margin-top:8px;"></div></div>
+          </div>
+
+          <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Radius · Shadow</h3>
+          <div class="grid grid-4">
+            <div class="arch-node" style="--corner: var(--radius-sm); border-radius: var(--radius-sm);"><div class="arch-node__title">sm · .375rem</div><div class="arch-node__body mono">--radius-sm</div></div>
+            <div class="arch-node" style="border-radius: var(--radius-md);"><div class="arch-node__title">md · .625rem</div><div class="arch-node__body mono">--radius-md</div></div>
+            <div class="arch-node" style="border-radius: var(--radius-lg);"><div class="arch-node__title">lg · .875rem</div><div class="arch-node__body mono">--radius-lg</div></div>
+            <div class="arch-node" style="border-radius: var(--radius-xl);"><div class="arch-node__title">xl · 1.25rem</div><div class="arch-node__body mono">--radius-xl</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOGO -->
+    <section class="section" id="logo">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">02</span>
+          <span>Logo &amp; wordmark</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>One mark. Two surfaces. Δ is always Unicode.</h2>
+        <p class="muted" style="margin-top: var(--space-3); max-width: 64ch;">
+          The canonical wordmark is ΔTOM — Greek capital Delta (U+0394), T, teal O ring, M. Never substitute Latin A. Lockup pairs the orbital icon at left.
+        </p>
+
+        <div class="grid grid-2" style="margin-top: var(--space-8);">
+          <div class="logo-tile logo-tile--dark" style="color: #e8e8ea;">
+            <span class="logo-tile__label">Dark · canonical</span>
+            <svg viewBox="0 0 480 96" width="360" height="72" role="img" aria-label="ΔTOM lockup on dark canvas">
+              <g transform="translate(8 16)">
+                <g fill="none" stroke="#00c8c8" stroke-width="1.6">
+                  <ellipse cx="32" cy="32" rx="26" ry="10"/>
+                  <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"/>
+                  <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"/>
+                </g>
+                <circle cx="32" cy="32" r="6" fill="#ffffff"/>
+              </g>
+              <g transform="translate(96 0)">
+                <text x="0" y="72" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">Δ T</text>
+                <text x="226" y="72" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">M</text>
+                <g transform="translate(172 40)"><circle cx="22" cy="22" r="20" fill="none" stroke="#00c8c8" stroke-width="6"/></g>
+              </g>
+            </svg>
+          </div>
+          <div class="logo-tile logo-tile--light" style="color: #14181a;">
+            <span class="logo-tile__label">Light · cream</span>
+            <svg viewBox="0 0 480 96" width="360" height="72" role="img" aria-label="ΔTOM lockup on cream canvas">
+              <g transform="translate(8 16)">
+                <g fill="none" stroke="#007b7b" stroke-width="1.6">
+                  <ellipse cx="32" cy="32" rx="26" ry="10"/>
+                  <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"/>
+                  <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"/>
+                </g>
+                <circle cx="32" cy="32" r="6" fill="#14181a"/>
+              </g>
+              <g transform="translate(96 0)">
+                <text x="0" y="72" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">Δ T</text>
+                <text x="226" y="72" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">M</text>
+                <g transform="translate(172 40)"><circle cx="22" cy="22" r="20" fill="none" stroke="#007b7b" stroke-width="6"/></g>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="grid grid-3" style="margin-top: var(--space-6);">
+          <div class="arch-node">
+            <div class="arch-node__title">Icon-only</div>
+            <div class="row" style="margin: var(--space-4) 0; gap: var(--space-6);">
+              <img src="assets/atom-icon.svg" alt="" width="64" height="64" />
+              <img src="assets/atom-icon.svg" alt="" width="32" height="32" />
+              <img src="assets/atom-icon.svg" alt="" width="20" height="20" />
+            </div>
+            <div class="arch-node__body">Use at favicons, app tiles, OG cards. Never below 16px square.</div>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Lettermark</div>
+            <div class="row" style="margin: var(--space-4) 0; gap: var(--space-6); color: var(--atom-text);">
+              <svg viewBox="0 0 80 80" width="64" height="64" role="img" aria-label="Δ lettermark large">
+                <text x="50%" y="62" text-anchor="middle" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:72px; letter-spacing:-0.02em; fill: currentColor;">Δ</text>
+              </svg>
+              <svg viewBox="0 0 80 80" width="40" height="40" role="img" aria-label="Δ lettermark small">
+                <text x="50%" y="62" text-anchor="middle" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:72px; letter-spacing:-0.02em; fill: currentColor;">Δ</text>
+              </svg>
+            </div>
+            <div class="arch-node__body">Δ alone. Cabinet Grotesk 800. Use for collapsed nav, social avatars.</div>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Wordmark only</div>
+            <div style="margin: var(--space-4) 0; color: var(--atom-text);">
+              <svg viewBox="0 0 320 80" width="280" role="img" aria-label="ΔTOM wordmark">
+                <text x="6" y="60" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">Δ T</text>
+                <text x="232" y="60" style="font-family: 'Cabinet Grotesk','Satoshi','Inter',system-ui,sans-serif; font-weight:800; font-size:64px; letter-spacing:-0.02em; fill: currentColor;">M</text>
+                <g transform="translate(178 28)">
+                  <circle cx="22" cy="22" r="20" fill="none" stroke="var(--atom-primary)" stroke-width="6"/>
+                </g>
+              </svg>
+            </div>
+            <div class="arch-node__body">Δ + T + teal O ring + M. Equal Δ height of clear space on all sides.</div>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: var(--space-8);">
+          <div class="callout__kicker">Hard rules</div>
+          <div class="callout__title">Do not break the wordmark.</div>
+          <ul class="callout__body" style="display:grid; gap: var(--space-2); padding-left: var(--space-5);">
+            <li>The first character must always be Greek capital Delta <span class="mono">Δ (U+0394)</span>. Never Latin A.</li>
+            <li>Δ, T, M render in light cream <span class="mono">#e8e8ea</span> on dark; near-black on cream.</li>
+            <li>The <strong>O</strong> is a teal ring accent — never the Δ.</li>
+            <li>Glow only. No drop shadows on the logo. Maintain Δ-height clear space.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section class="section" id="components">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">03</span>
+          <span>Components</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>Buttons, tags, cards, badges, fields.</h2>
+
+        <h3 style="margin-top: var(--space-8); margin-bottom: var(--space-4);">Buttons</h3>
+        <div class="row">
+          <button class="btn btn--primary atom-ripple">Launch ΔTOM</button>
+          <button class="btn btn--ghost">View logs</button>
+          <button class="btn btn--quiet">Skip</button>
+          <button class="btn btn--primary btn--lg">Start a call</button>
+          <button class="btn btn--ghost btn--sm">Filter</button>
+          <button class="btn btn--primary" disabled>Disabled</button>
+        </div>
+        <pre class="code"><code>&lt;button class="btn btn--primary"&gt;Launch ΔTOM&lt;/button&gt;
+&lt;button class="btn btn--ghost"&gt;View logs&lt;/button&gt;
+&lt;button class="btn btn--quiet"&gt;Skip&lt;/button&gt;</code></pre>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Tags / chips</h3>
+        <div class="provider-row">
+          <span class="tag tag--teal">Voice Stack</span>
+          <span class="tag tag--claude">Claude</span>
+          <span class="tag tag--hume">Hume EVI</span>
+          <span class="tag tag--samba">SambaNova</span>
+          <span class="tag tag--gpt">GPT-4.1</span>
+          <span class="tag tag--success">Healthy</span>
+          <span class="tag tag--warning">Degraded</span>
+          <span class="tag tag--danger">Outage</span>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Status badge</h3>
+        <div class="row">
+          <span class="status-badge"><span class="status-badge__dot" aria-hidden="true"></span>ΔTOM Live</span>
+          <span class="status-badge" style="color: var(--atom-warning); background: color-mix(in srgb, var(--atom-warning) 12%, transparent); border-color: color-mix(in srgb, var(--atom-warning) 35%, transparent);">
+            <span class="status-badge__dot" style="background: var(--atom-warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--atom-warning) 18%, transparent);"></span>
+            Synthesising
+          </span>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Arch nodes (cards)</h3>
+        <div class="grid grid-3">
+          <article class="arch-node">
+            <header class="arch-node__head">
+              <div class="arch-node__title">Voice Orchestrator</div>
+              <span class="tag tag--teal">Core</span>
+            </header>
+            <p class="arch-node__body">Routes turns across Hume EVI, GPT-4.1, and Claude with sub-300ms barge-in. Backpressure-aware.</p>
+            <div class="arch-node__meta">
+              <span class="tag">REST</span><span class="tag">gRPC</span><span class="tag">WS</span>
+            </div>
+          </article>
+          <article class="arch-node">
+            <header class="arch-node__head">
+              <div class="arch-node__title">Knowledge Plane</div>
+              <span class="tag tag--samba">SambaNova</span>
+            </header>
+            <p class="arch-node__body">Per-tenant retrieval over your call transcripts, CRM notes, and product docs. Cited every turn.</p>
+            <div class="arch-node__meta">
+              <span class="tag">RAG</span><span class="tag">Vectors</span><span class="tag">Citations</span>
+            </div>
+          </article>
+          <article class="arch-node">
+            <header class="arch-node__head">
+              <div class="arch-node__title">Observability</div>
+              <span class="tag tag--claude">Claude judge</span>
+            </header>
+            <p class="arch-node__body">Every conversation scored on rubric quality, deflection rate, and CSAT proxy. Drill into any turn.</p>
+            <div class="arch-node__meta">
+              <span class="tag">Traces</span><span class="tag">Replays</span><span class="tag">Diffs</span>
+            </div>
+          </article>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Flow steps</h3>
+        <div class="flow">
+          <div class="flow-step">
+            <div class="flow-step__num">01</div>
+            <div>
+              <div class="flow-step__title">Ingest your stack</div>
+              <div class="flow-step__body">Connect Twilio, SIP, or WebRTC. ΔTOM hot-mirrors traffic into a shadow lane in minutes.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step__num">02</div>
+            <div>
+              <div class="flow-step__title">Calibrate to your brand</div>
+              <div class="flow-step__body">Upload 30 of your best calls. ΔTOM derives tone, scripts, and objection handling automatically.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step__num">03</div>
+            <div>
+              <div class="flow-step__title">Promote to production</div>
+              <div class="flow-step__body">Move from shadow to live with one-click rollback. SLA-backed barge-in under 300ms.</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Metric displays</h3>
+        <div class="grid grid-4">
+          <div class="metric">
+            <div class="metric__label">Calls / min</div>
+            <div class="metric__value tabular" data-counter="2841">0</div>
+            <div class="metric__delta">▲ 12.4% wk</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">Median latency</div>
+            <div class="metric__value tabular" data-counter="284">0<span style="font-size:0.55em; color:var(--atom-text-muted)"> ms</span></div>
+            <div class="metric__delta metric__delta--flat">▬ flat</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">Resolution</div>
+            <div class="metric__value tabular" data-counter="92">0<span style="font-size:0.55em; color:var(--atom-text-muted)">%</span></div>
+            <div class="metric__delta">▲ 3.2 pts</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">Escalations</div>
+            <div class="metric__value tabular" data-counter="46">0</div>
+            <div class="metric__delta metric__delta--down">▼ 18%</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Forms</h3>
+        <div class="grid grid-2">
+          <div class="stack">
+            <div class="field">
+              <label class="field__label" for="org">Organisation</label>
+              <input class="input" id="org" type="text" placeholder="Nirmata Holdings" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="prov">Provider</label>
+              <select class="select" id="prov">
+                <option>GPT-4.1 · OpenAI</option>
+                <option>Claude 3.5 Sonnet</option>
+                <option>Hume EVI 2</option>
+                <option>SambaNova Llama 3.1</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="note">System prompt</label>
+              <textarea class="textarea" id="note" placeholder="You are ΔTOM, a senior sales engineer for Nirmata..."></textarea>
+            </div>
+          </div>
+          <div class="stack">
+            <label class="row"><input class="checkbox" type="checkbox" checked /> <span>Stream barge-in events</span></label>
+            <label class="row"><input class="checkbox" type="checkbox" /> <span>Persist transcripts to S3</span></label>
+            <label class="row"><input class="radio" type="radio" name="r" checked /> <span>Shadow mode</span></label>
+            <label class="row"><input class="radio" type="radio" name="r" /> <span>Production · 5% canary</span></label>
+            <label class="row"><input class="radio" type="radio" name="r" /> <span>Production · 100%</span></label>
+            <div class="row">
+              <button class="btn btn--primary">Save deployment</button>
+              <button class="btn btn--ghost">Discard</button>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Tabs</h3>
+        <div class="tabs" role="tablist">
+          <button class="tabs__btn" role="tab" aria-selected="true">Overview</button>
+          <button class="tabs__btn" role="tab" aria-selected="false">Traces</button>
+          <button class="tabs__btn" role="tab" aria-selected="false">Evaluations</button>
+          <button class="tabs__btn" role="tab" aria-selected="false">Settings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOTION -->
+    <section class="section" id="motion">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">04</span>
+          <span>Motion</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>Cinematic, but functional.</h2>
+        <p class="muted" style="margin-top: var(--space-3); max-width: 64ch;">
+          One signature transition: <code class="mono">180ms cubic-bezier(0.16, 1, 0.3, 1)</code>. All motion respects <code class="mono">prefers-reduced-motion</code>.
+        </p>
+
+        <div class="grid grid-3" style="margin-top: var(--space-8);">
+          <div class="arch-node">
+            <div class="arch-node__title">Loader sequence</div>
+            <p class="arch-node__body">Drop-in cinematic boot. Default 2.5s. JS API: <span class="mono">ATOMLoader.play()</span>.</p>
+            <div class="row" style="margin-top: var(--space-4);">
+              <button class="btn btn--ghost btn--sm" id="loader-play">Play 2.5s</button>
+              <button class="btn btn--quiet btn--sm" id="loader-play-fast">Play 1.2s</button>
+            </div>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Orbital + glow</div>
+            <p class="arch-node__body">Three rings spinning at staggered speeds with radial bloom behind the nucleus.</p>
+            <div style="margin-top: var(--space-4); position: relative; height: 120px;">
+              <div style="position:absolute; inset:0; display:grid; place-items:center;">
+                <div style="position:relative; width: 110px; height: 110px;">
+                  <svg viewBox="0 0 110 110" class="atom-orbit-spin" style="position:absolute; inset:0; width:100%; height:100%;"><ellipse cx="55" cy="55" rx="48" ry="18" fill="none" stroke="#00c8c8" stroke-width="1.2"/></svg>
+                  <svg viewBox="0 0 110 110" class="atom-orbit-counter" style="position:absolute; inset:0; width:100%; height:100%; transform: rotate(60deg);"><ellipse cx="55" cy="55" rx="48" ry="18" fill="none" stroke="#00c8c8" stroke-width="1.2" opacity="0.6"/></svg>
+                  <svg viewBox="0 0 110 110" class="atom-orbit-spin atom-orbit-spin--fast" style="position:absolute; inset:0; width:100%; height:100%; transform: rotate(120deg);"><ellipse cx="55" cy="55" rx="48" ry="18" fill="none" stroke="#00c8c8" stroke-width="1.2" opacity="0.4"/></svg>
+                  <div style="position:absolute; top:50%; left:50%; width:14px; height:14px; transform:translate(-50%,-50%); border-radius:50%; background:#fff; box-shadow: 0 0 30px rgba(0,200,200,0.7);" class="atom-pulse-dot"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Stagger entrance</div>
+            <p class="arch-node__body">Headline, subtext, CTAs fade-up at 100ms intervals on mount.</p>
+            <ul class="atom-stagger stack" style="margin-top: var(--space-4); list-style:none; padding:0;">
+              <li style="color: var(--atom-text);">Headline arrives.</li>
+              <li class="muted">Subtext follows.</li>
+              <li><button class="btn btn--primary btn--sm">CTA lands</button></li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-10); margin-bottom: var(--space-4);">Ripple on press</h3>
+        <p class="muted" style="margin-bottom: var(--space-4);">Click the primary button — a teal ripple emanates from the cursor.</p>
+        <button class="btn btn--primary atom-ripple" id="ripple-demo">Trigger ripple</button>
+      </div>
+    </section>
+
+    <!-- DATA VIZ -->
+    <section class="section" id="dataviz">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">05</span>
+          <span>Data viz</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>Counters, progress, waveforms, signal.</h2>
+
+        <div class="grid grid-2" style="margin-top: var(--space-8);">
+          <div class="arch-node">
+            <div class="arch-node__title">Animated progress</div>
+            <p class="arch-node__body" style="margin-bottom: var(--space-4);">Knowledge plane sync · 78%</p>
+            <div class="atom-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="78"><div class="atom-progress__bar" style="--progress: 78%"></div></div>
+            <p class="arch-node__body" style="margin: var(--space-4) 0 var(--space-2);">Latency budget · 42%</p>
+            <div class="atom-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="42"><div class="atom-progress__bar" style="--progress: 42%; animation-duration: 1.8s;"></div></div>
+            <p class="arch-node__body" style="margin: var(--space-4) 0 var(--space-2);">Cache hit rate · 96%</p>
+            <div class="atom-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="96"><div class="atom-progress__bar" style="--progress: 96%; animation-duration: 2.2s;"></div></div>
+          </div>
+
+          <div class="arch-node">
+            <div class="arch-node__title">Live waveform</div>
+            <p class="arch-node__body">Voice activity indicator. Use during streaming.</p>
+            <div class="row" style="margin-top: var(--space-4); gap: var(--space-4);">
+              <span class="atom-waveform" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </span>
+              <span class="status-badge"><span class="status-badge__dot"></span>Listening</span>
+            </div>
+            <div class="row atom-signal-scan" style="margin-top: var(--space-6); padding: var(--space-4); background: var(--atom-surface-2); border-radius: var(--radius-md); position: relative;">
+              <span class="mono" style="font-size: var(--text-sm); color: var(--atom-text-muted);">signal · scanning frequency band</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-4" style="margin-top: var(--space-6);">
+          <div class="metric">
+            <div class="metric__label">Tokens / sec</div>
+            <div class="metric__value tabular" data-counter="1240">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">Words spoken</div>
+            <div class="metric__value tabular" data-counter="318492">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">Avg call (s)</div>
+            <div class="metric__value tabular" data-counter="184">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric__label">CSAT proxy</div>
+            <div class="metric__value tabular" data-counter="4">0<span style="font-size:0.55em; color: var(--atom-text-muted);">.8 / 5</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- A11Y -->
+    <section class="section" id="a11y">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">06</span>
+          <span>Accessibility</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>WCAG AA, keyboard-first, motion-aware.</h2>
+        <div class="grid grid-3" style="margin-top: var(--space-8);">
+          <div class="arch-node">
+            <div class="arch-node__title">Contrast</div>
+            <p class="arch-node__body">Body text on dark canonical reaches 13.5:1. Teal primary on dark reaches 6.2:1 — passes AA Large and UI.</p>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Focus</div>
+            <p class="arch-node__body">All interactive elements expose a 4px teal ring via <span class="mono">:focus-visible</span>. Skip-link at top of page.</p>
+          </div>
+          <div class="arch-node">
+            <div class="arch-node__title">Motion</div>
+            <p class="arch-node__body"><span class="mono">prefers-reduced-motion: reduce</span> disables loaders, orbital spin, glow bloom, pulse, sweep, waveform, ripple.</p>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: var(--space-6); max-width: 64ch;">
+          Try tabbing through the page — every focusable element has a visible teal ring at 4px against background. The skip-link appears at top-left on first Tab.
+        </p>
+      </div>
+    </section>
+
+    <!-- IMPLEMENT -->
+    <section class="section" id="implement">
+      <div class="container">
+        <div class="section-label">
+          <span class="section-label__num">07</span>
+          <span>Implementation</span>
+          <span class="section-label__rule"></span>
+        </div>
+        <h2>Drop-in install.</h2>
+
+        <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3);">1 · Include the CSS</h3>
+        <pre class="code"><code>&lt;link rel="stylesheet" href="css/atom-tokens.css" /&gt;
+&lt;link rel="stylesheet" href="css/atom-animations.css" /&gt;
+&lt;link rel="stylesheet" href="css/atom-components.css" /&gt;</code></pre>
+
+        <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3);">2 · Load fonts</h3>
+        <pre class="code"><code>&lt;link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&amp;f[]=satoshi@300,400,500,700&amp;display=swap" rel="stylesheet" /&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&amp;display=swap" rel="stylesheet" /&gt;</code></pre>
+
+        <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3);">3 · Mount the loader (optional)</h3>
+        <pre class="code"><code>&lt;!-- copy markup from components/atom-loader.html into &lt;body&gt; --&gt;
+&lt;script src="js/atom-loader.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  // Boot once on page load — default 2500ms
+  ATOMLoader.init({ duration: 2500, autoStart: true });
+
+  // Or trigger manually
+  ATOMLoader.show();
+  ATOMLoader.hide();
+  ATOMLoader.play({ duration: 1500 });
+&lt;/script&gt;</code></pre>
+
+        <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3);">4 · Toggle theme</h3>
+        <pre class="code"><code>// On dark (canonical):
+document.documentElement.setAttribute('data-theme', 'dark');
+
+// On light cream:
+document.documentElement.setAttribute('data-theme', 'light');</code></pre>
+
+        <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3);">5 · Render the wordmark correctly</h3>
+        <pre class="code"><code>&lt;!-- Prefer the SVG --&gt;
+&lt;img src="assets/atom-wordmark.svg" alt="ΔTOM" /&gt;
+
+&lt;!-- Or inline text — Δ is U+0394, never Latin A --&gt;
+&lt;span class="atom-wordmark" aria-label="ΔTOM"&gt;
+  &lt;span&gt;Δ&lt;/span&gt;&lt;span&gt;T&lt;/span&gt;&lt;span class="atom-wordmark__o"&gt;O&lt;/span&gt;&lt;span&gt;M&lt;/span&gt;
+&lt;/span&gt;</code></pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="atom-wordmark" aria-label="ΔTOM"><span>Δ</span><span>T</span><span class="atom-wordmark__o">O</span><span>M</span></span>
+      &nbsp;·&nbsp; Nirmata Holdings · Design System v1.0
+    </footer>
+  </main>
+
+  <script src="js/atom-loader.js"></script>
+  <script>
+    // Boot loader on first load · 2.5s
+    ATOMLoader.init({ duration: 2500, autoStart: true });
+
+    // Theme toggle
+    var html = document.documentElement;
+    var btn = document.getElementById('theme-toggle');
+    var lbl = document.getElementById('theme-toggle-label');
+    function setTheme(t) {
+      html.setAttribute('data-theme', t);
+      btn.setAttribute('aria-pressed', t === 'light' ? 'true' : 'false');
+      lbl.textContent = t === 'light' ? 'Dark mode' : 'Light mode';
+    }
+    btn.addEventListener('click', function () {
+      var cur = html.getAttribute('data-theme') || 'dark';
+      setTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+
+    // Loader replay button
+    document.getElementById('replay-loader').addEventListener('click', function () {
+      ATOMLoader.play({ duration: 2500 });
+    });
+    document.getElementById('loader-play').addEventListener('click', function () {
+      ATOMLoader.play({ duration: 2500 });
+    });
+    document.getElementById('loader-play-fast').addEventListener('click', function () {
+      ATOMLoader.play({ duration: 1200 });
+    });
+
+    // Ripple
+    function attachRipple(el) {
+      el.addEventListener('click', function (e) {
+        var rect = el.getBoundingClientRect();
+        el.style.setProperty('--ripple-x', (e.clientX - rect.left) + 'px');
+        el.style.setProperty('--ripple-y', (e.clientY - rect.top) + 'px');
+        el.classList.remove('is-rippling');
+        // Force reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add('is-rippling');
+      });
+    }
+    document.querySelectorAll('.atom-ripple').forEach(attachRipple);
+
+    // Counter animation
+    function animateCounter(el) {
+      var target = parseInt(el.getAttribute('data-counter'), 10);
+      if (!target || target < 1) return;
+      var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        // Preserve any suffix HTML after the number text
+        el.firstChild.nodeValue = target.toLocaleString();
+        return;
+      }
+      var duration = 1200, start = performance.now();
+      function tick(now) {
+        var t = Math.min(1, (now - start) / duration);
+        var eased = 1 - Math.pow(1 - t, 3);
+        var v = Math.round(target * eased);
+        el.firstChild.nodeValue = v.toLocaleString();
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (ent) {
+        if (ent.isIntersecting) {
+          animateCounter(ent.target);
+          io.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll('[data-counter]').forEach(function (el) { io.observe(el); });
+
+    // Tabs
+    document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+      list.querySelectorAll('[role="tab"]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          list.querySelectorAll('[role="tab"]').forEach(function (t) { t.setAttribute('aria-selected', 'false'); });
+          tab.setAttribute('aria-selected', 'true');
+        });
+      });
+    });
+
+    // Nav-tab active state on scroll
+    var sections = document.querySelectorAll('main section[id]');
+    var navLinks = document.querySelectorAll('.atom-header__nav .nav-tab');
+    var navIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (ent) {
+        if (ent.isIntersecting) {
+          var id = ent.target.id;
+          navLinks.forEach(function (l) {
+            if (l.getAttribute('href') === '#' + id) l.classList.add('is-active');
+            else l.classList.remove('is-active');
+          });
+        }
+      });
+    }, { rootMargin: '-50% 0px -45% 0px' });
+    sections.forEach(function (s) { navIO.observe(s); });
+  </script>
+</body>
+</html>

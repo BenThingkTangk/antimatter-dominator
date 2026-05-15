@@ -1,0 +1,246 @@
+/*
+ * ATOM Animations
+ * Cinematic motion layer for the ATOM design system.
+ *
+ * Conventions:
+ *   - All easing references --ease-atom unless mimicking physics.
+ *   - All durations reference --dur-* tokens.
+ *   - Every motion utility honours prefers-reduced-motion.
+ *   - Keyframes only describe motion; binding is via utility classes.
+ */
+
+/* ────────────────────────────────────────────────────────────
+ * Keyframes
+ * ──────────────────────────────────────────────────────────── */
+
+@keyframes atom-pulse-dot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.6; }
+}
+
+@keyframes atom-reveal-fade {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes atom-reveal-clip {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to   { clip-path: inset(0 0    0 0); opacity: 1; }
+}
+
+@keyframes atom-orbit-spin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes atom-orbit-counter {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes atom-glow-bloom {
+  0%, 100% { opacity: 0.55; transform: scale(1);    filter: blur(40px); }
+  50%      { opacity: 0.85; transform: scale(1.08); filter: blur(56px); }
+}
+
+@keyframes atom-particle-orbit {
+  0%   { transform: rotate(0deg)   translateX(var(--orbit-r, 32px)) rotate(0deg);   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(var(--orbit-r, 32px)) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes atom-loader-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes atom-loader-fade-out {
+  0%   { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@keyframes atom-ripple {
+  0%   { transform: scale(0.4); opacity: 0.45; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes atom-counter-tick {
+  from { transform: translateY(0.4em);  opacity: 0; }
+  to   { transform: translateY(0);      opacity: 1; }
+}
+
+@keyframes atom-progress-fill {
+  from { width: 0; }
+  to   { width: var(--progress, 100%); }
+}
+
+@keyframes atom-waveform {
+  0%, 100% { transform: scaleY(0.35); }
+  20%      { transform: scaleY(0.85); }
+  40%      { transform: scaleY(0.5);  }
+  60%      { transform: scaleY(1);    }
+  80%      { transform: scaleY(0.6);  }
+}
+
+@keyframes atom-signal-scan {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(100%);  opacity: 0; }
+}
+
+@keyframes atom-hover-glow {
+  from { box-shadow: 0 0 0 0 var(--atom-primary-glow); }
+  to   { box-shadow: 0 0 0 8px transparent; }
+}
+
+@keyframes atom-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ────────────────────────────────────────────────────────────
+ * Motion utilities · apply by class
+ * ──────────────────────────────────────────────────────────── */
+
+.atom-reveal {
+  opacity: 0;
+  animation: atom-reveal-fade var(--dur-slower) var(--ease-atom) forwards;
+}
+
+.atom-reveal-clip {
+  animation: atom-reveal-clip var(--dur-slower) var(--ease-atom) forwards;
+}
+
+/* Entrance stagger: parent .atom-stagger reveals children sequentially */
+.atom-stagger > * {
+  opacity: 0;
+  animation: atom-reveal-fade var(--dur-slower) var(--ease-atom) forwards;
+}
+.atom-stagger > *:nth-child(1) { animation-delay: 60ms;  }
+.atom-stagger > *:nth-child(2) { animation-delay: 160ms; }
+.atom-stagger > *:nth-child(3) { animation-delay: 260ms; }
+.atom-stagger > *:nth-child(4) { animation-delay: 360ms; }
+.atom-stagger > *:nth-child(5) { animation-delay: 460ms; }
+.atom-stagger > *:nth-child(6) { animation-delay: 560ms; }
+.atom-stagger > *:nth-child(7) { animation-delay: 660ms; }
+.atom-stagger > *:nth-child(8) { animation-delay: 760ms; }
+
+.atom-pulse-dot {
+  animation: atom-pulse-dot 1.8s var(--ease-in-out) infinite;
+}
+
+.atom-orbit-spin     { animation: atom-orbit-spin     12s linear infinite; transform-origin: center; }
+.atom-orbit-spin--slow    { animation-duration: 22s; }
+.atom-orbit-spin--fast    { animation-duration: 6s;  }
+.atom-orbit-counter  { animation: atom-orbit-counter 16s linear infinite; transform-origin: center; }
+
+.atom-glow-bloom {
+  animation: atom-glow-bloom 6s var(--ease-in-out) infinite;
+}
+
+.atom-counter-tick {
+  display: inline-block;
+  animation: atom-counter-tick var(--dur-slow) var(--ease-atom);
+}
+
+.atom-progress {
+  height: 6px;
+  background: var(--atom-surface-3);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+.atom-progress__bar {
+  position: absolute; inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--atom-primary-dim), var(--atom-primary));
+  border-radius: inherit;
+  box-shadow: 0 0 12px var(--atom-primary-strong);
+  animation: atom-progress-fill 1.4s var(--ease-atom) forwards;
+}
+
+.atom-waveform {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+}
+.atom-waveform span {
+  display: inline-block;
+  width: 3px;
+  height: 100%;
+  background: var(--atom-primary);
+  border-radius: var(--radius-full);
+  transform-origin: center;
+  animation: atom-waveform 1.1s var(--ease-in-out) infinite;
+}
+.atom-waveform span:nth-child(1) { animation-delay: 0ms;   }
+.atom-waveform span:nth-child(2) { animation-delay: 120ms; }
+.atom-waveform span:nth-child(3) { animation-delay: 240ms; }
+.atom-waveform span:nth-child(4) { animation-delay: 360ms; }
+.atom-waveform span:nth-child(5) { animation-delay: 480ms; }
+.atom-waveform span:nth-child(6) { animation-delay: 600ms; }
+.atom-waveform span:nth-child(7) { animation-delay: 720ms; }
+
+.atom-signal-scan {
+  position: relative;
+  overflow: hidden;
+}
+.atom-signal-scan::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--atom-primary-strong), transparent);
+  animation: atom-signal-scan 2.6s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+.atom-ripple {
+  position: relative; overflow: hidden;
+}
+.atom-ripple::after {
+  content: '';
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top:  var(--ripple-y, 50%);
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--atom-primary-strong);
+  transform: scale(0); opacity: 0;
+  pointer-events: none;
+}
+.atom-ripple.is-rippling::after {
+  animation: atom-ripple 600ms var(--ease-atom);
+}
+
+/* ────────────────────────────────────────────────────────────
+ * Reduced motion · comprehensive
+ * ──────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .atom-stagger > *,
+  .atom-reveal,
+  .atom-reveal-clip {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+  .atom-orbit-spin,
+  .atom-orbit-counter,
+  .atom-glow-bloom,
+  .atom-pulse-dot,
+  .atom-waveform span,
+  .atom-signal-scan::after,
+  #atom-loader__ring,
+  #atom-loader__sweep {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,13 @@
+/*
+ * ΔTOM Brand & Design System
+ * Aggregate stylesheet for app imports.
+ *
+ * Usage:
+ *   import "@nirmata/atom-design-system/css";
+ *   or
+ *   <link rel="stylesheet" href="/node_modules/@nirmata/atom-design-system/atom.css" />
+ */
+
+@import url("./css/atom-tokens.css");
+@import url("./css/atom-animations.css");
+@import url("./css/atom-components.css");
