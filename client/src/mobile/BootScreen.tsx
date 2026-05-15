@@ -25,7 +25,7 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
   }, [minDuration, onDone]);
 
   return (
-    <div className={`m-boot${leaving ? " is-leaving" : ""}`} role="status" aria-label="ΔTOM booting">
+    <div className={`m-boot${leaving ? " is-leaving" : ""}`} role="status" aria-label="ATOM booting">
       <div className="m-boot-mark"><AtomOrbit size={170} /></div>
       <div className="m-boot-wordmark">ΔT<span className="m-o">O</span>M</div>
       <div className="m-boot-bar"><div className="m-boot-bar-fill" /></div>
@@ -36,7 +36,7 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">NET&nbsp;&nbsp;&nbsp;</span>
-          <span className="m-boot-val">Handshake · ΔTOM.Live</span>
+          <span className="m-boot-val">Handshake · Nirmata.Holdings</span>
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">LLM&nbsp;&nbsp;&nbsp;</span>

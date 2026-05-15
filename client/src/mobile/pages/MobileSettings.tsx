@@ -52,9 +52,9 @@ export default function MobileSettings() {
           <div className="m-row" style={{ gap: 12, marginTop: 10 }}>
             <span style={{
               width: 44, height: 44, borderRadius: 12,
-              background: "rgba(105,106,172,0.1)",
+              background: "rgba(0,230,211,0.1)",
               display: "grid", placeItems: "center",
-              color: "#696aac",
+              color: "#00e6d3",
             }}>
               <Building2 size={20} />
             </span>
@@ -68,9 +68,6 @@ export default function MobileSettings() {
           <Link href="/m/admin" className="m-btn m-btn-ghost" style={{ marginTop: 14 }}>
             <Building2 size={16} /> Open tenant admin
           </Link>
-          <Link href="/m/admin/hq" className="m-btn m-btn-ghost" style={{ marginTop: 8, color: "#ffd166", borderColor: "rgba(255,209,102,0.32)" }}>
-            <Building2 size={16} /> Nirmata HQ overlord console
-          </Link>
         </div>
 
         {/* Appearance */}
@@ -83,7 +80,7 @@ export default function MobileSettings() {
             </span>
             <button
               className="m-btn"
-              style={{ width: 64, minHeight: 32, padding: 0, background: haptic ? "#696aac" : "rgba(255,255,255,0.08)", color: haptic ? "#041413" : "#9ca8ad", border: "none" }}
+              style={{ width: 64, minHeight: 32, padding: 0, background: haptic ? "#00e6d3" : "rgba(255,255,255,0.08)", color: haptic ? "#041413" : "#9ca8ad", border: "none" }}
               onClick={() => setHaptic((v) => !v)}
             >
               {haptic ? "ON" : "OFF"}
@@ -117,7 +114,7 @@ export default function MobileSettings() {
         </div>
 
         {/* Switch to desktop */}
-        <a className="m-row" href="#/?desktop=1" style={{ justifyContent: "center", gap: 6, color: "#8587e3", fontSize: 14, padding: 12 }}>
+        <a className="m-row" href="#/?desktop=1" style={{ justifyContent: "center", gap: 6, color: "#00a7ff", fontSize: 14, padding: 12 }}>
           <ExternalLink size={14} /> Switch to desktop view
         </a>
       </div>

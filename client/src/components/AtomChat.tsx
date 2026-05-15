@@ -1,5 +1,5 @@
 /**
- * ΔTOM Chat — floating in-app assistant.
+ * ATOM Chat — floating in-app assistant.
  *
  * UX:
  *   - Bottom-right floating button (atomic orbit icon, teal glow)
@@ -46,7 +46,7 @@ const ROUTE_TO_CONTEXT: Record<string, string> = {
 
 const STARTERS_BY_CONTEXT: Record<string, string[]> = {
   general: [
-    "What can ΔTOM do for me?",
+    "What can ATOM do for me?",
     "How do I start a call?",
     "Walk me through the War Room",
   ],
@@ -116,144 +116,35 @@ export default function AtomChat() {
     setInput("");
     setLoading(true);
 
-    // Insert empty assistant message we'll progressively fill.
-    let assistantIndex = -1;
-    setMessages((m) => {
-      assistantIndex = m.length;
-      return [...m, { role: "assistant", content: "" }];
-    });
-
     try {
       const sessionId = getSessionId();
-      const tenantSlug =
-        typeof window !== "undefined"
-          ? window.location.hostname.split(".")[0] || null
-          : null;
+      const tenantSlug = (typeof window !== "undefined")
+        ? (window.location.hostname.split(".")[0] || null)
+        : null;
       const res = await fetch("/api/atom-chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: msg,
           context,
           history: messages.slice(-6),
           sessionId,
           tenantSlug,
-          stream: true,
         }),
       });
-
-      // Fallback: server returned non-stream JSON (legacy or error)
-      const ctype = res.headers.get("content-type") || "";
-      if (!ctype.includes("text/event-stream")) {
-        const data = await res.json().catch(() => ({}));
-        setMessages((m) => {
-          const next = [...m];
-          if (assistantIndex >= 0 && next[assistantIndex]) {
-            next[assistantIndex] = {
-              role: "assistant",
-              content: res.ok
-                ? data.content || "(no response)"
-                : `Sorry — ${data.error || "something went wrong"}.`,
-              citations: data.citations || [],
-              memoryUsed: data.memoryUsed || 0,
-            };
-          }
-          return next;
-        });
-        return;
+      const data = await res.json();
+      if (!res.ok) {
+        setMessages((m) => [...m, { role: "assistant", content: `Sorry — ${data.error || "something went wrong"}.` }]);
+      } else {
+        setMessages((m) => [...m, {
+          role: "assistant",
+          content: data.content || "(no response)",
+          citations: data.citations || [],
+          memoryUsed: data.memoryUsed || 0,
+        }]);
       }
-
-      if (!res.body) throw new Error("No response body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let assembled = "";
-      let lastEvent = "message";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buf.indexOf("\n\n")) !== -1) {
-          const frame = buf.slice(0, nl);
-          buf = buf.slice(nl + 2);
-          let evt = "message";
-          let dataLine = "";
-          for (const line of frame.split("\n")) {
-            if (line.startsWith("event:")) evt = line.slice(6).trim();
-            else if (line.startsWith("data:")) dataLine = line.slice(5).trim();
-          }
-          lastEvent = evt;
-          if (!dataLine) continue;
-          let payload: any = null;
-          try { payload = JSON.parse(dataLine); } catch { continue; }
-
-          if (evt === "token" && payload.delta) {
-            assembled += payload.delta;
-            setMessages((m) => {
-              const next = [...m];
-              if (assistantIndex >= 0 && next[assistantIndex]) {
-                next[assistantIndex] = {
-                  ...next[assistantIndex],
-                  content: assembled,
-                };
-              }
-              return next;
-            });
-          } else if (evt === "meta") {
-            setMessages((m) => {
-              const next = [...m];
-              if (assistantIndex >= 0 && next[assistantIndex]) {
-                next[assistantIndex] = {
-                  ...next[assistantIndex],
-                  memoryUsed: payload.memoryUsed || 0,
-                };
-              }
-              return next;
-            });
-          } else if (evt === "done") {
-            setMessages((m) => {
-              const next = [...m];
-              if (assistantIndex >= 0 && next[assistantIndex]) {
-                next[assistantIndex] = {
-                  ...next[assistantIndex],
-                  content: assembled || next[assistantIndex].content,
-                  citations: payload.citations || [],
-                };
-              }
-              return next;
-            });
-          } else if (evt === "error") {
-            setMessages((m) => {
-              const next = [...m];
-              if (assistantIndex >= 0 && next[assistantIndex]) {
-                next[assistantIndex] = {
-                  role: "assistant",
-                  content:
-                    assembled || `Sorry — ${payload.error || "stream failed"}.`,
-                };
-              }
-              return next;
-            });
-          }
-        }
-      }
-      void lastEvent;
     } catch (e: any) {
-      setMessages((m) => {
-        const next = [...m];
-        if (assistantIndex >= 0 && next[assistantIndex]) {
-          next[assistantIndex] = {
-            role: "assistant",
-            content: `Network error: ${e.message}`,
-          };
-        }
-        return next;
-      });
+      setMessages((m) => [...m, { role: "assistant", content: `Network error: ${e.message}` }]);
     } finally {
       setLoading(false);
     }
@@ -318,7 +209,7 @@ export default function AtomChat() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label="Close ΔTOM Chat"
+              aria-label="Close ATOM Chat"
               className="w-8 h-8 flex items-center justify-center rounded-lg"
               style={{ color: "var(--color-text-muted)" }}
             >

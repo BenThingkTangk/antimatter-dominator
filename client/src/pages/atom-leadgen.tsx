@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useProductIntel } from "@/hooks/use-product-intel";
 import { useToast } from "@/hooks/use-toast";
-import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair, Play, Pause, Download, Mic } from "lucide-react";
-import { AtomCta } from "@/components/ui/atom-form";
+import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair } from "lucide-react";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 
@@ -29,7 +28,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
     }] : [];
     flagAsHVT(companyName, { source: "leadgen", stakeholders: stakeholders as any });
     setFlagged(true);
-    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ΔTOM War Room — Von Clausewitz Engine activated.` });
+    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ATOM War Room — Von Clausewitz Engine activated.` });
   };
 
   if (flagged) {
@@ -48,7 +47,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
     <button
       onClick={handleFlag}
       className="h-[46px] px-4 rounded-xl border border-white/[0.08] flex items-center gap-1.5 text-[12px] text-white/50 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all"
-      title="Flag as HVT — Send to ΔTOM War Room"
+      title="Flag as HVT — Send to ATOM War Room"
     >
       <Crosshair className="w-3.5 h-3.5" />Flag HVT
     </button>
@@ -120,8 +119,7 @@ interface CallHistoryEntry {
   companyName: string;
   product: string;
   phoneNumber: string;
-  timestamp: number;     // end-of-call wallclock ms (Date.now())
-  callStartMs?: number;  // dial-time wallclock ms (Date.now() when call placed)
+  timestamp: number;
   duration: number;
   finalSentiment: number;
   finalIntent: number;
@@ -130,33 +128,6 @@ interface CallHistoryEntry {
   sentimentHistory: SentimentPoint[];
   emotions: Record<string, number>;
   buyingSignals: string[];
-  recordEnabled?: boolean;
-  recordingUrl?: string | null;
-  warroom?: any | null;
-}
-
-/**
- * Push a call entry into history, deduplicating by callSid. If a call with
- * the same callSid is already there, we MERGE the new fields onto the old
- * row instead of pushing a duplicate. Called from 3 different code paths
- * (poll loop, websocket close, manual hangup) — any of which can fire for
- * the same call.
- */
-function upsertHistoryEntry(prev: CallHistoryEntry[], entry: CallHistoryEntry): CallHistoryEntry[] {
-  const i = prev.findIndex(c => c.callSid === entry.callSid);
-  if (i === -1) return [entry, ...prev];
-  const merged: CallHistoryEntry = {
-    ...prev[i],
-    ...entry,
-    // Keep the longest transcript / sentiment history we've seen for this call
-    transcript:       (entry.transcript?.length || 0)       >= (prev[i].transcript?.length || 0)       ? entry.transcript       : prev[i].transcript,
-    sentimentHistory: (entry.sentimentHistory?.length || 0) >= (prev[i].sentimentHistory?.length || 0) ? entry.sentimentHistory : prev[i].sentimentHistory,
-    // Keep the earlier callStartMs / later timestamp
-    callStartMs: Math.min(prev[i].callStartMs ?? entry.callStartMs ?? entry.timestamp, entry.callStartMs ?? entry.timestamp),
-    timestamp:   Math.max(prev[i].timestamp, entry.timestamp),
-    duration:    Math.max(prev[i].duration, entry.duration),
-  };
-  return [merged, ...prev.slice(0, i), ...prev.slice(i + 1)];
 }
 
 type CallStatus = "idle" | "dialing" | "active" | "ended";
@@ -262,7 +233,7 @@ function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: st
         {/* Track */}
         <path
           d="M 20 100 A 80 80 0 0 1 180 100"
-          stroke="var(--color-text-faint)"
+          stroke="rgba(246,246,253,0.06)"
           fill="none"
           strokeWidth="12"
           strokeLinecap="round"
@@ -284,7 +255,7 @@ function Gauge({ score, label, type, idSuffix = "" }: { score: number; label: st
           {Math.round(pct)}
         </text>
         {/* Label */}
-        <text x="100" y="104" textAnchor="middle" fill="var(--color-text-muted)" fontSize="11">
+        <text x="100" y="104" textAnchor="middle" fill="rgba(246,246,253,0.5)" fontSize="11">
           {label}
         </text>
       </svg>
@@ -308,10 +279,10 @@ function EmotionBar({ name, value }: { name: string; value: number }) {
   const color = EMOTION_COLORS[name] ?? "#696aac";
   return (
     <div className="flex items-center gap-3">
-      <span className="w-24 text-xs capitalize" style={{ color: "var(--color-text-muted)" }}>
+      <span className="w-24 text-xs capitalize" style={{ color: "rgba(246,246,253,0.6)" }}>
         {name}
       </span>
-      <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }}>
+      <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(246,246,253,0.06)" }}>
         <div
           className="h-2 rounded-full"
           style={{
@@ -321,7 +292,7 @@ function EmotionBar({ name, value }: { name: string; value: number }) {
           }}
         />
       </div>
-      <span className="w-9 text-right text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <span className="w-9 text-right text-xs" style={{ color: "rgba(246,246,253,0.45)" }}>
         {pct}%
       </span>
     </div>
@@ -353,8 +324,8 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
                     ? "linear-gradient(135deg, #8587e3, #4c4dac)"
                     : isPast
                     ? "rgba(105,106,172,0.4)"
-                    : "var(--color-text-faint)",
-                  color: isActive || isPast ? "white" : "var(--color-text-muted)",
+                    : "rgba(246,246,253,0.06)",
+                  color: isActive || isPast ? "white" : "rgba(246,246,253,0.3)",
                   boxShadow: isActive ? "0 0 12px rgba(133,135,227,0.6)" : "none",
                 }}
               >
@@ -364,10 +335,10 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
                 className="text-[10px] mt-1 text-center truncate w-full"
                 style={{
                   color: isActive
-                    ? "#696aac"
+                    ? "#a2a3e9"
                     : isPast
-                    ? "var(--color-text-muted)"
-                    : "var(--color-text-faint)",
+                    ? "rgba(246,246,253,0.5)"
+                    : "rgba(246,246,253,0.25)",
                 }}
               >
                 {stage}
@@ -377,7 +348,7 @@ function StageTimeline({ activeStage }: { activeStage: string }) {
               <div
                 className="h-px flex-1 mb-4 transition-all duration-500"
                 style={{
-                  background: i < idx ? "rgba(105,106,172,0.5)" : "var(--color-text-faint)",
+                  background: i < idx ? "rgba(105,106,172,0.5)" : "rgba(246,246,253,0.08)",
                 }}
               />
             )}
@@ -395,7 +366,7 @@ function SentimentSparkline({ points, idSuffix = "" }: { points: Array<{ ts: num
     return (
       <div
         className="h-full flex items-center justify-center text-xs"
-        style={{ color: "var(--color-text-muted)" }}
+        style={{ color: "rgba(246,246,253,0.3)" }}
       >
         Collecting data…
       </div>
@@ -446,19 +417,19 @@ function TxMessage({ entry }: { entry: TranscriptEntry }) {
             ? {
                 background: "rgba(105,106,172,0.1)",
                 borderLeft: "2px solid #696aac",
-                color: "var(--color-text)",
+                color: "rgba(246,246,253,0.85)",
               }
             : {
-                background: "rgba(255,255,255,0.04)",
-                color: "var(--color-text)",
+                background: "rgba(246,246,253,0.05)",
+                color: "rgba(246,246,253,0.75)",
               }
         }
       >
         <div
           className="text-[10px] mb-1 font-medium uppercase tracking-wider"
-          style={{ color: isAtom ? "#696aac" : "var(--color-text-muted)" }}
+          style={{ color: isAtom ? "#a2a3e9" : "rgba(246,246,253,0.4)" }}
         >
-          {isAtom ? "ΔTOM" : "Prospect"} · {formatTime(entry.ts)}
+          {isAtom ? "ATOM" : "Prospect"} · {formatTime(entry.ts)}
         </div>
         <div>{entry.text}</div>
       </div>
@@ -482,125 +453,26 @@ function PulsingDot() {
 
 // ─── History Card Detail ──────────────────────────────────────────────────────
 
-// ─── Helpers used by the history detail replay scrubber ────────────────────
-function interpolateSentiment(points: SentimentPoint[], targetMs: number): number {
-  if (!points || points.length === 0) return 0;
-  if (targetMs <= points[0].ts) return points[0].value;
-  if (targetMs >= points[points.length - 1].ts) return points[points.length - 1].value;
-  for (let i = 1; i < points.length; i++) {
-    if (points[i].ts >= targetMs) {
-      const a = points[i - 1];
-      const b = points[i];
-      const range = (b.ts - a.ts) || 1;
-      const t = (targetMs - a.ts) / range;
-      return a.value + (b.value - a.value) * t;
-    }
-  }
-  return points[points.length - 1].value;
-}
-
-function transcriptIndexAt(transcriptItems: TranscriptEntry[], targetMs: number): number {
-  if (!transcriptItems || transcriptItems.length === 0) return -1;
-  if (targetMs < transcriptItems[0].ts) return -1;
-  let idx = 0;
-  for (let i = 0; i < transcriptItems.length; i++) {
-    if (transcriptItems[i].ts <= targetMs) idx = i;
-    else break;
-  }
-  return idx;
-}
-
-function formatMs(ms: number): string {
-  const totalSec = Math.max(0, Math.round(ms / 1000));
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
   const idx = entry.id;
-
-  // ─── Audio playback state ─────────────────────────────────────────────
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioReady, setAudioReady] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSec, setCurrentSec] = useState(0);
-  const [audioDurSec, setAudioDurSec] = useState(0);
-
-  // Replay-scrub mode: when the user is actively playing the recording, we
-  // re-derive the live-analytics panes from where in the call we are. When
-  // there's no audio (or paused at start), we show the static end-of-call
-  // final values. This is what lets reps "watch the call back" with the
-  // sentiment line, transcript cursor, and emotion bars syncing to audio.
-  //
-  // We anchor on entry.callStartMs (recorded at dial time, same origin as
-  // sentimentHistory[i].ts). Older entries without that field fall back to
-  // the end-of-call timestamp minus duration.
-  const callStartMs = entry.callStartMs ?? (entry.timestamp - (entry.duration * 1000));
-  const cursorMs    = callStartMs + (currentSec * 1000);
-  const inReplay    = audioReady && (isPlaying || currentSec > 0.25);
-
-  const sortedTranscript = [...(entry.transcript || [])].sort((a, b) => a.ts - b.ts);
-  const sortedSentiment  = [...(entry.sentimentHistory || [])].sort((a, b) => a.ts - b.ts);
-
-  const replaySentiment = inReplay
-    ? Math.round(interpolateSentiment(sortedSentiment, cursorMs))
-    : entry.finalSentiment;
-
-  const transcriptCursorIdx = inReplay
-    ? transcriptIndexAt(sortedTranscript, cursorMs)
-    : sortedTranscript.length - 1;
-
-  // Try to fetch a recording URL from the backend. The Twilio recording
-  // callback may have populated it after the call ended even if the row
-  // wasn't saved locally with one.
-  const [resolvedRecordingUrl, setResolvedRecordingUrl] = useState<string | null>(entry.recordingUrl ?? null);
-  useEffect(() => {
-    let cancelled = false;
-    if (!entry.callSid || entry.callSid.startsWith("manual-")) return;
-    // We always go through our proxy — Twilio recordings need basic-auth.
-    // Probing it with HEAD first lets us suppress the error UI if there's no
-    // recording on this call.
-    const proxied = `/api/atom-leadgen/recording-stream?callSid=${encodeURIComponent(entry.callSid)}`;
-    fetch(proxied, { method: "HEAD" })
-      .then((r) => {
-        if (cancelled) return;
-        if (r.ok) setResolvedRecordingUrl(proxied);
-        else setResolvedRecordingUrl(null);
-      })
-      .catch(() => { if (!cancelled) setResolvedRecordingUrl(null); });
-    return () => { cancelled = true; };
-  }, [entry.callSid]);
-
-  const hasAudio = Boolean(resolvedRecordingUrl);
-
-  const togglePlay = () => {
-    const el = audioRef.current;
-    if (!el) return;
-    if (el.paused) el.play().catch(() => setAudioError("Playback blocked. Try again."));
-    else el.pause();
-  };
-
   return (
-    <>
-    <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+    <div className="mt-4 space-y-4 pt-4" style={{ borderTop: "1px solid rgba(246,246,253,0.06)" }}>
       {/* Gauges */}
       <div className="grid grid-cols-2 gap-4">
         <div
           className="rounded-xl p-4 flex flex-col items-center"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
         >
-          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "var(--color-text-muted)" }}>
+          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "rgba(246,246,253,0.45)" }}>
             Sentiment
           </div>
           <Gauge score={entry.finalSentiment} label={sentimentLabel(entry.finalSentiment)} type="sentiment" idSuffix={`-hist-${idx}`} />
         </div>
         <div
           className="rounded-xl p-4 flex flex-col items-center"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
         >
-          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "var(--color-text-muted)" }}>
+          <div className="text-xs uppercase tracking-wider mb-2 self-start" style={{ color: "rgba(246,246,253,0.45)" }}>
             Buyer Intent
           </div>
           <Gauge score={entry.finalIntent} label={intentLabel(entry.finalIntent)} type="intent" idSuffix={`-hist-${idx}`} />
@@ -610,9 +482,9 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
       {/* Emotion Bars */}
       <div
         className="rounded-xl p-4"
-        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+        style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
       >
-        <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "var(--color-text-muted)" }}>
+        <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "rgba(246,246,253,0.45)" }}>
           Emotion Analysis
         </div>
         <div className="space-y-2.5">
@@ -626,18 +498,18 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
           className="rounded-xl p-4"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
         >
-          <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "var(--color-text-muted)" }}>
+          <div className="text-xs uppercase tracking-wider mb-4" style={{ color: "rgba(246,246,253,0.45)" }}>
             Call Stage
           </div>
           <StageTimeline activeStage={entry.finalStage} />
         </div>
         <div
           className="rounded-xl p-4"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
         >
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
             Sentiment Timeline
           </div>
           <div className="h-20">
@@ -646,114 +518,10 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
         </div>
       </div>
 
-      {/* Von Clausewitz / Aletheia Engine snapshot */}
-      {entry.warroom && (
-        <div
-          className="rounded-xl p-4"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
-        >
-          <div className="text-xs uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
-            <span>Von Clausewitz Engine · Final Read</span>
-            <span
-              className="px-1.5 py-[1px] rounded text-[9px]"
-              style={{
-                background:
-                  entry.warroom.dealRisk === "HEALTHY" ? "rgba(34,197,94,0.2)" :
-                  entry.warroom.dealRisk === "CAUTION" ? "rgba(250,204,21,0.2)" :
-                  entry.warroom.dealRisk === "AT_RISK" ? "rgba(251,146,60,0.2)" :
-                  "rgba(239,68,68,0.2)",
-                color:
-                  entry.warroom.dealRisk === "HEALTHY" ? "#4ade80" :
-                  entry.warroom.dealRisk === "CAUTION" ? "#fde047" :
-                  entry.warroom.dealRisk === "AT_RISK" ? "var(--color-primary-2)" :
-                  "var(--color-error)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              {entry.warroom.dealRisk || "—"}
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Truth</div>
-              <div className="text-xl font-light" style={{ color: "var(--color-text)" }}>{entry.warroom.truthScore ?? 0}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Leverage</div>
-              <div className="text-xl font-light capitalize" style={{ color: "var(--color-text)" }}>
-                {entry.warroom.negotiationPosture?.leveragePosition || "—"}
-              </div>
-              <div className="text-[9px] opacity-60">power {entry.warroom.negotiationPosture?.powerScore ?? 0}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Ghost risk</div>
-              <div className="text-xl font-light" style={{
-                color: (entry.warroom.ghostProbability ?? 0) > 50 ? "var(--color-error)" : "var(--color-text)",
-              }}>
-                {entry.warroom.ghostProbability ?? 0}%
-              </div>
-            </div>
-          </div>
-          {entry.warroom.signal && (
-            <div className="mt-3 text-[11px] italic" style={{ color: "var(--color-text-muted)" }}>
-              “{entry.warroom.signal}”
-            </div>
-          )}
-          {Array.isArray(entry.warroom.flags) && entry.warroom.flags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {entry.warroom.flags.slice(0, 6).map((f: any, i: number) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 rounded-full text-[10px]"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: f.severity === "high" ? "var(--color-error)" :
-                           f.severity === "medium" ? "var(--color-primary-2)" :
-                           "var(--color-text-muted)",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {f.type}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sentiment peaks & bottoms */}
-      {sortedSentiment.length > 1 && (() => {
-        const max = sortedSentiment.reduce((a, b) => b.value > a.value ? b : a);
-        const min = sortedSentiment.reduce((a, b) => b.value < a.value ? b : a);
-        const cs = callStartMs;
-        return (
-          <div
-            className="rounded-xl p-4 grid grid-cols-2 gap-4"
-            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Peak sentiment</div>
-              <div className="text-2xl font-light" style={{ color: sentimentColor(max.value) }}>+{Math.round(max.value)}</div>
-              <div className="text-[10px] opacity-70" style={{ color: "var(--color-text-muted)" }}>
-                at {formatMs(max.ts - cs)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Lowest sentiment</div>
-              <div className="text-2xl font-light" style={{ color: sentimentColor(min.value) }}>{Math.round(min.value)}</div>
-              <div className="text-[10px] opacity-70" style={{ color: "var(--color-text-muted)" }}>
-                at {formatMs(min.ts - cs)}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Buying Signals */}
       {entry.buyingSignals.length > 0 && (
         <div>
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
             Buying Signals
           </div>
           <div className="flex flex-wrap gap-2">
@@ -764,7 +532,7 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
                 style={{
                   background: "rgba(105,106,172,0.2)",
                   border: "1px solid rgba(133,135,227,0.3)",
-                  color: "#696aac",
+                  color: "#a2a3e9",
                 }}
               >
                 {sig}
@@ -776,167 +544,23 @@ function HistoryCallDetail({ entry }: { entry: CallHistoryEntry }) {
 
       {/* Transcript */}
       <div>
-        <div className="text-xs uppercase tracking-wider mb-3 flex items-center justify-between" style={{ color: "var(--color-text-muted)" }}>
-          <span>Full Transcript</span>
-          {inReplay && transcriptCursorIdx >= 0 && (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{
-                background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
-                color: "var(--color-primary)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              Replay · turn {transcriptCursorIdx + 1}/{sortedTranscript.length}
-            </span>
-          )}
+        <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "rgba(246,246,253,0.45)" }}>
+          Full Transcript
         </div>
         <div
           className="overflow-y-auto pr-1"
           style={{ maxHeight: "360px", minHeight: "80px" }}
         >
-          {sortedTranscript.length === 0 ? (
-            <div className="text-sm text-center py-8" style={{ color: "var(--color-text-faint)" }}>
+          {entry.transcript.length === 0 ? (
+            <div className="text-sm text-center py-8" style={{ color: "rgba(246,246,253,0.25)" }}>
               No transcript recorded.
             </div>
           ) : (
-            sortedTranscript.map((e, i) => (
-              <div
-                key={i}
-                style={{
-                  opacity: inReplay ? (i <= transcriptCursorIdx ? 1 : 0.25) : 1,
-                  outline: inReplay && i === transcriptCursorIdx
-                    ? "1px solid color-mix(in oklab, var(--color-primary) 40%, transparent)"
-                    : "none",
-                  borderRadius: "8px",
-                  transition: "opacity 120ms ease, outline-color 120ms ease",
-                }}
-              >
-                <TxMessage entry={e} />
-              </div>
-            ))
+            entry.transcript.map((e, i) => <TxMessage key={i} entry={e} />)
           )}
         </div>
       </div>
     </div>
-
-    {/* ── Call Recording + Replay Scrubber (only when audio is available) ── */}
-    {hasAudio && (
-      <div
-        className="mt-4 rounded-xl p-4"
-        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid color-mix(in oklab, var(--color-primary) 22%, transparent)" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Mic size={14} style={{ color: "var(--color-primary)" }} />
-            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-              Call Recording · Live Analytics Replay
-            </span>
-          </div>
-          <a
-            href={resolvedRecordingUrl!}
-            download={`atom-call-${entry.callSid}.mp3`}
-            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md"
-            style={{
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "var(--color-text-muted)",
-              background: "rgba(255,255,255,0.03)",
-            }}
-          >
-            <Download size={11} />Download
-          </a>
-        </div>
-
-        {/* Hidden audio element — we drive playback via the custom button */}
-        <audio
-          ref={audioRef}
-          src={resolvedRecordingUrl || undefined}
-          preload="metadata"
-          onLoadedMetadata={() => {
-            const el = audioRef.current;
-            if (!el) return;
-            setAudioReady(true);
-            if (Number.isFinite(el.duration)) setAudioDurSec(el.duration);
-            else if (entry.duration > 0) setAudioDurSec(entry.duration);
-          }}
-          onTimeUpdate={() => {
-            const el = audioRef.current;
-            if (!el) return;
-            setCurrentSec(el.currentTime);
-          }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => setIsPlaying(false)}
-          onError={() => setAudioError("Recording is still being processed by Twilio. Refresh in a minute.")}
-        />
-
-        {audioError && (
-          <div className="text-[11px] mb-2" style={{ color: "var(--color-error)" }}>
-            {audioError}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={togglePlay}
-            className="flex items-center justify-center rounded-full transition-all"
-            style={{
-              width: 40, height: 40,
-              background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",
-              color: "var(--color-text-inverse)",
-              boxShadow: "0 0 14px var(--color-primary-glow)",
-            }}
-          >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-          </button>
-
-          <div className="flex-1">
-            <input
-              type="range"
-              min={0}
-              max={audioDurSec || entry.duration || 1}
-              step={0.05}
-              value={Math.min(currentSec, audioDurSec || entry.duration || 1)}
-              onChange={(e) => {
-                const t = Number(e.target.value);
-                setCurrentSec(t);
-                const el = audioRef.current;
-                if (el) el.currentTime = t;
-              }}
-              className="w-full"
-              style={{ accentColor: "var(--color-primary)" }}
-            />
-            <div className="flex items-center justify-between mt-1 text-[10px]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
-              <span>{formatMs(currentSec * 1000)}</span>
-              <span>
-                Sentiment now: <strong style={{ color: sentimentColor(replaySentiment) }}>{replaySentiment}</strong>
-              </span>
-              <span>{formatMs((audioDurSec || entry.duration) * 1000)}</span>
-            </div>
-          </div>
-        </div>
-
-        {sortedSentiment.length > 0 && (
-          <div className="mt-3">
-            <SentimentSparkline points={sortedSentiment} idSuffix={`-replay-${idx}`} />
-          </div>
-        )}
-      </div>
-    )}
-
-    {!hasAudio && entry.recordEnabled && entry.callSid && !entry.callSid.startsWith("manual-") && (
-      <div
-        className="mt-4 rounded-xl p-3 text-[11px] flex items-center gap-2"
-        style={{
-          background: "rgba(255,255,255,0.025)",
-          border: "1px dashed rgba(255,255,255,0.12)",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        <Mic size={12} /> Recording still being processed by Twilio. Reopen this call in a minute to play it back.
-      </div>
-    )}
-    </>
   );
 }
 
@@ -949,8 +573,8 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
     <div
       className="rounded-xl p-4 cursor-pointer transition-all duration-200"
       style={{
-        background: "rgba(255,255,255,0.04)",
-        border: `1px solid ${isExpanded ? "var(--color-primary)" : "rgba(255,255,255,0.08)"}`,
+        background: "rgba(246,246,253,0.03)",
+        border: `1px solid ${isExpanded ? "#696aac" : "rgba(246,246,253,0.08)"}`,
         borderLeft: `3px solid ${borderColor}`,
         boxShadow: isExpanded ? "0 0 16px rgba(105,106,172,0.15)" : "none",
       }}
@@ -960,11 +584,11 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+            <span className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
               {entry.companyName || "Unknown Company"}
             </span>
             {entry.contactName && (
-              <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.45)" }}>
                 · {entry.contactName}
               </span>
             )}
@@ -977,19 +601,19 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
           </div>
 
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="text-xs" style={{ color: "rgba(246,246,253,0.4)" }}>
               {entry.phoneNumber}
             </span>
             {entry.product && (
-              <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.4)" }}>
                 · {entry.product}
               </span>
             )}
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="text-xs" style={{ color: "rgba(246,246,253,0.3)" }}>
               · {formatDateTime(entry.timestamp)}
             </span>
             {entry.duration > 0 && (
-              <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <span className="text-xs" style={{ color: "rgba(246,246,253,0.3)" }}>
                 · {formatDuration(entry.duration)}
               </span>
             )}
@@ -999,7 +623,7 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
         {/* Scores + chevron */}
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            <div className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(246,246,253,0.35)" }}>
               Sentiment
             </div>
             <div
@@ -1010,14 +634,14 @@ function HistoryCard({ entry, isExpanded, onToggle }: { entry: CallHistoryEntry;
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            <div className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(246,246,253,0.35)" }}>
               Intent
             </div>
-            <div className="text-lg font-light" style={{ color: "#696aac" }}>
+            <div className="text-lg font-light" style={{ color: "#a2a3e9" }}>
               {Math.round(entry.finalIntent)}
             </div>
           </div>
-          <div style={{ color: "var(--color-text-muted)" }}>
+          <div style={{ color: "rgba(246,246,253,0.35)" }}>
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         </div>
@@ -1037,35 +661,12 @@ export default function ATOMLeadGen() {
 
   // Form — pre-fill from cross-module navigation
   const [phone, setPhone] = useState(params.get("phone") || "");
-  // Contact name is split into first + last fields per the brand spec.
-  // We back-populate from a single ?contact=/?name= param too so old links keep working.
-  const _legacyName = params.get("firstName") || params.get("name") || params.get("contact") || "";
-  const _legacyParts = _legacyName.trim().split(/\s+/);
-  const [firstName, setFirstName] = useState(params.get("contactFirstName") || _legacyParts[0] || "");
-  const [lastName, setLastName]   = useState(params.get("contactLastName") || _legacyParts.slice(1).join(" ") || "");
-  const contactName = [firstName, lastName].filter(Boolean).join(" ").trim();
-  const setContactName = (v: string) => {
-    const parts = (v || "").trim().split(/\s+/);
-    setFirstName(parts[0] || "");
-    setLastName(parts.slice(1).join(" "));
-  };
+  const [contactName, setContactName] = useState(params.get("firstName") || params.get("name") || params.get("contact") || "");
   const [companyName, setCompanyName] = useState(params.get("company") || params.get("companyName") || "");
   const [productSlug, setProductSlug] = useState(params.get("product") || "");
-  const [pitchTopic, setPitchTopic] = useState(params.get("topic") || "");
-  // "Record this call" toggle — default ON so a normal dial captures audio.
-  // Persisted to localStorage so the rep's preference sticks across reloads.
-  const [recordCall, setRecordCall] = useState<boolean>(() => {
-    try {
-      const v = localStorage.getItem("atom_dial_record");
-      return v == null ? true : v === "1";
-    } catch { return true; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem("atom_dial_record", recordCall ? "1" : "0"); } catch {}
-  }, [recordCall]);
-  // Deal value field removed from the UI — enterprise routing now keys off
-  // tenant plan + Apollo firmographics rather than a manual rep input.
-  const dealValue = "";
+  // Deal value drives GPT-5.5 enterprise routing on the backend.
+  // Empty / 0 → default Claude Sonnet path. >= GPT5_MIN_DEAL_VALUE on enterprise tenants → GPT-5.5.
+  const [dealValue, setDealValue] = useState<string>(params.get("dealValue") || "");
   // Tier badge shown after dial — set from /api/atom-leadgen/call response.
   const [callTier, setCallTier] = useState<"standard" | "enterprise" | null>(null);
   const [reasoningModel, setReasoningModel] = useState<string | null>(null);
@@ -1093,19 +694,7 @@ export default function ATOMLeadGen() {
   const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>(() => {
     try {
       const saved = localStorage.getItem('atom_leadgen_call_history');
-      const raw: CallHistoryEntry[] = saved ? JSON.parse(saved) : [];
-      // One-time cleanup: prior versions could push the same callSid up to
-      // 3 times (poll loop + websocket close + manual hangup all fired).
-      // Collapse any duplicates that snuck into localStorage on load.
-      const seen = new Set<string>();
-      const deduped: CallHistoryEntry[] = [];
-      for (const c of raw) {
-        const key = c.callSid || c.id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        deduped.push(c);
-      }
-      return deduped;
+      return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
@@ -1129,12 +718,6 @@ export default function ATOMLeadGen() {
   const sentimentHistoryRef = useRef(sentimentHistory);
   const emotionsRef = useRef(metrics.emotions);
   const buyingSignalsRef = useRef(buyingSignals);
-  const warroomRef       = useRef(warroom);
-  const recordCallRef    = useRef(recordCall);
-  // Wallclock millis the dial was placed (Date.now() right before /api/call).
-  // Same origin as sentimentHistory[i].ts, so the replay scrubber
-  // (audio currentTime) maps cleanly to sentiment timeline indexes.
-  const callStartMsRef   = useRef<number>(0);
   const formRef = useRef({ contactName, companyName, product: productSlug, phone });
 
   useEffect(() => { metricsRef.current = metrics; }, [metrics]);
@@ -1142,8 +725,6 @@ export default function ATOMLeadGen() {
   useEffect(() => { sentimentHistoryRef.current = sentimentHistory; }, [sentimentHistory]);
   useEffect(() => { emotionsRef.current = metrics.emotions; }, [metrics.emotions]);
   useEffect(() => { buyingSignalsRef.current = buyingSignals; }, [buyingSignals]);
-  useEffect(() => { warroomRef.current       = warroom; },       [warroom]);
-  useEffect(() => { recordCallRef.current    = recordCall; },    [recordCall]);
   useEffect(() => {
     formRef.current = { contactName, companyName, product: productSlug, phone };
   }, [contactName, companyName, productSlug, phone]);
@@ -1220,15 +801,12 @@ export default function ATOMLeadGen() {
             buyerIntent: data.metrics.buyerIntent ?? 0,
             stage: ["Discovery", "Evaluation", "Negotiation", "Close"][(data.metrics.stage || 1) - 1] || "Discovery",
             emotions: {
-              // Server returns 0..1 from rollupEmotions(). EmotionBar already
-              // multiplies value*100 to get a percent. So pass through as-is
-              // — don't double-multiply (that was the 'all bars at 100%' bug).
-              confidence:  data.metrics.emotions?.confidence  ?? 0,
-              interest:    data.metrics.emotions?.interest    ?? 0,
-              skepticism:  data.metrics.emotions?.skepticism  ?? 0,
-              excitement:  data.metrics.emotions?.excitement  ?? 0,
-              frustration: data.metrics.emotions?.frustration ?? 0,
-              neutrality:  data.metrics.emotions?.neutrality  ?? 0,
+              confidence:  (data.metrics.emotions?.confidence ?? 0) * 100,
+              interest:    (data.metrics.emotions?.interest ?? 0) * 100,
+              skepticism:  (data.metrics.emotions?.skepticism ?? 0) * 100,
+              excitement:  (data.metrics.emotions?.excitement ?? 0) * 100,
+              frustration: (data.metrics.emotions?.frustration ?? 0) * 100,
+              neutrality:  (data.metrics.emotions?.neutrality ?? 0) * 100,
             },
             buyingSignals: data.buyingSignals || [],
           });
@@ -1274,51 +852,26 @@ export default function ATOMLeadGen() {
 
             const currentSid = callSidRef.current ?? sessionId;
             const form = formRef.current;
-            const entry: CallHistoryEntry = {
-              id: currentSid,
-              callSid: currentSid,
-              contactName: form.contactName,
-              companyName: form.companyName,
-              product: form.product,
-              phoneNumber: form.phone,
-              timestamp: Date.now(),
-              duration: dur,
-              finalSentiment: metricsRef.current.sentiment,
-              finalIntent: metricsRef.current.buyerIntent,
-              finalStage: metricsRef.current.stage,
-              transcript: [...transcriptRef.current],
-              sentimentHistory: [...sentimentHistoryRef.current],
-              emotions: { ...emotionsRef.current },
-              buyingSignals: [...buyingSignalsRef.current],
-              recordEnabled: recordCallRef.current,
-              recordingUrl: null,
-              warroom: warroomRef.current,
-              callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
-            };
-            setCallHistory(prev => upsertHistoryEntry(prev, entry));
-
-            // Persist to Supabase so the call-history detail page can replay
-            // it later from any device. Best-effort — the local copy in
-            // localStorage above is the source of truth for the current rep.
-            fetch("/api/atom-leadgen/save-call", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+            setCallHistory(prev => [
+              {
+                id: currentSid,
                 callSid: currentSid,
+                contactName: form.contactName,
+                companyName: form.companyName,
+                product: form.product,
+                phoneNumber: form.phone,
+                timestamp: Date.now(),
                 duration: dur,
                 finalSentiment: metricsRef.current.sentiment,
                 finalIntent: metricsRef.current.buyerIntent,
                 finalStage: metricsRef.current.stage,
-                transcript: transcriptRef.current,
-                sentimentHistory: sentimentHistoryRef.current,
-                emotions: emotionsRef.current,
-                buyingSignals: buyingSignalsRef.current,
-                warroom: warroomRef.current,
-                contactName: form.contactName,
-                companyName: form.companyName,
-                productName: form.product,
-              }),
-            }).catch(() => { /* best-effort */ });
+                transcript: [...transcriptRef.current],
+                sentimentHistory: [...sentimentHistoryRef.current],
+                emotions: { ...emotionsRef.current },
+                buyingSignals: [...buyingSignalsRef.current],
+              },
+              ...prev,
+            ]);
           }
         }
       } catch (e) {
@@ -1402,49 +955,26 @@ export default function ATOMLeadGen() {
         // Push to call history using latest refs
         const currentSid = callSidRef.current ?? sid;
         const form = formRef.current;
-        const entry: CallHistoryEntry = {
-          id: currentSid,
-          callSid: currentSid,
-          contactName: form.contactName,
-          companyName: form.companyName,
-          product: form.product,
-          phoneNumber: form.phone,
-          timestamp: Date.now(),
-          duration: dur,
-          finalSentiment: metricsRef.current.sentiment,
-          finalIntent: metricsRef.current.buyerIntent,
-          finalStage: metricsRef.current.stage,
-          transcript: [...transcriptRef.current],
-          sentimentHistory: [...sentimentHistoryRef.current],
-          emotions: { ...emotionsRef.current },
-          buyingSignals: [...buyingSignalsRef.current],
-          recordEnabled: recordCallRef.current,
-          recordingUrl: null,
-          warroom: warroomRef.current,
-          callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
-        };
-        setCallHistory((prev) => upsertHistoryEntry(prev, entry));
-
-        // Persist to Supabase (best-effort).
-        fetch("/api/atom-leadgen/save-call", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        setCallHistory((prev) => [
+          {
+            id: currentSid,
             callSid: currentSid,
+            contactName: form.contactName,
+            companyName: form.companyName,
+            product: form.product,
+            phoneNumber: form.phone,
+            timestamp: Date.now(),
             duration: dur,
             finalSentiment: metricsRef.current.sentiment,
             finalIntent: metricsRef.current.buyerIntent,
             finalStage: metricsRef.current.stage,
-            transcript: transcriptRef.current,
-            sentimentHistory: sentimentHistoryRef.current,
-            emotions: emotionsRef.current,
-            buyingSignals: buyingSignalsRef.current,
-            warroom: warroomRef.current,
-            contactName: form.contactName,
-            companyName: form.companyName,
-            productName: form.product,
-          }),
-        }).catch(() => { /* best-effort */ });
+            transcript: [...transcriptRef.current],
+            sentimentHistory: [...sentimentHistoryRef.current],
+            emotions: { ...emotionsRef.current },
+            buyingSignals: [...buyingSignalsRef.current],
+          },
+          ...prev,
+        ]);
 
         ws.close();
       }
@@ -1471,9 +1001,6 @@ export default function ATOMLeadGen() {
     console.log("[handleDial] Bridge URL:", BRIDGE_URL);
 
     setCallStatus("dialing");
-    // Anchor the wallclock origin for sentiment + transcript timestamps so
-    // the replay scrubber lines audio currentTime up with the timeline.
-    callStartMsRef.current = Date.now();
     setTranscript([]);
     setBuyingSignals([]);
     setSentimentHistory([]);
@@ -1506,10 +1033,7 @@ export default function ATOMLeadGen() {
         firstName: contactName.trim() || undefined,
         companyName: companyName.trim() || undefined,
         product: productSlug.trim() || undefined,
-        pitchTopic: pitchTopic.trim() || undefined,
         productIntel: productIntelData || undefined,
-        // Toggle — backend wires Twilio Record=true + recording status callback
-        record: recordCall,
         // GPT-5.5 router inputs
         dealValue: dealValue ? Number(dealValue.replace(/[^0-9.]/g, "")) : undefined,
         tenantSlug: window.location.hostname.split(".")[0] || undefined,
@@ -1535,15 +1059,14 @@ export default function ATOMLeadGen() {
       const json = await res.json();
       console.log("[handleDial] Success response:", json);
       const sid: string = json.callSid;
+      const sessionId: string = json.sessionId || json.humeCustomSessionId || sid;
       setCallSid(sid);
       callSidRef.current = sid;
       // Surface backend's tier routing decision
       setCallTier(json.tier || "standard");
       setReasoningModel(json.reasoningModel || null);
-      // Poll Hume by Twilio CallSid — Hume's TwiML integration writes call_sid
-      // into chat metadata. The legacy `sessionId` query-param we used to send
-      // was never propagated to the chat, so polling never resolved a chat.
-      startPolling(sid);
+      // Start polling Hume chat-events for live transcript + emotions
+      startPolling(sessionId);
       setCallStatus("active");
     } catch (err: any) {
       console.error("[handleDial] Caught error:", err);
@@ -1573,49 +1096,26 @@ export default function ATOMLeadGen() {
     // Push to history when manually ended
     const currentSid = callSidRef.current ?? "manual-" + Date.now();
     const form = formRef.current;
-    const entry: CallHistoryEntry = {
-      id: currentSid,
-      callSid: currentSid,
-      contactName: form.contactName,
-      companyName: form.companyName,
-      product: form.product,
-      phoneNumber: form.phone,
-      timestamp: Date.now(),
-      duration: dur,
-      finalSentiment: metricsRef.current.sentiment,
-      finalIntent: metricsRef.current.buyerIntent,
-      finalStage: metricsRef.current.stage,
-      transcript: [...transcriptRef.current],
-      sentimentHistory: [...sentimentHistoryRef.current],
-      emotions: { ...emotionsRef.current },
-      buyingSignals: [...buyingSignalsRef.current],
-      recordEnabled: recordCallRef.current,
-      recordingUrl: null,
-      warroom: warroomRef.current,
-      callStartMs: callStartMsRef.current || (Date.now() - dur * 1000),
-    };
-    setCallHistory((prev) => upsertHistoryEntry(prev, entry));
-
-    // Persist to Supabase (best-effort).
-    fetch("/api/atom-leadgen/save-call", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setCallHistory((prev) => [
+      {
+        id: currentSid,
         callSid: currentSid,
+        contactName: form.contactName,
+        companyName: form.companyName,
+        product: form.product,
+        phoneNumber: form.phone,
+        timestamp: Date.now(),
         duration: dur,
         finalSentiment: metricsRef.current.sentiment,
         finalIntent: metricsRef.current.buyerIntent,
         finalStage: metricsRef.current.stage,
-        transcript: transcriptRef.current,
-        sentimentHistory: sentimentHistoryRef.current,
-        emotions: emotionsRef.current,
-        buyingSignals: buyingSignalsRef.current,
-        warroom: warroomRef.current,
-        contactName: form.contactName,
-        companyName: form.companyName,
-        productName: form.product,
-      }),
-    }).catch(() => { /* best-effort */ });
+        transcript: [...transcriptRef.current],
+        sentimentHistory: [...sentimentHistoryRef.current],
+        emotions: { ...emotionsRef.current },
+        buyingSignals: [...buyingSignalsRef.current],
+      },
+      ...prev,
+    ]);
   };
 
   const handleNewCall = () => {
@@ -1654,17 +1154,17 @@ export default function ATOMLeadGen() {
   return (
     <div
       className="min-h-screen px-4 py-8 md:px-8"
-      style={{ background: "#020202", color: "var(--color-text)", fontFamily: "inherit" }}
+      style={{ background: "#020202", color: "rgba(246,246,253,0.9)", fontFamily: "inherit" }}
     >
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* ─── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4 mb-2">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
-              ΔTOM Dial
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "rgba(246,246,253,0.95)" }}>
+              ATOM Lead Gen
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+            <p className="text-sm mt-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>
               AI-powered outbound calling with live analytics
             </p>
           </div>
@@ -1677,8 +1177,8 @@ export default function ATOMLeadGen() {
               background: viewMode === "history" ? "rgba(105,106,172,0.2)" : "transparent",
               border: viewMode === "history"
                 ? "1px solid #696aac"
-                : "1px solid rgba(255,255,255,0.08)",
-              color: viewMode === "history" ? "#696aac" : "var(--color-text-muted)",
+                : "1px solid rgba(246,246,253,0.15)",
+              color: viewMode === "history" ? "#a2a3e9" : "rgba(246,246,253,0.6)",
               cursor: "pointer",
               boxShadow: viewMode === "history" ? "0 0 12px rgba(105,106,172,0.2)" : "none",
             }}
@@ -1690,7 +1190,7 @@ export default function ATOMLeadGen() {
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                 style={{
                   background: "rgba(105,106,172,0.35)",
-                  color: "#696aac",
+                  color: "#a2a3e9",
                 }}
               >
                 {callHistory.length}
@@ -1709,7 +1209,7 @@ export default function ATOMLeadGen() {
               <Search
                 size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--color-text-muted)" }}
+                style={{ color: "rgba(246,246,253,0.3)" }}
               />
               <input
                 type="text"
@@ -1718,9 +1218,9 @@ export default function ATOMLeadGen() {
                 onChange={(e) => setHistorySearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "var(--color-text)",
+                  background: "rgba(246,246,253,0.04)",
+                  border: "1px solid rgba(246,246,253,0.1)",
+                  color: "rgba(246,246,253,0.9)",
                 }}
               />
             </div>
@@ -1730,12 +1230,12 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-12 text-center"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(246,246,253,0.02)",
+                  border: "1px solid rgba(246,246,253,0.06)",
                 }}
               >
-                <Clock size={32} className="mx-auto mb-3" style={{ color: "var(--color-text-faint)" }} />
-                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                <Clock size={32} className="mx-auto mb-3" style={{ color: "rgba(246,246,253,0.15)" }} />
+                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
                   No calls yet. Make your first call to start building history.
                 </p>
               </div>
@@ -1743,11 +1243,11 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-10 text-center"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(246,246,253,0.02)",
+                  border: "1px solid rgba(246,246,253,0.06)",
                 }}
               >
-                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
                   No calls match your search.
                 </p>
               </div>
@@ -1777,13 +1277,13 @@ export default function ATOMLeadGen() {
             <div
               className="rounded-2xl p-6"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(246,246,253,0.03)",
+                border: "1px solid rgba(246,246,253,0.08)",
               }}
             >
               <div
                 className="text-xs uppercase tracking-wider mb-5"
-                style={{ color: "var(--color-text-muted)" }}
+                style={{ color: "rgba(246,246,253,0.5)" }}
               >
                 Call Setup
               </div>
@@ -1791,7 +1291,7 @@ export default function ATOMLeadGen() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 {/* Phone */}
                 <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
                     Phone Number <span style={{ color: "var(--color-error)" }}>*</span>
                   </label>
                   <input
@@ -1802,56 +1302,36 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
                     }}
                   />
                 </div>
 
-                {/* Contact First Name */}
+                {/* Contact Name */}
                 <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
-                    Contact First Name
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Contact Name
                   </label>
                   <input
                     type="text"
-                    placeholder="Jane"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Jane Smith"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
-                    }}
-                  />
-                </div>
-
-                {/* Contact Last Name */}
-                <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
-                    Contact Last Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Smith"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={callStatus === "active" || callStatus === "dialing"}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
                     }}
                   />
                 </div>
 
                 {/* Company */}
                 <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
                     Company Name
                   </label>
                   <input
@@ -1862,116 +1342,100 @@ export default function ATOMLeadGen() {
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
                     }}
                   />
                 </div>
 
-                {/* Seller company (becomes "Adam from {{this}}" in the call opener) */}
+                {/* Product */}
                 <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
-                    Pitching On Behalf Of <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(seller company)</span>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Product / Service to Pitch
                   </label>
                   <input
                     type="text"
-                    placeholder="Akamai, AntimatterAI, TierPoint…"
+                    placeholder="Akamai, TierPoint, CDN…"
                     value={productSlug}
                     onChange={(e) => setProductSlug(e.target.value)}
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
                     }}
                   />
-                  <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
-                    Just the company name — ΔTOM will open with “Hey [name], this is Adam from [{productSlug || "AntimatterAI"}]”
-                  </p>
                 </div>
 
-                {/* Pitch topic / talking point (informational — fed to brief, not the opener) */}
+                {/* Deal Value — drives GPT-5.5 enterprise routing */}
                 <div>
-                  <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">
-                    Pitch Topic <span style={{ color: "var(--color-text-muted)", opacity: 0.6 }}>(optional)</span>
+                  <label className="block text-xs mb-1.5 flex items-center gap-2" style={{ color: "rgba(246,246,253,0.5)" }}>
+                    Deal Value <span style={{ color: "rgba(246,246,253,0.3)" }}>(optional)</span>
+                    {Number(dealValue.replace(/[^0-9.]/g, "")) >= 50000 && (
+                      <span
+                        className="text-[9px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded"
+                        style={{
+                          background: "color-mix(in oklab, var(--color-primary) 14%, transparent)",
+                          color: "var(--color-primary)",
+                          border: "1px solid color-mix(in oklab, var(--color-primary) 35%, transparent)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        GPT-5 eligible
+                      </span>
+                    )}
                   </label>
                   <input
                     type="text"
-                    placeholder="HIPAA compliance changes, Guardicore segmentation, App & API Protector…"
-                    value={pitchTopic}
-                    onChange={(e) => setPitchTopic(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="$50,000"
+                    value={dealValue}
+                    onChange={(e) => setDealValue(e.target.value)}
                     disabled={callStatus === "active" || callStatus === "dialing"}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "var(--color-text)",
+                      background: "rgba(246,246,253,0.05)",
+                      border: "1px solid rgba(246,246,253,0.1)",
+                      color: "rgba(246,246,253,0.9)",
+                      fontFamily: "var(--font-mono)",
+                      fontVariantNumeric: "tabular-nums",
                     }}
                   />
-                  <p className="text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.7 }}>
-                    What you specifically want ΔTOM to bring up — surfaces in the call brief.
-                  </p>
+                  <div className="text-[10px] mt-1" style={{ color: "rgba(246,246,253,0.35)" }}>
+                    Calls on enterprise tenants with deal value ≥ $50K route to GPT-5 reasoning (1M context).
+                  </div>
                 </div>
-
-                {/* Record this call — per-call audio capture toggle */}
-                <div>
-                  <label
-                    className="flex items-start gap-3 px-3 py-2.5 rounded-xl cursor-pointer select-none transition-colors"
-                    style={{
-                      background: recordCall ? "color-mix(in oklab, var(--color-primary) 9%, transparent)" : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${recordCall ? "color-mix(in oklab, var(--color-primary) 35%, transparent)" : "rgba(255,255,255,0.08)"}`,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={recordCall}
-                      onChange={(e) => setRecordCall(e.target.checked)}
-                      disabled={callStatus === "active" || callStatus === "dialing"}
-                      className="mt-0.5 h-4 w-4 cursor-pointer accent-current"
-                      style={{ accentColor: "var(--color-primary)" }}
-                    />
-                    <span className="flex-1">
-                      <span className="block text-sm" style={{ color: "var(--color-text)" }}>
-                        Record this call
-                        <span
-                          className="ml-2 px-1.5 py-[1px] rounded text-[9px] uppercase tracking-[0.16em]"
-                          style={{
-                            background: recordCall ? "color-mix(in oklab, var(--color-primary) 22%, transparent)" : "rgba(255,255,255,0.06)",
-                            color: recordCall ? "var(--color-primary)" : "var(--color-text-muted)",
-                            fontFamily: "var(--font-mono)",
-                          }}
-                        >
-                          {recordCall ? "ON" : "OFF"}
-                        </span>
-                      </span>
-                      <span className="block text-[10px] mt-1" style={{ color: "var(--color-text-muted)", opacity: 0.75 }}>
-                        Captures both audio channels. Playback + sentiment replay surfaces in History.
-                      </span>
-                    </span>
-                  </label>
-                </div>
-
-                {/* Deal Value field removed — enterprise routing keys off
-                    tenant plan + Apollo firmographics on the backend now. */}
               </div>
 
               {/* CTA row */}
               {callStatus === "idle" || callStatus === "dialing" ? (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <AtomCta
-                    accent="emerald"
+                  <button
                     onClick={handleDial}
                     disabled={callStatus === "dialing"}
-                    className="w-full sm:w-auto px-6"
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm transition-all"
+                    style={{
+                      background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",
+                      color: "var(--color-text-inverse)",
+                      boxShadow: "0 0 18px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.25)",
+                      border: "1px solid color-mix(in oklab, var(--color-primary) 60%, transparent)",
+                      opacity: callStatus === "dialing" ? 0.7 : 1,
+                      cursor: callStatus === "dialing" ? "not-allowed" : "pointer",
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700,
+                      letterSpacing: "0.01em",       // positive tracking for short labels
+                      wordSpacing: "0.05em",         // breathing room between Dial / with / ATOM
+                    }}
                   >
                     {callStatus === "dialing" ? (
                       <><Loader2 size={16} className="animate-spin" />Connecting…</>
                     ) : (
                       <><PhoneCall size={16} />Dial with ΔTOM</>
                     )}
-                  </AtomCta>
+                  </button>
                   <HVTFlagButton companyName={companyName} contactName={contactName} phone={phone} />
                 </div>
               ) : callStatus === "active" ? (
@@ -2002,8 +1466,8 @@ export default function ATOMLeadGen() {
                       <span
                         className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full"
                         style={{
-                          background: "rgba(255,255,255,0.04)",
-                          color: "var(--color-text-muted)",
+                          background: "rgba(246,246,253,0.04)",
+                          color: "rgba(246,246,253,0.55)",
                           border: "1px solid var(--color-border)",
                           fontFamily: "var(--font-mono)",
                         }}
@@ -2029,7 +1493,7 @@ export default function ATOMLeadGen() {
               ) : (
                 /* ended */
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  <span className="text-sm" style={{ color: "rgba(246,246,253,0.5)" }}>
                     Call ended
                   </span>
                   <button
@@ -2054,13 +1518,13 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-6 space-y-6"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(246,246,253,0.03)",
+                  border: "1px solid rgba(246,246,253,0.08)",
                 }}
               >
                 <div
                   className="text-xs uppercase tracking-wider"
-                  style={{ color: "var(--color-text-muted)" }}
+                  style={{ color: "rgba(246,246,253,0.5)" }}
                 >
                   Live Analytics{callStatus === "ended" && " — Final State"}
                 </div>
@@ -2069,11 +1533,11 @@ export default function ATOMLeadGen() {
                 <div className="grid grid-cols-2 gap-4">
                   <div
                     className="rounded-xl p-4 flex flex-col items-center"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-2 self-start"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Sentiment
                     </div>
@@ -2081,11 +1545,11 @@ export default function ATOMLeadGen() {
                   </div>
                   <div
                     className="rounded-xl p-4 flex flex-col items-center"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-2 self-start"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Buyer Intent
                     </div>
@@ -2096,11 +1560,11 @@ export default function ATOMLeadGen() {
                 {/* ── Row 2: Emotion Bars ── */}
                 <div
                   className="rounded-xl p-4"
-                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
                 >
                   <div
                     className="text-xs uppercase tracking-wider mb-4"
-                    style={{ color: "var(--color-text-muted)" }}
+                    style={{ color: "rgba(246,246,253,0.45)" }}
                   >
                     Emotion Analysis
                   </div>
@@ -2115,11 +1579,11 @@ export default function ATOMLeadGen() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div
                     className="rounded-xl p-4"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-4"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Call Stage
                     </div>
@@ -2127,11 +1591,11 @@ export default function ATOMLeadGen() {
                   </div>
                   <div
                     className="rounded-xl p-4"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(246,246,253,0.025)", border: "1px solid rgba(246,246,253,0.06)" }}
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-3"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Sentiment Timeline
                     </div>
@@ -2178,18 +1642,18 @@ export default function ATOMLeadGen() {
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <div className="text-[10px] uppercase tracking-wider opacity-60">TRUTH</div>
-                        <div className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>{warroom.truthScore ?? 0}</div>
+                        <div className="text-2xl font-bold" style={{ color: "#f6f6fd" }}>{warroom.truthScore ?? 0}</div>
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider opacity-60">Leverage</div>
-                        <div className="text-sm font-semibold capitalize" style={{ color: "var(--color-text)" }}>
+                        <div className="text-sm font-semibold capitalize" style={{ color: "#f6f6fd" }}>
                           {warroom.negotiationPosture?.leveragePosition || "—"}
                         </div>
                         <div className="text-[10px] opacity-60">power {warroom.negotiationPosture?.powerScore ?? 0}</div>
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider opacity-60">Ghost Risk</div>
-                        <div className="text-2xl font-bold" style={{ color: warroom.ghostProbability > 50 ? "var(--color-error)" : "var(--color-text)" }}>
+                        <div className="text-2xl font-bold" style={{ color: warroom.ghostProbability > 50 ? "var(--color-error)" : "#f6f6fd" }}>
                           {warroom.ghostProbability ?? 0}%
                         </div>
                       </div>
@@ -2202,7 +1666,7 @@ export default function ATOMLeadGen() {
                         {Object.entries(warroom.deception as Record<string, number>).map(([k, v]) => (
                           <div key={k} className="flex items-center gap-3 text-[11px]">
                             <span className="w-32 capitalize opacity-80">{k.replace(/Pct|Probability/g, "").replace(/([A-Z])/g, " $1").trim()}</span>
-                            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(246,246,253,0.08)" }}>
                               <div style={{ width: `${v}%`, height: "100%", background: v > 60 ? "var(--color-error)" : v > 30 ? "var(--color-primary-2)" : "#4ade80" }} />
                             </div>
                             <span className="w-8 text-right opacity-70">{v}</span>
@@ -2258,7 +1722,7 @@ export default function ATOMLeadGen() {
                         <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#4ade80" }}>
                           ➤ Suggested Next Line ({warroom.move || "play"})
                         </div>
-                        <div className="text-sm italic" style={{ color: "var(--color-text)" }}>
+                        <div className="text-sm italic" style={{ color: "#f6f6fd" }}>
                           “{warroom.suggestedReply}”
                         </div>
                       </div>
@@ -2275,7 +1739,7 @@ export default function ATOMLeadGen() {
                   <div>
                     <div
                       className="text-xs uppercase tracking-wider mb-3"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Buying Signals
                     </div>
@@ -2287,7 +1751,7 @@ export default function ATOMLeadGen() {
                           style={{
                             background: "rgba(105,106,172,0.2)",
                             border: "1px solid rgba(133,135,227,0.3)",
-                            color: "#696aac",
+                            color: "#a2a3e9",
                             animation: "slideIn 0.3s ease",
                           }}
                         >
@@ -2309,32 +1773,32 @@ export default function ATOMLeadGen() {
                   >
                     <div
                       className="text-xs uppercase tracking-wider mb-3"
-                      style={{ color: "var(--color-text-muted)" }}
+                      style={{ color: "rgba(246,246,253,0.45)" }}
                     >
                       Call Summary
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div>
-                        <div className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Duration</div>
-                        <div className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Duration</div>
+                        <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
                           {summary.duration ? formatDuration(summary.duration) : "—"}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Final Sentiment</div>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Sentiment</div>
                         <div className="text-sm font-medium" style={{ color: sentimentColor(summary.finalSentiment) }}>
                           {sentimentLabel(summary.finalSentiment)} ({Math.round(summary.finalSentiment)})
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Final Intent</div>
-                        <div className="text-sm font-medium" style={{ color: "#696aac" }}>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Intent</div>
+                        <div className="text-sm font-medium" style={{ color: "#a2a3e9" }}>
                           {intentLabel(summary.finalIntent)} ({Math.round(summary.finalIntent)})
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Final Stage</div>
-                        <div className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                        <div className="text-xs mb-0.5" style={{ color: "rgba(246,246,253,0.4)" }}>Final Stage</div>
+                        <div className="text-sm font-medium" style={{ color: "rgba(246,246,253,0.9)" }}>
                           {summary.stage}
                         </div>
                       </div>
@@ -2349,13 +1813,13 @@ export default function ATOMLeadGen() {
               <div
                 className="rounded-2xl p-6"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(246,246,253,0.03)",
+                  border: "1px solid rgba(246,246,253,0.08)",
                 }}
               >
                 <div
                   className="text-xs uppercase tracking-wider mb-4"
-                  style={{ color: "var(--color-text-muted)" }}
+                  style={{ color: "rgba(246,246,253,0.5)" }}
                 >
                   {callStatus === "ended" ? "Transcript" : "Live Transcript"}
                 </div>
@@ -2370,7 +1834,7 @@ export default function ATOMLeadGen() {
                   {transcript.length === 0 ? (
                     <div
                       className="text-sm text-center py-10"
-                      style={{ color: "var(--color-text-faint)" }}
+                      style={{ color: "rgba(246,246,253,0.25)" }}
                     >
                       {callStatus === "active" ? "Waiting for transcript…" : "No transcript recorded."}
                     </div>
@@ -2391,11 +1855,11 @@ export default function ATOMLeadGen() {
           from { opacity: 0; transform: translateY(4px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        input::placeholder { color: var(--color-text-faint); }
+        input::placeholder { color: rgba(246,246,253,0.2); }
         input:focus { border-color: rgba(133,135,227,0.4) !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--color-text-faint); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb { background: rgba(246,246,253,0.1); border-radius: 9999px; }
       `}</style>
     </div>
   );

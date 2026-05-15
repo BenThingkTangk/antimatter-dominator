@@ -3,7 +3,6 @@ import { Markdown } from "@/mobile/Markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AtomCta } from "@/components/ui/atom-form";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Eye,
@@ -93,7 +92,6 @@ import {
   type PackageStatus,
   type TargetTier,
 } from "@/lib/warroom-store";
-import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -273,19 +271,10 @@ const intentLabel = (s: string) => (s || "unknown").replace(/_/g, " ").replace(/
 const phraseColor = (c: string) => c === "red" ? "bg-rose-500/20 border-rose-500/30 text-rose-300" : c === "amber" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-300";
 const strengthColor = (s: string) => s === "strong" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : s === "moderate" ? "bg-amber-500/15 text-amber-400 border-amber-500/25" : "bg-white/5 text-white/40 border-white/10";
 
-// Primary action button — tinted glass + teal hairline per the brand bible.
-// Was a flat saturated fill which violated 'energy belongs in small,
-// precise bursts'. Now a quiet luxury treatment: ~10% teal tint, soft glow,
-// teal text. Reads as a clear primary CTA without screaming at the user.
-// War Room runs on the canonical ΔTOM teal. We want the deploy button to
-// burn at the same intensity as the Generate Pitch / Scan for Prospects /
-// Generate Intelligence buttons — not a wash.
 const CRIMSON_BTN_STYLE = {
-  background: "linear-gradient(96deg, #2dd4bf 0%, #14b8a6 60%, #0d9488 100%)",
-  border: "1px solid rgba(20, 184, 166, 0.6)",
-  boxShadow: "0 0 28px rgba(20, 184, 166, 0.35), inset 0 0 2px rgba(255,255,255,0.25)",
-  color: "#04181a",
-  fontWeight: 700 as const,
+  background: "linear-gradient(93.92deg, var(--color-primary) -13.51%, var(--color-primary) 40.91%, var(--color-primary) 113.69%)",
+  boxShadow: "0 0 15px color-mix(in oklab, var(--color-primary) 12%, transparent), inset 0 0 2px rgba(255,255,255,0.3)",
+  color: "#fff",
 };
 
 function stageLabel(s: DealStage): string {
@@ -337,7 +326,7 @@ function TruthGauge({ score }: { score: number }) {
           <span className="text-[10px] text-white/30 font-mono">/100</span>
         </div>
       </div>
-      <p className="atom-field-label">Truth Score™</p>
+      <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Truth Score™</p>
     </div>
   );
 }
@@ -444,15 +433,15 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
         </div>
         <div className="space-y-2 max-w-sm">
           <p className="text-[15px] font-semibold text-[#f6f6fd]">No active deals.</p>
-          <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ΔTOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
+          <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ATOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
         </div>
-        <AtomCta
-          accent="teal"
+        <button
           onClick={() => onTabChange("pipeline")}
-          className="w-auto px-4"
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-[12px] font-medium transition-all hover:scale-[1.02]"
+          style={CRIMSON_BTN_STYLE}
         >
           <Plus size={13} /> Add First Deal
-        </AtomCta>
+        </button>
       </div>
     );
   }
@@ -756,14 +745,14 @@ function IntelAnalyzerTab({
         </button>
       </div>
 
-      {/* Loading — teal to match ATOM War Room's module color */}
+      {/* Loading */}
       {isAnalyzing && (
-        <div className="rounded-xl border border-teal-400/30 bg-gradient-to-r from-teal-500/[0.06] to-transparent p-5 flex items-center gap-3">
+        <div className="rounded-xl border border-red-500/20 bg-gradient-to-r from-red-500/[0.04] to-transparent p-5 flex items-center gap-3">
           <div className="relative w-5 h-5 shrink-0">
-            <div className="absolute inset-0 rounded-full border-2 border-teal-400/30" />
-            <div className="absolute inset-0 rounded-full border-2 border-teal-300 border-t-transparent animate-spin" />
+            <div className="absolute inset-0 rounded-full border-2 border-red-400/30" />
+            <div className="absolute inset-0 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
           </div>
-          <span className="text-[13px] font-mono text-teal-200/90">
+          <span className="text-[13px] font-mono" style={{ color: "color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
             Von Clausewitz scanning for deception patterns, behavioral signals, competitive intelligence...
           </span>
         </div>
@@ -1306,7 +1295,7 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
         content: activeSectionContent,
         at: Date.now(),
       }));
-      toast({ title: "✅ Pushed to Campaign", description: "Open ΔTOM Campaign to use in your template." });
+      toast({ title: "✅ Pushed to Campaign", description: "Open ATOM Campaign to use in your template." });
     } catch {}
   }
 
@@ -1381,13 +1370,9 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
                 disabled={isGenerating}
                 className="gap-1.5 px-4 py-2 rounded-full text-[11px] font-semibold"
                 style={{
-                  // Quiet-luxury primary CTA per the brand bible. Tinted glass
-                  // + teal hairline + soft glow instead of a flat saturated fill.
-                  background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
-                  border: "1px solid color-mix(in oklab, var(--color-primary) 32%, transparent)",
-                  color: "var(--color-primary)",
-                  boxShadow: "0 0 18px color-mix(in oklab, var(--color-primary) 14%, transparent)",
-                  fontWeight: 700,
+                  background: "linear-gradient(93.92deg, var(--color-primary) -13.51%, var(--color-primary) 40.91%, var(--color-primary) 113.69%)",
+                  color: "#fff",
+                  boxShadow: "0 0 12px color-mix(in oklab, var(--color-primary) 12%, transparent)",
                 }}
               >
                 {isGenerating
@@ -1530,12 +1515,30 @@ function OperatorIntelTab({ deals }: { deals: Deal[] }) {
           )}
         </div>
 
-        {/* Signal Feed — auto-populated from /api/signals/discover (Sonar Pro
-            against CB Insights, PitchBook, Statista, TechCrunch, SEC, etc.).
-            Manual signals from the deal store are merged on top so anything
-            the rep added by hand still shows. */}
+        {/* Signal Feed */}
         {deal && (
-          <DealSignalFeed deal={deal} sortedSignals={sortedSignals} onAdd={() => setShowAddSignal(true)} />
+          <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <MonoLabel>🛰️ Signal Feed · {(deal.targetMeta?.signalScore ?? 0).toFixed(1)}/10</MonoLabel>
+              <button
+                onClick={() => setShowAddSignal(true)}
+                className="text-[10px] text-white/30 hover:text-rose-400 transition-colors"
+              >+ Add</button>
+            </div>
+            {sortedSignals.length > 0 ? sortedSignals.slice(0, 10).map(sig => (
+              <div key={sig.id} className="flex items-start gap-2 text-[11px] py-1.5 border-b border-white/[0.04]">
+                <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${signalDotColor(sig.type)}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/70 leading-snug">{sig.headline}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] font-mono text-white/25">{sig.type.replace(/_/g, " ")}</span>
+                    <span className="text-[9px] font-mono text-white/25">{sig.date}</span>
+                    {sig.impactScore >= 7 && <span className="text-[9px] font-mono text-rose-400">HIGH</span>}
+                  </div>
+                </div>
+              </div>
+            )) : <p className="text-[11px] text-white/25">No signals yet.</p>}
+          </div>
         )}
 
         {/* Stakeholder Quick View */}
@@ -2149,12 +2152,8 @@ export default function AtomWarRoom() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{
-                background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
-                border: "1px solid color-mix(in oklab, var(--color-primary) 32%, transparent)",
-                boxShadow: "0 0 18px color-mix(in oklab, var(--color-primary) 14%, transparent)",
-              }}>
-                <Swords size={14} style={{ color: "var(--color-primary)" }} />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary))", boxShadow: "0 0 12px color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
+                <Swords size={14} className="text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -2228,120 +2227,6 @@ export default function AtomWarRoom() {
           <GhostOpsTab deals={deals} />
         )}
       </div>
-    </div>
-  );
-}
-
-// ─── DealSignalFeed ─────────────────────────────────────────────────────────
-// Auto-fetches premium-source signals (CB Insights, PitchBook, Statista,
-// TechCrunch, Bloomberg, SEC, etc.) for the active deal and merges them
-// with any manually-logged signals from the war-room store.
-function DealSignalFeed({
-  deal,
-  sortedSignals,
-  onAdd,
-}: {
-  deal: Deal;
-  sortedSignals: any[];
-  onAdd: () => void;
-}) {
-  const { data, isLoading } = useSignals({
-    company: deal.company,
-    domain: deal.website || undefined,
-  });
-
-  const auto = data?.signals ?? [];
-  const atomScore = data?.atomScore ?? 0;
-  // Merge: manual signals first (they're rep-curated), then dedupe by lowercased headline
-  const seen = new Set<string>();
-  const merged: Array<
-    | { kind: "manual"; sig: any }
-    | { kind: "auto"; sig: DiscoveredSignal }
-  > = [];
-  for (const sig of sortedSignals) {
-    const k = (sig.headline || "").toLowerCase().slice(0, 80);
-    if (seen.has(k)) continue; seen.add(k);
-    merged.push({ kind: "manual", sig });
-  }
-  for (const sig of auto) {
-    const k = (sig.headline || "").toLowerCase().slice(0, 80);
-    if (seen.has(k)) continue; seen.add(k);
-    merged.push({ kind: "auto", sig });
-  }
-  const visible = merged.slice(0, 12);
-
-  return (
-    <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <MonoLabel>
-          🛰️ Signal Feed · {(deal.targetMeta?.signalScore ?? atomScore / 10).toFixed(1)}/10
-          {data?.sourceCount ? <span className="ml-2 text-white/25">· {data.sourceCount} premium sources</span> : null}
-        </MonoLabel>
-        <button
-          onClick={onAdd}
-          className="text-[10px] text-white/30 hover:text-rose-400 transition-colors"
-        >
-          + Add
-        </button>
-      </div>
-      {data?.topNarrative && (
-        <p className="text-[11px] text-white/55 leading-snug italic">{data.topNarrative}</p>
-      )}
-      {isLoading && !visible.length && (
-        <p className="text-[11px] text-white/30">Discovering signals from CB Insights, PitchBook, Statista, TechCrunch…</p>
-      )}
-      {visible.length > 0 ? (
-        visible.map((row, i) =>
-          row.kind === "manual" ? (
-            <div key={`m_${row.sig.id || i}`} className="flex items-start gap-2 text-[11px] py-1.5 border-b border-white/[0.04]">
-              <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${signalDotColor(row.sig.type)}`} />
-              <div className="flex-1 min-w-0">
-                <p className="text-white/70 leading-snug">{row.sig.headline}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[9px] font-mono text-white/25">{(row.sig.type || "manual").replace(/_/g, " ")}</span>
-                  <span className="text-[9px] font-mono text-white/25">{row.sig.date}</span>
-                  {row.sig.impactScore >= 7 && <span className="text-[9px] font-mono text-rose-400">HIGH</span>}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <a
-              key={`a_${row.sig.id}`}
-              href={row.sig.url || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-2 text-[11px] py-1.5 border-b border-white/[0.04] hover:bg-white/[0.02] rounded-md px-1 -mx-1 transition-colors"
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
-                style={{ background: signalCategoryColor(row.sig.category), boxShadow: `0 0 6px ${signalCategoryColor(row.sig.category)}` }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-white/75 leading-snug">{row.sig.headline}</p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span
-                    className="text-[9px] font-mono uppercase tracking-wider"
-                    style={{ color: signalCategoryColor(row.sig.category) }}
-                  >
-                    {row.sig.category}
-                  </span>
-                  {row.sig.source && (
-                    <span className="text-[9px] font-mono text-white/25">{row.sig.source}</span>
-                  )}
-                  {row.sig.recencyDays >= 0 && (
-                    <span className="text-[9px] font-mono text-white/25">
-                      {row.sig.recencyDays === 0 ? "today" : `${row.sig.recencyDays}d ago`}
-                    </span>
-                  )}
-                  {row.sig.impact >= 7 && <span className="text-[9px] font-mono text-rose-400">HIGH</span>}
-                </div>
-              </div>
-            </a>
-          )
-        )
-      ) : (
-        !isLoading && <p className="text-[11px] text-white/25">No signals yet — log one or wait for the discovery to populate.</p>
-      )}
     </div>
   );
 }

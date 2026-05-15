@@ -94,7 +94,7 @@ export default function MobileChat() {
       <div className="m-stack-lg">
         {messages.length === 0 && (
           <div className="m-card m-card-glow">
-            <Sparkles size={22} style={{ color: "#696aac", marginBottom: 8 }} />
+            <Sparkles size={22} style={{ color: "#00e6d3", marginBottom: 8 }} />
             <div className="m-card-title">What's on your mind?</div>
             <div className="m-text-muted" style={{ fontSize: 14, marginTop: 6 }}>
               Ask anything — markets, accounts, objections, pitches.
@@ -111,8 +111,8 @@ export default function MobileChat() {
 
         {messages.map((m, i) => (
           <div key={i} className="m-card" style={{
-            borderColor: m.role === "assistant" ? "rgba(105,106,172,0.18)" : "rgba(255,255,255,0.06)",
-            background: m.role === "user" ? "rgba(105,106,172,0.04)" : undefined,
+            borderColor: m.role === "assistant" ? "rgba(0,230,211,0.18)" : "rgba(255,255,255,0.06)",
+            background: m.role === "user" ? "rgba(0,230,211,0.04)" : undefined,
           }}>
             <div className={`m-bubble-label${m.role === "assistant" ? " is-atom" : ""}`}>
               {m.role === "assistant" ? "ΔTOM" : "You"}
@@ -126,7 +126,7 @@ export default function MobileChat() {
               <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                 {m.citations.map((c, j) => (
                   <a key={j} href={c.url} target="_blank" rel="noreferrer" className="m-row" style={{
-                    gap: 6, fontSize: 12, color: "#696aac", textDecoration: "none",
+                    gap: 6, fontSize: 12, color: "#00e6d3", textDecoration: "none",
                   }}>
                     <ExternalLink size={12} /> {c.title || c.url}
                   </a>
@@ -139,7 +139,7 @@ export default function MobileChat() {
         {loading && (
           <div className="m-card">
             <div className="m-row" style={{ gap: 10 }}>
-              <Loader2 size={16} className="animate-spin" style={{ color: "#696aac" }} />
+              <Loader2 size={16} className="animate-spin" style={{ color: "#00e6d3" }} />
               <span className="m-text-muted" style={{ fontSize: 14 }}>ΔTOM is thinking…</span>
             </div>
           </div>

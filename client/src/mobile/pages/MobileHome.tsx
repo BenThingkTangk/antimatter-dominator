@@ -46,12 +46,12 @@ const PRIMARY_ACTIONS: QuickAction[] = [
   {
     href: "/m/dial", icon: PhoneCall, label: "Dial with ΔTOM",
     sub: "Voice agent · instant pickup",
-    accent: "#696aac", accentBg: "rgba(105,106,172,0.1)",
+    accent: "#00e6d3", accentBg: "rgba(0,230,211,0.1)",
   },
   {
     href: "/m/leads", icon: Radar, label: "Lead queue",
     sub: "Swipe to dial or snooze",
-    accent: "#8587e3", accentBg: "rgba(0,167,255,0.1)",
+    accent: "#00a7ff", accentBg: "rgba(0,167,255,0.1)",
   },
   {
     href: "/m/chat", icon: MessageSquare, label: "Ask ΔTOM",
@@ -69,7 +69,7 @@ const MODULE_ACTIONS: QuickAction[] = [
   {
     href: "/m/pitch", icon: TrendingUp, label: "ΔTOM Pitch",
     sub: "Precision pitch writer",
-    accent: "#696aac", accentBg: "rgba(105,106,172,0.1)",
+    accent: "#00e6d3", accentBg: "rgba(0,230,211,0.1)",
   },
   {
     href: "/m/objections", icon: MessageSquareWarning, label: "ΔTOM Objection Handler",
@@ -84,7 +84,7 @@ const MODULE_ACTIONS: QuickAction[] = [
   {
     href: "/m/prospects", icon: Megaphone, label: "ΔTOM Prospect",
     sub: "Scan + enrich accounts",
-    accent: "#8587e3", accentBg: "rgba(0,167,255,0.12)",
+    accent: "#00a7ff", accentBg: "rgba(0,167,255,0.12)",
   },
   {
     href: "/m/warbook", icon: Brain, label: "ΔTOM WarBook",

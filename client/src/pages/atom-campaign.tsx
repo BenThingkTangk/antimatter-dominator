@@ -3,13 +3,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { loadDeals, onWarRoomEvent, type Deal } from "@/lib/warroom-store";
-import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AtomChip, AtomChipGroup, AtomCta } from "@/components/ui/atom-form";
 import {
   Select,
   SelectContent,
@@ -65,122 +62,35 @@ import {
 
 const BRIDGE_URL = "https://45-79-202-76.sslip.io";
 
-// Alphabetized by group: top-level scope, US (whole / regions / states),
-// then external regions with their countries indented underneath.
 const GEO_OPTIONS = [
-  "Global",
-
-  // United States
-  "United States",
-  "  US Midwest (IL, IN, MI, MN, OH, WI...)",
-  "  US Northeast (CT, MA, NJ, NY, PA, RI...)",
-  "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)",
-  "  US Southeast (FL, GA, NC, SC, VA...)",
-  "  US West (AZ, CA, CO, OR, UT, WA...)",
-  "    Arizona",
-  "    California",
-  "    Colorado",
-  "    Florida",
-  "    Georgia",
-  "    Illinois",
-  "    Massachusetts",
-  "    New York",
-  "    North Carolina",
-  "    Ohio",
-  "    Pennsylvania",
-  "    Tennessee",
-  "    Texas",
-  "    Washington",
-
-  // External regions, alphabetized
-  "APAC",
-  "  Australia",
-  "  India",
-  "  Japan",
-  "  Singapore",
-  "  South Korea",
-
-  "Canada",
-
-  "European Union",
-  "  France",
-  "  Germany",
-  "  Ireland",
-  "  Italy",
-  "  Netherlands",
-  "  Spain",
-  "  Sweden",
-
-  "Latin America",
-  "  Argentina",
-  "  Brazil",
-  "  Chile",
-  "  Colombia",
-  "  Mexico",
-
-  "Middle East",
-  "  Israel",
-  "  Saudi Arabia",
-  "  United Arab Emirates",
-
-  "United Kingdom",
+  "All US", "US South (TX, FL, GA, NC, TN...)", "US Northeast (NY, NJ, MA, CT...)",
+  "US Midwest (IL, OH, MI, IN, MN...)", "US West (CA, WA, OR, CO, AZ...)",
+  "US Southeast (FL, GA, NC, SC, VA...)", "Texas", "California", "New York",
+  "Florida", "Illinois", "Georgia", "North Carolina", "Washington",
+  "Massachusetts", "Colorado", "EU", "UK", "Canada", "Global",
 ];
 
 const GEO_VALUES: Record<string, string> = {
-  "Global": "Global",
-
-  "United States": "All US",
-  "  US Midwest (IL, IN, MI, MN, OH, WI...)": "US Midwest",
-  "  US Northeast (CT, MA, NJ, NY, PA, RI...)": "US Northeast",
-  "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)": "US South",
-  "  US Southeast (FL, GA, NC, SC, VA...)": "US Southeast",
-  "  US West (AZ, CA, CO, OR, UT, WA...)": "US West",
-  "    Arizona": "Arizona",
-  "    California": "California",
-  "    Colorado": "Colorado",
-  "    Florida": "Florida",
-  "    Georgia": "Georgia",
-  "    Illinois": "Illinois",
-  "    Massachusetts": "Massachusetts",
-  "    New York": "New York",
-  "    North Carolina": "North Carolina",
-  "    Ohio": "Ohio",
-  "    Pennsylvania": "Pennsylvania",
-  "    Tennessee": "Tennessee",
-  "    Texas": "Texas",
-  "    Washington": "Washington",
-
-  "APAC": "APAC",
-  "  Australia": "Australia",
-  "  India": "India",
-  "  Japan": "Japan",
-  "  Singapore": "Singapore",
-  "  South Korea": "South Korea",
-
+  "All US": "All US",
+  "US South (TX, FL, GA, NC, TN...)": "US South",
+  "US Northeast (NY, NJ, MA, CT...)": "US Northeast",
+  "US Midwest (IL, OH, MI, IN, MN...)": "US Midwest",
+  "US West (CA, WA, OR, CO, AZ...)": "US West",
+  "US Southeast (FL, GA, NC, SC, VA...)": "US Southeast",
+  "Texas": "Texas",
+  "California": "California",
+  "New York": "New York",
+  "Florida": "Florida",
+  "Illinois": "Illinois",
+  "Georgia": "Georgia",
+  "North Carolina": "North Carolina",
+  "Washington": "Washington",
+  "Massachusetts": "Massachusetts",
+  "Colorado": "Colorado",
+  "EU": "EU",
+  "UK": "UK",
   "Canada": "Canada",
-
-  "European Union": "EU",
-  "  France": "France",
-  "  Germany": "Germany",
-  "  Ireland": "Ireland",
-  "  Italy": "Italy",
-  "  Netherlands": "Netherlands",
-  "  Spain": "Spain",
-  "  Sweden": "Sweden",
-
-  "Latin America": "Latin America",
-  "  Argentina": "Argentina",
-  "  Brazil": "Brazil",
-  "  Chile": "Chile",
-  "  Colombia": "Colombia",
-  "  Mexico": "Mexico",
-
-  "Middle East": "Middle East",
-  "  Israel": "Israel",
-  "  Saudi Arabia": "Saudi Arabia",
-  "  United Arab Emirates": "UAE",
-
-  "United Kingdom": "UK",
+  "Global": "Global",
 };
 
 const INDUSTRIES = [
@@ -596,21 +506,27 @@ function AdvancedTargetingPanel({
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider flex items-center gap-1">
+        <label className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
           <User className="w-3 h-3" />Job Titles
         </label>
-        <AtomChipGroup>
-          {JOB_TITLE_PRESETS.map((t) => (
-            <AtomChip
-              key={t}
-              active={filters.jobTitles.includes(t)}
-              accent="violet"
-              onClick={() => toggleTitle(t)}
-            >
-              {t}
-            </AtomChip>
-          ))}
-        </AtomChipGroup>
+        <div className="flex flex-wrap gap-1.5">
+          {JOB_TITLE_PRESETS.map((t) => {
+            const active = filters.jobTitles.includes(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggleTitle(t)}
+                className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
+                  active
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                    : "bg-white/[0.03] text-white/55 border-white/[0.12] hover:border-white/20 hover:text-white/55"
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -663,17 +579,6 @@ export default function AtomCampaign() {
   const pausedRef = useRef(false);
 
   pausedRef.current = isPaused;
-
-  // Auto-build targets when arriving with ?brief= so Objection Handler
-  // 'Use in Campaign' lands directly into a running target build.
-  const autoBuiltRef = useRef(false);
-  useEffect(() => {
-    if (autoBuiltRef.current) return;
-    if (brief && brief.length > 10) {
-      autoBuiltRef.current = true;
-      setTimeout(() => buildTargets(), 500);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Step 2: Build Targets ─────────────────────────────────────────────────
 
@@ -924,7 +829,7 @@ export default function AtomCampaign() {
       let companiesScanned = 0;
       let broadMode = false;
 
-      setBuildProgress((p) => [...p, `ΔTOM Intelligence scanning — target: ${maxTargets} contacts...`]);
+      setBuildProgress((p) => [...p, `ATOM Intelligence scanning — target: ${maxTargets} contacts...`]);
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         if (allTargets.length >= maxTargets) break;
@@ -1395,7 +1300,7 @@ export default function AtomCampaign() {
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
-              ΔTOM Campaign
+              ATOM Campaign
             </h1>
           </div>
           <p className="text-sm text-[#8a8a96] ml-12">
@@ -1431,8 +1336,8 @@ export default function AtomCampaign() {
 
             <div className="space-y-3">
               <p className="text-sm text-white/50 leading-relaxed">
-                Describe your campaign in plain English. ΔTOM AI will extract product focus, target industry,
-                and ideal personas — then scan ΔTOM Intelligence to build your target list automatically.
+                Describe your campaign in plain English. ATOM AI will extract product focus, target industry,
+                and ideal personas — then scan ATOM Intelligence to build your target list automatically.
               </p>
 
               <textarea
@@ -1473,26 +1378,26 @@ export default function AtomCampaign() {
 
               <div className="flex items-center justify-between">
                 <p className="text-xs text-white/40">
-                  {brief.length} chars · the richer your brief, the better ΔTOM can target
+                  {brief.length} chars · the richer your brief, the better ATOM can target
                 </p>
-                <AtomCta
-                  accent="violet"
+                <Button
                   onClick={buildTargets}
                   disabled={!brief.trim() || isBuilding}
-                  className="w-auto px-6"
+                  className="h-10 px-6 text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white gap-2 transition-all"
+                  style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}
                 >
                   {isBuilding ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Building…</>
+                    <><Loader2 className="w-4 h-4 animate-spin" />Building...</>
                   ) : (
                     <><Zap className="w-4 h-4" />Build Campaign</>
                   )}
-                </AtomCta>
+                </Button>
               </div>
             </div>
 
             {/* Example briefs */}
             <div className="border-t border-white/[0.10] pt-4 space-y-2">
-              <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Example Briefs</p>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Example Briefs</p>
               <div className="grid gap-2">
                 {[
                   "Cloudflare CDN takeout for Akamai. Match pricing + eat 6 months of contract to switch.",
@@ -1615,7 +1520,7 @@ export default function AtomCampaign() {
                       bg: "",
                     },
                     {
-                      label: "Avg ΔTOM Score",
+                      label: "Avg ATOM Score",
                       value: avgScore,
                       icon: BarChart3,
                       color: scoreTextColor(avgScore),
@@ -1709,13 +1614,13 @@ export default function AtomCampaign() {
                 {/* ── Column Headers ── */}
                 <div className="grid grid-cols-[28px_52px_minmax(160px,1.8fr)_minmax(140px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_100px_80px] gap-2 items-center px-4 py-2 border-b border-white/[0.04] min-w-[900px]">
                   <div />
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Score</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Company</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Contact</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Phone</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Email / LinkedIn</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Email</p>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">Conf.</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Score</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Company</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Contact</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Phone</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Email / LinkedIn</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Signals</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Conf.</p>
                 </div>
 
                 {/* ── Target Rows ── */}
@@ -1745,30 +1650,11 @@ export default function AtomCampaign() {
                           className="w-3.5 h-3.5 rounded border-white/20 bg-transparent accent-violet-400 cursor-pointer"
                         />
 
-                        {/* ATOM Score — hover for what the number means */}
+                        {/* ATOM Score */}
                         <div className="flex items-center justify-center">
-                          <TooltipProvider delayDuration={150}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className={`text-xs font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border cursor-help ${scoreColor(t.score)}`}>
-                                  {t.score}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" align="start" className="max-w-[280px] bg-[#111113] border border-violet-500/30 text-white/90 px-3 py-2.5">
-                                <div className="text-[10px] font-mono uppercase tracking-wider text-violet-300 mb-1.5">ΔTOM Score · {t.score}/100</div>
-                                <div className="text-[11px] text-white/80 leading-relaxed mb-2">
-                                  {t.score >= 80 ? "Hot target. Strong buying signals + ICP fit + recent intent activity. Dial first."
-                                    : t.score >= 60 ? "Warm target. Solid ICP match with at least one fresh signal. Worth a call."
-                                    : t.score >= 40 ? "Tepid. Right industry / size but no recent intent. Email-first cadence recommended."
-                                    : "Cold. Generic ICP fit only. Nurture queue."}
-                                </div>
-                                <div className="text-[10px] text-white/55 leading-relaxed pt-2 border-t border-white/10">
-                                  Composite of: Sonar intent signals, Apollo firmographic match,
-                                  buying-signal recency, and Aletheia behavioral score.
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <span className={`text-xs font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${scoreColor(t.score)}`}>
+                            {t.score}
+                          </span>
                         </div>
 
                         {/* Company */}
@@ -1864,25 +1750,33 @@ export default function AtomCampaign() {
                           )}
                         </div>
 
-                        {/* Email — dedicated column with prominent send button */}
-                        <div className="min-w-0 flex items-center">
-                          {t.email ? (
-                            <Button
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
-                              disabled={emailingTarget === t.id}
-                              className="h-7 text-[11px] px-3 gap-1.5 bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/30"
-                            >
-                              {emailingTarget === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                              Email
-                            </Button>
-                          ) : (
-                            <span className="text-[9px] text-white/25 font-mono">no email</span>
+                        {/* Buying Signals (first 2) */}
+                        <div className="min-w-0 space-y-0.5">
+                          {t.buyingSignals.slice(0, 2).map((sig, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                              <Zap className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                              <span className="text-[9px] text-white/55 truncate leading-tight">{sig}</span>
+                            </div>
+                          ))}
+                          {t.buyingSignals.length === 0 && (
+                            <span className="text-[9px] text-white/15 font-mono">—</span>
                           )}
                         </div>
 
-                        {/* Confidence */}
-                        <div className="flex items-center justify-end">
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {t.email && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => { e.stopPropagation(); sendEmailOutreach(t); }}
+                              disabled={emailingTarget === t.id}
+                              className="h-6 text-[10px] px-2 gap-1 border-violet-500/20 text-violet-400 hover:bg-violet-500/10 bg-transparent"
+                            >
+                              {emailingTarget === t.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
+                              Email
+                            </Button>
+                          )}
                           <Badge className={`text-[9px] font-mono px-1.5 shrink-0 ${
                             t.confidence >= 70
                               ? "bg-emerald-500/10 text-emerald-400/70 border-emerald-500/20"
@@ -2063,7 +1957,7 @@ export default function AtomCampaign() {
               {/* Table Headers */}
               <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-3 px-4 py-2 border-b border-white/[0.04]">
                 {["Company", "Contact", "Status", "Duration", "Sentiment", "Disposition"].map((h) => (
-                  <p key={h} className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70">{h}</p>
+                  <p key={h} className="text-[10px] font-mono uppercase tracking-wider text-white/40">{h}</p>
                 ))}
               </div>
 
@@ -2119,38 +2013,6 @@ export default function AtomCampaign() {
           </Card>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── TargetSignalChip ───────────────────────────────────────────────────
-// Pulls top premium-source signal from /api/signals/discover (Sonar Pro,
-// premium domain filter) for each campaign target row. Renders a tiny
-// category-colored chip with truncated headline. Cached 6h client + server.
-function TargetSignalChip({ company, domain }: { company: string; domain?: string }) {
-  const { data, isLoading } = useSignals({ company, domain });
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse shrink-0" />
-        <span className="text-[9px] text-white/30 font-mono leading-tight">scanning premium…</span>
-      </div>
-    );
-  }
-  const top: DiscoveredSignal | undefined = data?.signals?.[0];
-  if (!top) return null;
-  return (
-    <div className="flex items-center gap-1" title={`${top.headline} — ${top.source}`}>
-      <span
-        className="w-1.5 h-1.5 rounded-full shrink-0"
-        style={{ background: signalCategoryColor(top.category) }}
-      />
-      <span
-        className="text-[9px] truncate leading-tight"
-        style={{ color: signalCategoryColor(top.category) }}
-      >
-        {top.category.toUpperCase()}·{top.headline}
-      </span>
     </div>
   );
 }

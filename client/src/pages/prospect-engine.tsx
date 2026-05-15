@@ -5,7 +5,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { type Prospect, type Contact } from "@/lib/store";
-import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +17,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { AtomChip, AtomChipGroup, AtomCta } from "@/components/ui/atom-form";
 import {
   Radar,
   Loader2,
@@ -87,122 +85,31 @@ const INDUSTRIES = [
   "Biotech & Pharma",
 ];
 
-// ─── IndustrySignalsPanel ────────────────────────────────────────────────────
-// Pulls premium-source signals (CB Insights, PitchBook, Bloomberg, TechCrunch,
-// SEC, Crunchbase, G2, Gartner) for the chosen industry. Surfaced above the
-// prospect list so the user sees the macro context the scoring leans on, plus
-// can copy a top headline as a keyword/pain-point input on the next scan.
-function IndustrySignalsPanel({ industry }: { industry: string }) {
-  if (!industry || industry === "All Industries") return null;
-  const { data, isLoading } = useSignals({ industry });
-  if (isLoading) {
-    return (
-      <div className="rounded-xl bg-black/40 border border-violet-500/[0.18] p-3 flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 animate-pulse shrink-0" />
-        <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400/70">⚡ Industry Signal Scan · Sonar Pro</span>
-        <span className="text-[10px] text-white/30 font-mono animate-pulse">scanning…</span>
-      </div>
-    );
-  }
-  if (!data || !data.signals?.length) return null;
-  const top = [...data.signals].sort((a, b) => b.impact - a.impact).slice(0, 4);
-  return (
-    <div className="rounded-xl bg-black/40 backdrop-blur-md border border-violet-500/[0.18] p-3">
-      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400/80">⚡ Industry Signal Scan · Sonar Pro</span>
-        <span className="text-[9px] text-white/40 font-mono">{data.sourceCount || 0} sources · score {data.atomScore}/100</span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {top.map((s: DiscoveredSignal) => (
-          <a
-            key={s.id}
-            href={s.url || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors"
-            title={s.summary}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
-              style={{ background: signalCategoryColor(s.category) }}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] text-white/75 leading-snug truncate group-hover:text-white">{s.headline}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[8px] uppercase font-mono" style={{ color: signalCategoryColor(s.category) }}>{s.category}</span>
-                <span className="text-[8px] text-white/30 font-mono">·</span>
-                <span className="text-[8px] text-white/35 font-mono">{s.recencyDays >= 0 ? `${s.recencyDays}d` : "recent"}</span>
-                <span className="text-[8px] text-white/30 font-mono">·</span>
-                <span className="text-[8px] text-violet-400/60 font-mono truncate">{s.source}</span>
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Alphabetized by group: top-level regions first, then US sub-regions,
-// then states within the US, then countries within each external region.
 const GEOGRAPHIES = [
-  // Top-level scope
+  { value: "All US", label: "All US" },
+  { value: "US South", label: "US South (TX, FL, GA, NC, TN...)" },
+  { value: "US Northeast", label: "US Northeast (NY, NJ, MA, CT, PA...)" },
+  { value: "US Midwest", label: "US Midwest (IL, OH, MI, IN, MN...)" },
+  { value: "US West", label: "US West (CA, WA, OR, CO, AZ...)" },
+  { value: "US Southeast", label: "US Southeast (FL, GA, NC, SC, VA...)" },
+  { value: "Texas", label: "Texas" },
+  { value: "California", label: "California" },
+  { value: "New York", label: "New York" },
+  { value: "Florida", label: "Florida" },
+  { value: "Illinois", label: "Illinois" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "North Carolina", label: "North Carolina" },
+  { value: "Washington", label: "Washington" },
+  { value: "Massachusetts", label: "Massachusetts" },
+  { value: "Colorado", label: "Colorado" },
+  { value: "Arizona", label: "Arizona" },
+  { value: "Tennessee", label: "Tennessee" },
+  { value: "Pennsylvania", label: "Pennsylvania" },
+  { value: "Ohio", label: "Ohio" },
+  { value: "EU", label: "EU (Germany, France, Netherlands...)" },
+  { value: "UK", label: "United Kingdom" },
+  { value: "Canada", label: "Canada" },
   { value: "Global", label: "Global" },
-
-  // United States — the whole country, then alphabetized regions, then states
-  { value: "All US",        label: "United States" },
-  { value: "US Midwest",    label: "  US Midwest (IL, IN, MI, MN, OH, WI...)" },
-  { value: "US Northeast",  label: "  US Northeast (CT, MA, NJ, NY, PA, RI...)" },
-  { value: "US South",      label: "  US South (AL, AR, KY, LA, MS, OK, TN, TX...)" },
-  { value: "US Southeast",  label: "  US Southeast (FL, GA, NC, SC, VA...)" },
-  { value: "US West",       label: "  US West (AZ, CA, CO, OR, UT, WA...)" },
-  { value: "Arizona",       label: "    Arizona" },
-  { value: "California",    label: "    California" },
-  { value: "Colorado",      label: "    Colorado" },
-  { value: "Florida",       label: "    Florida" },
-  { value: "Georgia",       label: "    Georgia" },
-  { value: "Illinois",      label: "    Illinois" },
-  { value: "Massachusetts", label: "    Massachusetts" },
-  { value: "New York",      label: "    New York" },
-  { value: "North Carolina",label: "    North Carolina" },
-  { value: "Ohio",          label: "    Ohio" },
-  { value: "Pennsylvania",  label: "    Pennsylvania" },
-  { value: "Tennessee",     label: "    Tennessee" },
-  { value: "Texas",         label: "    Texas" },
-  { value: "Washington",    label: "    Washington" },
-
-  // Other major regions, alphabetized, with their countries indented
-  { value: "APAC",          label: "APAC" },
-  { value: "Australia",     label: "  Australia" },
-  { value: "India",         label: "  India" },
-  { value: "Japan",         label: "  Japan" },
-  { value: "Singapore",     label: "  Singapore" },
-  { value: "South Korea",   label: "  South Korea" },
-
-  { value: "Canada",        label: "Canada" },
-
-  { value: "EU",            label: "European Union" },
-  { value: "France",        label: "  France" },
-  { value: "Germany",       label: "  Germany" },
-  { value: "Ireland",       label: "  Ireland" },
-  { value: "Italy",         label: "  Italy" },
-  { value: "Netherlands",   label: "  Netherlands" },
-  { value: "Spain",         label: "  Spain" },
-  { value: "Sweden",        label: "  Sweden" },
-
-  { value: "Latin America", label: "Latin America" },
-  { value: "Argentina",     label: "  Argentina" },
-  { value: "Brazil",        label: "  Brazil" },
-  { value: "Chile",         label: "  Chile" },
-  { value: "Colombia",      label: "  Colombia" },
-  { value: "Mexico",        label: "  Mexico" },
-
-  { value: "Middle East",   label: "Middle East" },
-  { value: "Israel",        label: "  Israel" },
-  { value: "Saudi Arabia",  label: "  Saudi Arabia" },
-  { value: "UAE",           label: "  United Arab Emirates" },
-
-  { value: "UK",            label: "United Kingdom" },
 ];
 
 const EMPLOYEE_SIZES = [
@@ -330,29 +237,20 @@ function exportToCSV(prospects: Prospect[]) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-// Signal-intelligence ramp: cold (steel) → warm (amber) → hot (rose).
-// Picks a CSS gradient that ends at the score, so the fill itself encodes
-// the temperature (low scores stay cool, high scores burn).
+// Full-width gradient score bar matching the screenshot
 function ScoreBar({ score }: { score: number }) {
-  const fillGradient =
-    score >= 80 ? "linear-gradient(to right, #f97316, #f43f5e)" :       // hot — amber → rose
-    score >= 60 ? "linear-gradient(to right, #14b8a6, #f59e0b)" :       // warm — teal → amber
-    score >= 40 ? "linear-gradient(to right, #38bdf8, #14b8a6)" :       // tepid — sky → teal
-                  "linear-gradient(to right, #475569, #64748b)";        // cold — slate ramp
-  const glow =
-    score >= 80 ? "0 0 12px rgba(244, 63, 94, 0.45)" :
-    score >= 60 ? "0 0 10px rgba(245, 158, 11, 0.35)" :
-    score >= 40 ? "0 0 8px rgba(20, 184, 166, 0.25)" :
-                  "none";
   return (
     <div className="flex items-center gap-2 w-full">
       <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${score}%`, background: fillGradient, boxShadow: glow }}
+          style={{
+            width: `${score}%`,
+            background: "linear-gradient(to right, #22c55e, #eab308, var(--color-error))",
+          }}
         />
       </div>
-      <span className="text-xs font-bold tabular-nums text-white/80 w-6 text-right font-mono">
+      <span className="text-xs font-bold tabular-nums text-white/70 w-6 text-right font-mono">
         {Math.round(score)}
       </span>
     </div>
@@ -444,7 +342,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
         </div>
         <Button size="sm" onClick={handleCallAtom}
           className="h-8 text-xs px-3 gap-1.5 bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/20 shrink-0">
-          <PhoneCall className="w-3 h-3" />Call with ΔTOM
+          <PhoneCall className="w-3 h-3" />Call with ATOM
         </Button>
       </div>
       {/* Contact details */}
@@ -459,11 +357,11 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
           <a href={`tel:${callablePhone}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-violet-400 transition-colors">
             <Phone className="w-3.5 h-3.5" />{callablePhone}
             {!contact.phone && (prospect as any).companyPhone && (
-              <span className="text-[9px] text-white/55 ml-1">(main line)</span>
+              <span className="text-[9px] text-white/25 ml-1">(main line)</span>
             )}
           </a>
         ) : (
-          <span className="flex items-center gap-1.5 text-xs text-white/55">
+          <span className="flex items-center gap-1.5 text-xs text-white/25">
             <Phone className="w-3.5 h-3.5" />No phone available
           </span>
         )}
@@ -476,7 +374,7 @@ function ContactRow({ contact, prospect, compact = false }: { contact: Contact; 
       {/* Location + tags */}
       <div className="flex flex-wrap items-center gap-1.5 pl-[52px]">
         {(contact.city || contact.state) && (
-          <span className="flex items-center gap-1 text-[10px] text-white/55">
+          <span className="flex items-center gap-1 text-[10px] text-white/25">
             <MapPin className="w-3 h-3" />{[contact.city, contact.state].filter(Boolean).join(", ")}
           </span>
         )}
@@ -520,7 +418,7 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
     setFlagged(true);
     toast({
       title: "🎯 HVT Flagged",
-      description: `${prospect.companyName} deployed to ΔTOM War Room — Von Clausewitz Engine activated.`,
+      description: `${prospect.companyName} deployed to ATOM War Room — Von Clausewitz Engine activated.`,
     });
   };
 
@@ -546,7 +444,7 @@ function HVTFlagButton({ prospect }: { prospect: Prospect }) {
     <button
       onClick={handleFlag}
       className="h-7 px-2.5 rounded-lg border border-white/[0.08] flex items-center gap-1 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all shrink-0"
-      title="Flag as HVT — Send to ΔTOM War Room"
+      title="Flag as HVT — Send to ATOM War Room"
     >
       <Crosshair className="w-3 h-3" />Flag HVT
     </button>
@@ -591,7 +489,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
     : "bg-white/5 text-white/40 border-white/10";
 
   return (
-    <Card className="bg-[#111113] border-white/[0.16] hover:border-violet-500/20 transition-all duration-200">
+    <Card className="bg-[#111113] border-white/[0.08] hover:border-violet-500/20 transition-all duration-200">
       <CardContent className="p-0">
         {/* ── COMPANY HEADER ── */}
         <div className="p-4 pb-3">
@@ -725,7 +623,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
                       <div>
                         <span className="text-xs text-[#8a8a96]">{typeof item === "string" ? item : item.headline || item.title || JSON.stringify(item)}</span>
                         {typeof item === "object" && item.date && (
-                          <span className="text-[10px] text-white/50 font-mono ml-2">{item.date}</span>
+                          <span className="text-[10px] text-white/20 font-mono ml-2">{item.date}</span>
                         )}
                       </div>
                     </div>
@@ -753,12 +651,12 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="font-mono text-[9px] uppercase tracking-wider text-[#4a4a55]">Decision Makers</p>
-                <button className="flex items-center gap-1 text-[9px] font-mono text-white/55 hover:text-violet-400 transition-colors">
+                <button className="flex items-center gap-1 text-[9px] font-mono text-white/25 hover:text-violet-400 transition-colors">
                   <RefreshCw className="w-2.5 h-2.5" />Refresh
                 </button>
               </div>
               {contacts.length === 0 ? (
-                <p className="text-xs text-white/50 italic">No contacts found</p>
+                <p className="text-xs text-white/20 italic">No contacts found</p>
               ) : (
                 <div className="space-y-2">
                   {contacts.map((c, i) => (
@@ -803,7 +701,7 @@ function ProspectCard({ prospect, isViewingHistory }: { prospect: Prospect; isVi
 
 function SkeletonCard() {
   return (
-    <Card className="bg-[#111113] border-white/[0.16]">
+    <Card className="bg-[#111113] border-white/[0.08]">
       <CardContent className="p-4">
         <div className="flex gap-3">
           <Skeleton className="w-10 h-10 rounded-lg bg-white/5" />
@@ -891,7 +789,7 @@ function HistoryDrawer({
             <div className="flex flex-col items-center justify-center h-48 text-center">
               <History className="w-10 h-10 text-white/10 mb-3" />
               <p className="text-sm text-white/30">No search history yet</p>
-              <p className="text-xs text-white/50 mt-1">Past searches will appear here</p>
+              <p className="text-xs text-white/20 mt-1">Past searches will appear here</p>
             </div>
           ) : (
             history.map((entry) => (
@@ -909,7 +807,7 @@ function HistoryDrawer({
                     <p className="text-xs text-white/60 leading-relaxed">{filterSummary(entry.filters)}</p>
                   </button>
                   <Button variant="ghost" size="sm" onClick={() => deleteEntry(entry.id)}
-                    className="h-6 w-6 p-0 text-white/50 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    className="h-6 w-6 p-0 text-white/20 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
@@ -951,7 +849,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       {/* Row 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <Briefcase className="w-3 h-3" />Industry
           </label>
           <Select value={filters.industry} onValueChange={(v) => set("industry", v)}>
@@ -965,7 +863,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <MapPin className="w-3 h-3" />Geography
           </label>
           <Select value={filters.geo} onValueChange={(v) => set("geo", v)}>
@@ -979,7 +877,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <Users className="w-3 h-3" />Company Size
           </label>
           <Select value={filters.employeeSize} onValueChange={(v) => set("employeeSize", v)}>
@@ -993,7 +891,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <DollarSign className="w-3 h-3" />Revenue
           </label>
           <Select value={filters.revenueRange} onValueChange={(v) => set("revenueRange", v)}>
@@ -1010,7 +908,7 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
       {/* Row 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <Tag className="w-3 h-3" />Product / Service Focus
           </label>
           <input
@@ -1018,11 +916,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.productFocus}
             onChange={(e) => set("productFocus", e.target.value)}
             placeholder='e.g. "Cloudflare CDN" or "Akamai"'
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <Cpu className="w-3 h-3" />Tech Stack
           </label>
           <input
@@ -1030,11 +928,11 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.techStack}
             onChange={(e) => set("techStack", e.target.value)}
             placeholder="e.g. Salesforce, AWS, HubSpot"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/70 flex items-center gap-1">
+          <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
             <Search className="w-3 h-3" />Keywords
           </label>
           <input
@@ -1042,38 +940,49 @@ function FilterPanel({ filters, onChange, onScan, isScanning }: FilterPanelProps
             value={filters.keywords}
             onChange={(e) => set("keywords", e.target.value)}
             placeholder="e.g. digital transformation, cloud"
-            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/55 focus:outline-none focus:border-violet-500/40 transition-colors"
+            className="w-full h-9 px-3 text-xs rounded-md border border-white/[0.08] bg-[#161618] text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 transition-colors"
           />
         </div>
       </div>
 
       {/* Job Titles */}
       <div className="space-y-2">
-        <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider flex items-center gap-1">
+        <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 flex items-center gap-1">
           <User className="w-3 h-3" />Target Job Titles
         </label>
-        <AtomChipGroup>
-          {JOB_TITLES.map((t) => (
-            <AtomChip
-              key={t}
-              active={filters.jobTitles.includes(t)}
-              accent="cyan"
-              onClick={() => toggleTitle(t)}
-            >
-              {t}
-            </AtomChip>
-          ))}
-        </AtomChipGroup>
+        <div className="flex flex-wrap gap-1.5">
+          {JOB_TITLES.map((t) => {
+            const active = filters.jobTitles.includes(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggleTitle(t)}
+                className={`text-[10px] font-mono px-2 py-1 rounded border transition-all ${
+                  active
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                    : "bg-white/[0.03] text-white/40 border-white/[0.08] hover:border-white/20 hover:text-white/60"
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Scan Button */}
-      <AtomCta accent="cyan" onClick={onScan} disabled={isScanning}>
+      <Button
+        onClick={onScan}
+        disabled={isScanning}
+        className="w-full h-12 text-sm font-semibold text-white gap-2 transition-all rounded-full hover:scale-[1.01]"
+        style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", background: "linear-gradient(93.92deg, #22d3ee -13.51%, #06b6d4 40.91%, #0891b2 113.69%)", boxShadow: "0 0 20px rgba(6,182,212,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
+      >
         {isScanning ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ΔTOM Intelligence…</>
+          <><Loader2 className="w-4 h-4 animate-spin" />Scanning ATOM Intelligence...</>
         ) : (
           <><Radar className="w-4 h-4" />Scan for Prospects</>
         )}
-      </AtomCta>
+      </Button>
     </div>
   );
 }
@@ -1197,11 +1106,11 @@ export default function ProspectEngine() {
               className="text-2xl font-bold text-[#e8e8ea] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', Arial, sans-serif", letterSpacing: "-0.03em" }}
             >
-              ΔTOM Prospect
+              ATOM Prospect
             </h1>
           </div>
           <p className="text-sm text-[#8a8a96] ml-12">
-            ΔTOM-powered prospect scanner · find decision makers with verified contact data
+            ATOM-powered prospect scanner · find decision makers with verified contact data
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -1228,7 +1137,7 @@ export default function ProspectEngine() {
 
       {/* FORM VIEW */}
       {view === "form" && (
-        <Card className="bg-[#111113] border-white/[0.16]">
+        <Card className="bg-[#111113] border-white/[0.08]">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-5">
               <SlidersHorizontal className="w-4 h-4 text-violet-400" />
@@ -1236,7 +1145,7 @@ export default function ProspectEngine() {
                 Scan Filters
               </span>
               <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[10px] font-mono ml-auto">
-                ΔTOM Intelligence · 275M+ verified contacts
+                ATOM Intelligence · 275M+ verified contacts
               </Badge>
             </div>
             <FilterPanel
@@ -1298,51 +1207,9 @@ export default function ProspectEngine() {
             )}
           </div>
 
-          {/* Hot / Warm / Cold / Contacts KPI strip — only when we have results. */}
-          {displayedProspects.length > 0 && (() => {
-            // Bucket by ATOM score: Hot 75+, Warm 50–74, Cold <50.
-            const hot   = displayedProspects.filter(p => p.score >= 75).length;
-            const warm  = displayedProspects.filter(p => p.score >= 50 && p.score < 75).length;
-            const cold  = displayedProspects.filter(p => p.score < 50).length;
-            const tiles = [
-              { label: "HOT",      sub: "(75+)",   value: hot,           color: "#f43f5e", glow: "244,63,94",  icon: Flame },
-              { label: "WARM",     sub: "(50–74)", value: warm,          color: "#f59e0b", glow: "245,158,11", icon: TrendingUp },
-              { label: "COLD",     sub: "(<50)",   value: cold,          color: "#64748b", glow: "100,116,139", icon: Snowflake },
-              { label: "CONTACTS", sub: "verified", value: totalContacts, color: "#14b8a6", glow: "20,184,166", icon: Users },
-            ];
-            return (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                {tiles.map((t) => {
-                  const Icon = t.icon;
-                  return (
-                    <div key={t.label} className="rounded-xl border bg-[#111113] px-4 py-3 flex items-center gap-3"
-                      style={{ borderColor: `rgba(${t.glow},0.3)`, boxShadow: `0 0 14px rgba(${t.glow},0.06) inset` }}>
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: `rgba(${t.glow},0.12)`, border: `1px solid rgba(${t.glow},0.3)` }}>
-                        <Icon className="w-4 h-4" style={{ color: t.color }} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[24px] leading-none font-bold tabular-nums" style={{ color: t.color }}>{t.value}</div>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-[10px] font-mono tracking-wider" style={{ color: t.color }}>{t.label}</span>
-                          <span className="text-[9px] font-mono text-white/35">{t.sub}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          {/* Industry-level Premium Signals (informs ICP scoring + keyword guidance) */}
-          <IndustrySignalsPanel
-            industry={(view === "history-view" && historyEntry ? historyEntry.filters : currentFilters).industry}
-          />
-
           {/* Prospect Cards */}
           {paginated.length === 0 ? (
-            <Card className="bg-[#111113] border-white/[0.16]">
+            <Card className="bg-[#111113] border-white/[0.08]">
               <CardContent className="py-16 flex flex-col items-center gap-3">
                 <Radar className="w-12 h-12 text-white/10" />
                 <p className="text-sm text-white/30">No prospects found for these filters</p>

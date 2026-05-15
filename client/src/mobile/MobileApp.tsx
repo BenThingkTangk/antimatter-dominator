@@ -17,9 +17,6 @@ import MobileLeads from "./pages/MobileLeads";
 import MobileChat from "./pages/MobileChat";
 import MobileSettings from "./pages/MobileSettings";
 import MobileAdmin from "./pages/MobileAdmin";
-import MobileHQ from "./pages/MobileHQ";
-import MobileVibranium from "./pages/MobileVibranium";
-import MobileTenantDetail from "./pages/MobileTenantDetail";
 import {
   MobilePitch, MobileObjections, MobileMarket,
   MobileProspects, MobileWarBook, MobileWarRoom,
@@ -60,10 +57,7 @@ export default function MobileApp() {
         <Route path="/m/leads"     component={MobileLeads} />
         <Route path="/m/chat"      component={MobileChat} />
         <Route path="/m/settings"  component={MobileSettings} />
-        <Route path="/m/admin"           component={MobileAdmin} />
-        <Route path="/m/admin/hq"             component={MobileHQ} />
-        <Route path="/m/admin/vibranium-ga"   component={MobileVibranium} />
-        <Route path="/m/admin/t/:slug"   component={MobileTenantDetail} />
+        <Route path="/m/admin"     component={MobileAdmin} />
         {/* ΔTOM module suite — desktop pages mounted inside mobile shell */}
         <Route path="/m/war-room"  component={MobileWarRoom} />
         <Route path="/m/pitch"     component={MobilePitch} />

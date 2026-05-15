@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AtomCta } from "@/components/ui/atom-form";
 import {
   Brain,
   Search,
@@ -272,8 +271,8 @@ function generateVoiceBrief(result: WarBookResult): VoiceBrief {
     ],
     talkTrack: [
       `Open with pain: "${pp[0] || "infrastructure challenges"}" — show you've done homework`,
-      `Pivot to value: Connect their ${init || "initiative"} to ΔTOM's capabilities`,
-      `Social proof: Reference similar companies in their vertical that switched to ΔTOM`,
+      `Pivot to value: Connect their ${init || "initiative"} to ATOM's capabilities`,
+      `Social proof: Reference similar companies in their vertical that switched to ATOM`,
       `Discovery: Ask open-ended questions about their decision timeline and stakeholders`,
       `Close: Propose a 15-min deep dive with their technical lead`,
     ],
@@ -332,7 +331,7 @@ function Gauge({ value, label, color }: { value: number; label: string; color: s
           <span className="text-[9px] text-white/30 font-mono">/100</span>
         </div>
       </div>
-      <p className="atom-field-label">{label}</p>
+      <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">{label}</p>
     </div>
   );
 }
@@ -353,8 +352,8 @@ function PipelineFlow() {
   const nodes = [
     { label: "Company Input", icon: Building2 },
     { label: "Sonar Deep Research", icon: Radar },
-    { label: "ΔTOM AI Context Builder", icon: Brain },
-    { label: "ΔTOM Voice Brief", icon: Mic },
+    { label: "ATOM AI Context Builder", icon: Brain },
+    { label: "ATOM Voice Brief", icon: Mic },
   ];
   const cards = [
     { icon: Radar, title: "SONAR SCANS", body: "News, filings, LinkedIn, Glassdoor, job posts, press releases, tech stack signals", color: "text-cyan-400", border: "border-cyan-500/20" },
@@ -362,7 +361,7 @@ function PipelineFlow() {
     { icon: Mic, title: "VOICE BRIEF", body: "Personalized call script, live objection handling, talk track, discovery Qs", color: "text-emerald-400", border: "border-emerald-500/20" },
   ];
   return (
-    <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-5">
+    <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-5">
       <MonoLabel>WarBook Intelligence Pipeline</MonoLabel>
       <div className="flex items-center gap-1 flex-wrap">
         {nodes.map((n, i) => (
@@ -465,7 +464,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
       </div>
 
       {/* Tech Stack Detection */}
-      <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Cpu size={14} className="text-cyan-400" />
           <MonoLabel>Tech Stack Signals</MonoLabel>
@@ -482,7 +481,7 @@ function SonarScansSection({ wb, citations }: { wb: WarBook; citations: string[]
       </div>
 
       {/* Buying Signals */}
-      <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Zap size={14} className="text-yellow-400" />
           <MonoLabel>Buying Signals Detected</MonoLabel>
@@ -571,7 +570,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
       </div>
 
       {/* Competitive Landscape */}
-      <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Swords size={14} className="text-amber-400" />
           <MonoLabel>Competitive Landscape</MonoLabel>
@@ -601,7 +600,7 @@ function AISynthesisSection({ wb, company }: { wb: WarBook; company: string }) {
 
       {/* Objection Map */}
       {(wb.battlePlan?.objectionPredictions || wb.objectionPredictions || []).length > 0 && (
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-amber-400" />
             <MonoLabel>Objection Map</MonoLabel>
@@ -655,7 +654,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       </div>
 
       {/* Talk Track */}
-      <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Radio size={14} className="text-violet-400" />
           <MonoLabel>Talk Track</MonoLabel>
@@ -671,7 +670,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
       </div>
 
       {/* Discovery Questions */}
-      <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
         <div className="flex items-center gap-2">
           <MessageSquare size={14} className="text-cyan-400" />
           <MonoLabel>Discovery Questions</MonoLabel>
@@ -688,7 +687,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
 
       {/* Live Objection Handling */}
       {brief.objections.length > 0 && (
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-amber-400" />
             <MonoLabel>Live Objection Handling</MonoLabel>
@@ -706,7 +705,7 @@ function VoiceBriefSection({ brief, company, callStrategy }: { brief: VoiceBrief
 
       {/* Call Strategy */}
       {callStrategy && (
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <PhoneCall size={14} className="text-violet-400" />
             <MonoLabel>Call Strategy</MonoLabel>
@@ -733,7 +732,7 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
     <div className="space-y-5 fade-in">
       {/* Pricing & Terms */}
       {bc && (
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2"><DollarSign size={14} className="text-violet-400" /><MonoLabel>Pricing & Lock-In</MonoLabel></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <StatCell icon={DollarSign} label="Pricing Model" value={bc.pricingModel || "—"} />
@@ -782,7 +781,7 @@ function BattleCardSection({ wb }: { wb: WarBook }) {
 
       {/* Pitch Angles */}
       {(bp?.pitchAngles || wb.pitchAngles || []).length > 0 && (
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
           <div className="flex items-center gap-2"><TrendingUp size={14} className="text-violet-400" /><MonoLabel>Pitch Angles</MonoLabel></div>
           <div className="space-y-2">
             {(bp?.pitchAngles || wb.pitchAngles || []).map((pa, i) => (
@@ -863,13 +862,8 @@ function PeopleSection({ contacts }: { contacts: Contact[] }) {
 export default function CompanyIntelligence() {
   const { toast } = useToast();
 
-  // URL params — e.g. /company-intelligence?query=Acme or ?company=Acme&website=acme.com
-  const urlParams = new URLSearchParams(window.location.hash.split("?")[1] || "");
-  const initialCompany = urlParams.get("company") || urlParams.get("query") || "";
-  const initialWebsite = urlParams.get("website") || (initialCompany.includes(".") ? initialCompany : "");
-
-  const [company, setCompany] = useState(initialCompany);
-  const [website, setWebsite] = useState(initialWebsite);
+  const [company, setCompany] = useState("");
+  const [website, setWebsite] = useState("");
   const [depth, setDepth] = useState<"standard" | "enterprise">("enterprise");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<WarBookResult | null>(null);
@@ -879,19 +873,6 @@ export default function CompanyIntelligence() {
   const [sonarStep, setSonarStep] = useState(0);
 
   const stepRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Auto-build when arriving with ?company= or ?query= so Objection Handler
-  // 'Research Their Pain Point' lands directly into a running WarBook query.
-  const autoRanRef = useRef(false);
-  useEffect(() => {
-    if (autoRanRef.current) return;
-    if (initialCompany) {
-      autoRanRef.current = true;
-      // If no website was passed but the company looks like a domain, derive it.
-      if (!initialWebsite && initialCompany.includes(".")) setWebsite(initialCompany);
-      setTimeout(() => handleBuild(), 400);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sonar loading animation
   useEffect(() => {
@@ -906,12 +887,10 @@ export default function CompanyIntelligence() {
   }, [isLoading]);
 
   async function handleBuild() {
-    if (!company.trim()) {
-      toast({ title: "Company name required", description: "Enter a company to build a WarBook.", variant: "destructive" });
+    if (!company.trim() || !website.trim()) {
+      toast({ title: !company.trim() ? "Company name required" : "Website URL required", description: "Both company name and website URL are required to build a WarBook.", variant: "destructive" });
       return;
     }
-    // Website is optional — if missing, derive from company if it looks like a domain.
-    if (!website.trim() && company.includes(".")) setWebsite(company);
     setIsLoading(true);
     setResult(null);
     setVoiceBrief(null);
@@ -941,7 +920,7 @@ export default function CompanyIntelligence() {
       hist.unshift(entry);
       saveHistory(hist);
 
-      toast({ title: "WarBook Complete", description: `Full intelligence dossier loaded for ${company}.`, ...({ navigateTo: "/company-intelligence" } as any) });
+      toast({ title: "WarBook Complete", description: `Full intelligence dossier loaded for ${company}.` });
     } catch (err) {
       console.error(err);
       toast({ title: "Research failed", description: "Could not complete research. Please try again.", variant: "destructive" });
@@ -992,25 +971,25 @@ export default function CompanyIntelligence() {
         </div>
 
         {/* ── Input Section ── */}
-        <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5 space-y-4">
-          {/* Depth toggle — tiny segmented pill (matches plan/billing toggle scale) */}
-          <div className="flex items-center gap-2">
-            <MonoLabel>Depth:</MonoLabel>
-            <div className="inline-flex rounded-full p-[2px] gap-[2px]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
+        <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-5 space-y-4">
+          {/* Depth toggle */}
+          <div className="flex items-center gap-3">
+            <MonoLabel>Research Depth:</MonoLabel>
+            <div className="flex gap-1.5">
               {(["standard", "enterprise"] as const).map(d => (
                 <button
                   key={d}
                   onClick={() => setDepth(d)}
-                  className={`px-2.5 py-[3px] rounded-full text-[8px] font-mono uppercase tracking-[0.14em] transition-all ${
-                    depth === d ? "text-white" : "text-white/45 hover:text-white/80"
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wide transition-all ${depth === d
+                    ? "text-[#696aac] border-[#696aac]/40"
+                    : "text-white/35 border-white/10 hover:border-white/20"
                   }`}
                   style={{
-                    background: depth === d ? "linear-gradient(93deg, #818cf8 0%, #6366f1 100%)" : "transparent",
-                    boxShadow: depth === d ? "0 0 10px rgba(99,102,241,0.35)" : "none",
+                    background: depth === d ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${depth === d ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.1)"}`,
                   }}
-                  title={d === "standard" ? "3 queries · ~20s" : "5 queries · ~40s"}
                 >
-                  {d === "standard" ? "Standard" : "Enterprise"}
+                  {d === "standard" ? "Standard (3 queries · ~20s)" : "Enterprise (5 queries · ~40s)"}
                 </button>
               ))}
             </div>
@@ -1044,30 +1023,24 @@ export default function CompanyIntelligence() {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-white/15 font-mono pointer-events-none">REQUIRED</span>
             </div>
-            <AtomCta
-              accent="indigo"
+            <Button
               onClick={handleBuild}
               disabled={isLoading || !company.trim() || !website.trim()}
-              className="w-auto px-8"
+              className="gap-2 px-8 py-3 rounded-full font-semibold text-[14px] transition-all disabled:opacity-50 hover:scale-[1.02]"
+              style={{ background: "linear-gradient(93.92deg, #818cf8 -13.51%, #6366f1 40.91%, #4f46e5 113.69%)", color: "#fff", boxShadow: "0 0 15px rgba(99,102,241,0.4), inset 0 0 2px rgba(255,255,255,0.3)" }}
               data-testid="button-build-warbook"
             >
               {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
-              {isLoading ? "Building…" : "Build WarBook"}
-            </AtomCta>
+              {isLoading ? "Building..." : `Build WarBook (${depth === "enterprise" ? "5" : "3"} queries)`}
+            </Button>
           </div>
 
-          {/* Quick suggestions — properly outlined chips */}
+          {/* Quick suggestions */}
           {!result && !isLoading && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-white/40 font-mono uppercase tracking-wider">Quick:</span>
+              <span className="text-[10px] text-white/20 font-mono">QUICK:</span>
               {["Cloudflare", "Akamai", "Salesforce", "HubSpot", "Snowflake"].map(c => (
-                <button
-                  key={c}
-                  onClick={() => setCompany(c)}
-                  className="text-[11px] px-3 py-1 rounded-full border border-white/[0.14] bg-[#161618] text-white/75 hover:text-white hover:border-violet-500/45 hover:bg-violet-500/10 transition-all"
-                >
-                  {c}
-                </button>
+                <button key={c} onClick={() => setCompany(c)} className="text-[11px] px-2.5 py-1 rounded-lg border border-white/[0.08] text-white/35 hover:text-white/60 hover:border-white/20 bg-white/[0.02] transition-all">{c}</button>
               ))}
             </div>
           )}
@@ -1105,7 +1078,7 @@ export default function CompanyIntelligence() {
             <div className="text-center space-y-1">
               <h2 className="text-base font-semibold text-white/40">Enter a company to build their WarBook</h2>
               <p className="text-[13px] text-white/20 max-w-md">
-                ΔTOM will compile a full intelligence package on this company, including decision makers, pain points, buying signals, and a complete battle plan.
+                ATOM will compile a full intelligence package on this company, including decision makers, pain points, buying signals, and a complete battle plan.
               </p>
             </div>
             <div className="mt-6 w-full max-w-3xl">
@@ -1119,7 +1092,7 @@ export default function CompanyIntelligence() {
           <div className="space-y-5 fade-in">
 
             {/* Company Command Header */}
-            <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6 space-y-5">
+            <div className="rounded-xl border border-white/[0.08] bg-[#111113] p-6 space-y-5">
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-3 flex-wrap">

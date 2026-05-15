@@ -274,7 +274,7 @@ export default function CallPerformance() {
               {bridge.sambanova && (
                 <Badge variant="secondary" className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">
                   <Zap className="w-3 h-3 mr-1" />
-                  ΔTOM Engine
+                  ATOM Engine
                 </Badge>
               )}
               {bridge.activeCalls > 0 && (
@@ -349,7 +349,7 @@ export default function CallPerformance() {
             valueClass={latencyColor(agg.eviTurnLatency.avg)}
           />
           <StatCard
-            title="ΔTOM Tools"
+            title="ATOM Tools"
             value={agg.sambaNovaLatency.avg !== null ? `${Math.round(agg.sambaNovaLatency.avg)}` : "—"}
             suffix={agg.sambaNovaLatency.avg !== null ? "ms" : ""}
             icon={Zap}
@@ -427,7 +427,7 @@ export default function CallPerformance() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400" />
-                ΔTOM Tool Latency
+                ATOM Tool Latency
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">

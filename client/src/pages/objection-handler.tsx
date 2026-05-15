@@ -19,14 +19,6 @@ import { useLocation } from "wouter";
 import type { Product } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "@/lib/atom-products";
-import {
-  AtomConfigCard,
-  AtomField,
-  AtomChip,
-  AtomChipGroup,
-  AtomCta,
-  ATOM_FIELD_CLASS,
-} from "@/components/ui/atom-form";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -308,7 +300,7 @@ export default function ObjectionHandler() {
       saveHistory(updated);
       setLocalHistory(updated);
 
-      toast({ title: "Response ready", description: "Counter-objection crafted.", ...({ navigateTo: "/objections" } as any) });
+      toast({ title: "Response ready", description: "Counter-objection crafted." });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -455,11 +447,14 @@ export default function ObjectionHandler() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <AtomConfigCard eyebrow="Objection Details">
+            <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5 space-y-4">
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Objection Details</h2>
+
               {/* Product */}
-              <AtomField label="Product">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-product">
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -472,66 +467,72 @@ export default function ObjectionHandler() {
                     placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className={`mt-2 ${ATOM_FIELD_CLASS}`}
+                    className="mt-2 bg-white/[0.03] border-white/10 text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
                     data-testid="input-custom-product"
                   />
                 )}
-              </AtomField>
+              </div>
 
               {/* Objection */}
-              <AtomField label="The Objection">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">The Objection</label>
                 <Textarea
                   placeholder='Type what the prospect said, e.g. "We already have a solution in place..."'
                   value={objectionText}
                   onChange={e => setObjectionText(e.target.value)}
-                  className={`${ATOM_FIELD_CLASS} min-h-[100px] resize-none`}
+                  className="bg-white/[0.03] border-white/10 text-sm min-h-[100px] resize-none"
                   data-testid="textarea-objection"
                 />
-              </AtomField>
+              </div>
 
               {/* Quick Select */}
-              <AtomField label="Quick Select">
-                <AtomChipGroup>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Quick Select</label>
+                <div className="flex flex-wrap gap-1.5">
                   {QUICK_OBJECTIONS.map(obj => (
-                    <AtomChip
-                      key={obj}
-                      active={objectionText === obj}
-                      accent="amber"
+                    <button key={obj}
                       onClick={() => setObjectionText(obj)}
+                      className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${
+                        objectionText === obj
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                          : "border-white/[0.07] text-white/30 hover:text-white/60 hover:border-white/15"
+                      }`}
                       data-testid={`button-quick-objection-${obj.slice(0, 10)}`}>
                       {obj}
-                    </AtomChip>
+                    </button>
                   ))}
-                </AtomChipGroup>
-              </AtomField>
+                </div>
+              </div>
 
               {/* Context */}
-              <AtomField label="Context" optional>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Context <span className="text-white/20 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. 200-bed hospital, currently using Epic, budget review in Q3..."
                   value={context}
                   onChange={e => setContext(e.target.value)}
-                  className={`${ATOM_FIELD_CLASS} min-h-[60px] resize-none`}
+                  className="bg-white/[0.03] border-white/10 text-sm min-h-[60px] resize-none"
                   data-testid="textarea-context"
                 />
-              </AtomField>
+              </div>
 
-              <AtomCta
-                accent="amber"
+              <Button
+                className="w-full bg-amber-500/80 hover:bg-amber-500 text-white font-medium transition-all"
                 onClick={() => handleObjection.mutate()}
                 disabled={!selectedProduct || !objectionText || handleObjection.isPending}
                 data-testid="button-handle-objection">
                 {handleObjection.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Crafting response…</>
-                  : <><Zap className="w-4 h-4" />Destroy This Objection</>}
-              </AtomCta>
-            </AtomConfigCard>
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Crafting response...</>
+                  : <><Zap className="w-4 h-4 mr-2" />Destroy This Objection</>}
+              </Button>
+            </div>
           </div>
 
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {handleObjection.isPending ? (
-              <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6">
+              <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
                   <p className="text-sm text-white/50">Analyzing objection and crafting counter-response...</p>
@@ -541,7 +542,7 @@ export default function ObjectionHandler() {
             ) : activeResult ? (
               <>
                 {/* Sentiment Dashboard */}
-                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
+                <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Sentiment Analysis</p>
                     <div className="flex items-center gap-2">
@@ -591,7 +592,7 @@ export default function ObjectionHandler() {
                 </div>
 
                 {/* Primary Response */}
-                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
+                <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" style={{ boxShadow: "0 0 6px #f59e0b" }} />
@@ -626,7 +627,7 @@ export default function ObjectionHandler() {
 
                 {/* Response Strategies */}
                 {activeResult.strategies?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3">Response Strategies</p>
 
                     {/* Strategy tabs */}
@@ -687,7 +688,7 @@ export default function ObjectionHandler() {
 
                 {/* Follow-Up Questions — clickable to deep-dive */}
                 {activeResult.followUpQuestions?.length > 0 && (
-                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
                       <MessageCircle className="w-3 h-3" />Follow-Up Questions <span className="text-violet-400/40">· click to prepare response</span>
                     </p>
@@ -748,12 +749,12 @@ export default function ObjectionHandler() {
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.16] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
+              <div className="rounded-xl bg-black/30 backdrop-blur-sm border border-white/[0.05] flex flex-col items-center justify-center py-20 text-white/20">
                 <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/15">
                   <Zap className="w-7 h-7 text-amber-500/40" />
                 </div>
                 <p className="text-sm font-medium text-white/30">Enter an objection to get your counter-response</p>
-                <p className="text-xs text-white/40 mt-1">Select product and paste what the prospect said</p>
+                <p className="text-xs text-white/15 mt-1">Select product and paste what the prospect said</p>
               </div>
             )}
           </div>

@@ -20,16 +20,6 @@ import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { ATOM_PRODUCTS_INCL_ALL, resolveProductLabel, isCustom } from "@/lib/atom-products";
-import {
-  AtomConfigCard,
-  AtomField,
-  AtomChip,
-  AtomChipGroup,
-  AtomChoiceRow,
-  AtomCta,
-  ATOM_FIELD_CLASS,
-} from "@/components/ui/atom-form";
-import { useSignals, signalCategoryColor, type DiscoveredSignal } from "@/lib/useSignals";
 
 // ─── HVT Flag Button ───────────────────────────────────────────────────────────
 function HVTFlagButton({ companyName, industry, signal }: { companyName: string; industry?: string; signal?: string }) {
@@ -48,12 +38,12 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
         type: "news",
         headline: signal,
         date: new Date().toISOString().slice(0, 10),
-        source: "ΔTOM Market Intent",
+        source: "ATOM Market Intent",
         impactScore: 7,
       }] as any : [],
     });
     setFlagged(true);
-    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ΔTOM War Room.` });
+    toast({ title: "🎯 HVT Flagged", description: `${companyName} deployed to ATOM War Room.` });
   };
 
   if (flagged) {
@@ -69,7 +59,7 @@ function HVTFlagButton({ companyName, industry, signal }: { companyName: string;
   return (
     <button onClick={handleFlag}
       className="h-6 px-2 rounded border border-white/10 text-[10px] text-white/40 hover:text-[var(--color-error)] hover:border-rose-500/30 bg-white/[0.02] hover:bg-rose-500/10 transition-all flex items-center gap-1"
-      title="Flag as HVT — Send to ΔTOM War Room">
+      title="Flag as HVT — Send to ATOM War Room">
       <Crosshair className="w-2.5 h-2.5" />Flag
     </button>
   );
@@ -165,11 +155,8 @@ const ANALYSIS_TYPES = [
 ];
 
 const REGIONS = [
-  "Global", "United States", "Canada", "Mexico",
-  "Europe", "United Kingdom", "Germany", "France", "Netherlands", "Spain", "Italy",
-  "APAC", "Japan", "Australia", "Singapore", "India",
-  "Latin America", "Brazil", "Argentina",
-  "Middle East", "UAE", "Saudi Arabia", "Israel",
+  "North America", "United States", "Canada", "Europe", "United Kingdom",
+  "APAC", "Latin America", "Middle East", "Global",
 ];
 
 const TIME_HORIZONS = [
@@ -356,7 +343,7 @@ export default function MarketIntent() {
   // Form state
   const [selectedProduct, setSelectedProduct] = useState("all");
   const [selectedIndustry, setSelectedIndustry] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("United States");
+  const [selectedRegion, setSelectedRegion] = useState("North America");
   const [analysisType, setAnalysisType] = useState("Trend Analysis");
   const [timeHorizon, setTimeHorizon] = useState("90 days");
   const [customQuery, setCustomQuery] = useState(params.get("query") || "");
@@ -425,7 +412,7 @@ export default function MarketIntent() {
       saveHistory(updated);
       setLocalHistory(updated);
 
-      toast({ title: "Intel ready", description: "Market intelligence complete.", ...(({ navigateTo: "/market" } as any)) });
+      toast({ title: "Intel ready", description: "Market intelligence complete." });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -451,7 +438,7 @@ export default function MarketIntent() {
     if (productObj) setSelectedProduct(productObj.value);
     setSelectedIndustry(entry.industry || "");
     setAnalysisType(entry.analysisType || "Trend Analysis");
-    setSelectedRegion(entry.region || "United States");
+    setSelectedRegion(entry.region || "North America");
     setTimeHorizon(entry.timeHorizon || "90 days");
     setActiveResult(entry.result);
     setShowHistory(false);
@@ -571,11 +558,14 @@ export default function MarketIntent() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Config Panel */}
           <div className="lg:col-span-2 space-y-3">
-            <AtomConfigCard eyebrow="Analysis Parameters">
+            <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5 space-y-4">
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Analysis Parameters</h2>
+
               {/* Product Focus */}
-              <AtomField label="Product Focus">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Product Focus</label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-product">
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-sm" data-testid="select-product">
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -588,100 +578,111 @@ export default function MarketIntent() {
                     placeholder="Type the product — e.g. Akamai, Five9, PhysioPS"
                     value={customProduct}
                     onChange={e => setCustomProduct(e.target.value)}
-                    className={`mt-2 ${ATOM_FIELD_CLASS}`}
+                    className="mt-2 bg-white/[0.03] border-white/10 text-sm h-9"
+                    style={{ borderColor: "color-mix(in oklab, var(--color-primary) 35%, transparent)" }}
                     data-testid="input-custom-product"
                   />
                 )}
-              </AtomField>
+              </div>
 
               {/* Industry */}
-              <AtomField label="Industry">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Industry</label>
                 <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
-                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-industry">
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-sm" data-testid="select-industry">
                     <SelectValue placeholder="All industries" />
                   </SelectTrigger>
                   <SelectContent>
                     {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </AtomField>
+              </div>
 
               {/* Region */}
-              <AtomField label="Region">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Region</label>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                  <SelectTrigger className={ATOM_FIELD_CLASS} data-testid="select-region">
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-sm" data-testid="select-region">
                     <SelectValue placeholder="Select region" />
                   </SelectTrigger>
                   <SelectContent>
                     {REGIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </AtomField>
+              </div>
 
               {/* Analysis Type */}
-              <AtomField label="Analysis Type">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Analysis Type</label>
                 <div className="space-y-1">
                   {ANALYSIS_TYPES.map(at => {
                     const Icon = at.icon;
+                    const isActive = analysisType === at.value;
                     return (
-                      <AtomChoiceRow
-                        key={at.value}
-                        active={analysisType === at.value}
-                        accent="emerald"
-                        icon={<Icon className="w-3.5 h-3.5" />}
-                        title={at.value}
-                        description={at.desc}
-                        onClick={() => setAnalysisType(at.value)}
-                        data-testid={`button-analysis-type-${at.value}`}
-                      />
+                      <button key={at.value} onClick={() => setAnalysisType(at.value)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all border ${
+                          isActive
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-white"
+                            : "border-transparent hover:bg-white/[0.03] text-white/40 hover:text-white/70"
+                        }`}
+                        data-testid={`button-analysis-type-${at.value}`}>
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-emerald-400" : ""}`} />
+                        <div>
+                          <p className="text-xs font-medium">{at.value}</p>
+                          <p className="text-[10px] text-white/25">{at.desc}</p>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
-              </AtomField>
+              </div>
 
               {/* Time Horizon */}
-              <AtomField label="Time Horizon">
-                <AtomChipGroup>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Time Horizon</label>
+                <div className="flex gap-1.5">
                   {TIME_HORIZONS.map(th => (
-                    <AtomChip
-                      key={th.value}
-                      active={timeHorizon === th.value}
-                      accent="emerald"
-                      onClick={() => setTimeHorizon(th.value)}
+                    <button key={th.value} onClick={() => setTimeHorizon(th.value)}
+                      className={`flex-1 text-[11px] py-1.5 rounded-lg border font-medium transition-all ${
+                        timeHorizon === th.value
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                          : "border-white/[0.07] text-white/30 hover:text-white/50 hover:border-white/15"
+                      }`}
                       data-testid={`button-time-horizon-${th.value}`}>
                       {th.label}
-                    </AtomChip>
+                    </button>
                   ))}
-                </AtomChipGroup>
-              </AtomField>
+                </div>
+              </div>
 
               {/* Custom Query */}
-              <AtomField label="Custom Query" optional>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block uppercase tracking-wider">Custom Query <span className="text-white/20 normal-case">(optional)</span></label>
                 <Textarea
                   placeholder="e.g. Focus on HIPAA compliance spending trends in mid-market hospitals..."
                   value={customQuery}
                   onChange={e => setCustomQuery(e.target.value)}
-                  className={`${ATOM_FIELD_CLASS} min-h-[60px] resize-none`}
+                  className="bg-white/[0.03] border-white/10 text-sm min-h-[60px] resize-none"
                   data-testid="textarea-custom-query"
                 />
-              </AtomField>
+              </div>
 
-              <AtomCta
-                accent="emerald"
+              <Button
+                className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white font-medium transition-all"
                 onClick={() => analyzeIntent.mutate()}
                 disabled={analyzeIntent.isPending}
                 data-testid="button-generate-intel">
                 {analyzeIntent.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning signals…</>
-                  : <><Brain className="w-4 h-4" />Generate Intelligence</>}
-              </AtomCta>
-            </AtomConfigCard>
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning signals...</>
+                  : <><Brain className="w-4 h-4 mr-2" />Generate Intelligence</>}
+              </Button>
+            </div>
           </div>
 
           {/* Output Panel */}
           <div className="lg:col-span-3 space-y-3">
             {analyzeIntent.isPending ? (
-              <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-6">
+              <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                   <p className="text-sm text-white/50">Scanning market signals and competitive intelligence...</p>
@@ -691,7 +692,7 @@ export default function MarketIntent() {
             ) : activeResult ? (
               <>
                 {/* Market Sentiment Gauge */}
-                <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-5">
+                <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-5">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Market Sentiment</p>
                     <div className="flex items-center gap-2">
@@ -739,9 +740,6 @@ export default function MarketIntent() {
                   </div>
                 </div>
 
-                {/* ΔTOM Premium Signals (Sonar Pro · CB Insights, PitchBook, Bloomberg, SEC, etc.) */}
-                <PremiumSignalsBlock industry={selectedIndustry} />
-
                 {/* Tab Navigator */}
                 <div className="flex gap-1.5 overflow-x-auto tabs-scroll pb-1">
                   {OUTPUT_TABS.map(tab => (
@@ -755,7 +753,7 @@ export default function MarketIntent() {
                       data-testid={`button-tab-${tab.key}`}>
                       {tab.label}
                       {tab.count !== undefined && tab.count > 0 && (
-                        <span className={`text-[9px] rounded-full px-1.5 leading-4 ${activeTab === tab.key ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/50"}`}>
+                        <span className={`text-[9px] rounded-full px-1.5 leading-4 ${activeTab === tab.key ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/20"}`}>
                           {tab.count}
                         </span>
                       )}
@@ -769,7 +767,7 @@ export default function MarketIntent() {
                     {activeResult.keySignals?.length > 0 ? activeResult.keySignals.map((signal, i) => {
                       const cfg = URGENCY_CONFIG[signal.urgency] || URGENCY_CONFIG["medium"];
                       return (
-                        <div key={i} className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 hover:border-white/[0.12] transition-all">
+                        <div key={i} className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4 hover:border-white/[0.12] transition-all">
                           <div className="flex items-start gap-3">
                             <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${cfg.dot}`}
                               style={{ boxShadow: `0 0 6px currentColor` }} />
@@ -780,7 +778,7 @@ export default function MarketIntent() {
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase tracking-wide ${cfg.bg} ${cfg.text} ${cfg.border}`}>
                                     {signal.urgency}
                                   </span>
-                                  <span className="text-[10px] text-white/55 capitalize">{signal.category}</span>
+                                  <span className="text-[10px] text-white/25 capitalize">{signal.category}</span>
                                 </div>
                               </div>
                               <p className="text-xs text-white/50 leading-relaxed">{signal.description}</p>
@@ -789,13 +787,13 @@ export default function MarketIntent() {
                         </div>
                       );
                     }) : (
-                      <div className="text-center py-10 text-white/55 text-sm">No signals detected</div>
+                      <div className="text-center py-10 text-white/25 text-sm">No signals detected</div>
                     )}
                   </div>
                 )}
 
                 {activeTab === "competition" && (
-                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] overflow-hidden">
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] overflow-hidden">
                     {activeResult.competitiveMoves?.length > 0 ? (
                       <div className="overflow-x-auto">
                       <table className="w-full min-w-[400px]">
@@ -835,25 +833,25 @@ export default function MarketIntent() {
                       </table>
                       </div>
                     ) : (
-                      <div className="text-center py-10 text-white/55 text-sm">No competitive moves detected</div>
+                      <div className="text-center py-10 text-white/25 text-sm">No competitive moves detected</div>
                     )}
                   </div>
                 )}
 
                 {activeTab === "opportunities" && (
-                  <div className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 space-y-1">
+                  <div className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4 space-y-1">
                     {activeResult.opportunities?.length > 0 ? (
                       <>
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] text-white/30 uppercase tracking-wider">Scored Opportunities</p>
-                          <p className="text-[10px] text-white/50">Ranked by opportunity score</p>
+                          <p className="text-[10px] text-white/20">Ranked by opportunity score</p>
                         </div>
                         {activeResult.opportunities.map((opp, i) => (
                           <OpportunityBar key={i} opportunity={opp} />
                         ))}
                       </>
                     ) : (
-                      <div className="text-center py-10 text-white/55 text-sm">No opportunities identified</div>
+                      <div className="text-center py-10 text-white/25 text-sm">No opportunities identified</div>
                     )}
                   </div>
                 )}
@@ -861,7 +859,7 @@ export default function MarketIntent() {
                 {activeTab === "actions" && (
                   <div className="space-y-2">
                     {activeResult.actionItems?.length > 0 ? activeResult.actionItems.map((item, i) => (
-                      <div key={i} className="rounded-xl border border-white/[0.16] bg-[#111113] p-4 flex items-start gap-3 hover:border-violet-500/15 transition-all group">
+                      <div key={i} className="rounded-xl bg-black/40 backdrop-blur-md border border-white/[0.07] p-4 flex items-start gap-3 hover:border-violet-500/15 transition-all group">
                         <div className="w-6 h-6 rounded-full bg-violet-500/15 border border-violet-500/20 flex items-center justify-center shrink-0 text-[10px] font-bold text-violet-300">
                           {item.priority}
                         </div>
@@ -871,28 +869,28 @@ export default function MarketIntent() {
                             <span className={`text-[10px] px-2 py-0.5 rounded border font-medium ${OWNER_COLORS[item.owner] || "bg-white/5 text-white/40 border-white/10"}`}>
                               {item.owner}
                             </span>
-                            <span className="text-[10px] text-white/55 border border-white/[0.07] px-1.5 py-0.5 rounded">{item.deadline}</span>
+                            <span className="text-[10px] text-white/25 border border-white/[0.07] px-1.5 py-0.5 rounded">{item.deadline}</span>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm"
-                          className="h-6 text-[9px] text-white/50 hover:text-white/50 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          className="h-6 text-[9px] text-white/20 hover:text-white/50 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                           onClick={() => copyToClipboard(item.action, `action-${i}`)}>
                           {copiedSection === `action-${i}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
                         </Button>
                       </div>
                     )) : (
-                      <div className="text-center py-10 text-white/55 text-sm">No action items generated</div>
+                      <div className="text-center py-10 text-white/25 text-sm">No action items generated</div>
                     )}
                   </div>
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-white/[0.16] bg-[#111113] flex flex-col items-center justify-center py-20 text-white/50">
+              <div className="rounded-xl bg-black/30 backdrop-blur-sm border border-white/[0.05] flex flex-col items-center justify-center py-20 text-white/20">
                 <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/15">
                   <Globe className="w-7 h-7 text-emerald-500/40" />
                 </div>
                 <p className="text-sm font-medium text-white/30">Configure analysis parameters</p>
-                <p className="text-xs text-white/40 mt-1">Select industry, type, and time horizon to generate intelligence</p>
+                <p className="text-xs text-white/15 mt-1">Select industry, type, and time horizon to generate intelligence</p>
               </div>
             )}
           </div>
@@ -901,92 +899,3 @@ export default function MarketIntent() {
     </div>
   );
 }
-
-// ─── PremiumSignalsBlock ──────────────────────────────────────────────────────
-// Pulls premium-source signals (CB Insights, PitchBook, Bloomberg, TechCrunch,
-// SEC, Crunchbase, G2, Gartner) for the chosen industry from /api/signals/discover
-// (Sonar Pro · search_domain_filter). Renders the top 6 with category chips,
-// recency, impact, and source-domain link. Cached 6h.
-function PremiumSignalsBlock({ industry }: { industry: string }) {
-  const target = industry || "B2B SaaS";
-  const { data, isLoading, isError, refetch } = useSignals({ industry: target });
-
-  if (isLoading) {
-    return (
-      <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/70">⚡ ΔTOM Premium Signals · Sonar Pro</span>
-          <span className="text-[9px] text-white/30 font-mono animate-pulse">scanning…</span>
-        </div>
-        <div className="h-16 bg-white/[0.03] rounded-md animate-pulse" />
-      </div>
-    );
-  }
-
-  if (isError || !data || !data.signals?.length) {
-    return null;
-  }
-
-  const top = [...data.signals].sort((a, b) => b.impact - a.impact).slice(0, 6);
-
-  return (
-    <div className="rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/[0.18] p-5">
-      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80 shrink-0">⚡ ΔTOM Premium Signals · Sonar Pro</span>
-          <span className="text-[9px] text-white/40 font-mono shrink-0">{data.sourceCount || 0} sources · score {data.atomScore}/100</span>
-        </div>
-        <button
-          onClick={() => refetch()}
-          className="text-[10px] text-emerald-400/70 hover:text-emerald-300 font-mono"
-        >
-          ↻ refresh
-        </button>
-      </div>
-
-      {data.topNarrative && (
-        <p className="text-xs text-white/55 leading-relaxed mb-3 italic">{data.topNarrative}</p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {top.map((s: DiscoveredSignal) => (
-          <a
-            key={s.id}
-            href={s.url || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group rounded-lg border border-white/[0.07] hover:border-emerald-500/[0.30] bg-white/[0.02] hover:bg-white/[0.04] p-3 transition-all"
-          >
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: signalCategoryColor(s.category) }}
-              />
-              <span
-                className="text-[9px] font-mono uppercase tracking-wider"
-                style={{ color: signalCategoryColor(s.category) }}
-              >
-                {s.category}
-              </span>
-              <span className="text-[9px] text-white/30 font-mono ml-auto">
-                {s.recencyDays >= 0 ? `${s.recencyDays}d` : "—"} · impact {s.impact}/10
-              </span>
-            </div>
-            <p className="text-xs text-white/80 leading-snug font-medium line-clamp-2 mb-1 group-hover:text-white">
-              {s.headline}
-            </p>
-            {s.summary && (
-              <p className="text-[10px] text-white/45 leading-relaxed line-clamp-2 mb-1.5">
-                {s.summary}
-              </p>
-            )}
-            {s.source && (
-              <span className="text-[9px] text-emerald-400/60 font-mono">{s.source}</span>
-            )}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-

@@ -57,7 +57,7 @@ function renderInline(line: string, keyBase: string): React.ReactNode[] {
           fontSize: "0.86em",
           padding: "1px 6px",
           borderRadius: 6,
-          background: "rgba(105,106,172,0.08)",
+          background: "rgba(0,230,211,0.08)",
           color: "var(--m-teal)",
         }}>{m[6]}</code>
       );
