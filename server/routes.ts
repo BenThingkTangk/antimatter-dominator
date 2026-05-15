@@ -7,7 +7,12 @@ import {
   objectionRequestSchema,
   marketIntentRequestSchema,
   prospectScanRequestSchema,
+  createCampaignSchema,
+  importAccountsSchema,
+  enrichRequestSchema,
+  pushRequestSchema,
 } from "@shared/schema";
+import { scorePublic, scoreAtom, tierOf, HEALTHCARE_HIPAA_TEMPLATE } from "./scoring/engine";
 
 const anthropic = new Anthropic();
 
@@ -311,5 +316,215 @@ Focus on companies that have public signals of need: regulatory pressure, digita
     const prospect = storage.updateProspectStatus(Number(req.params.id), status);
     if (!prospect) return res.status(404).json({ error: "Prospect not found" });
     res.json(prospect);
+  });
+
+  // ===== ΔTOM CAMPAIGNS — Bulk Import + Score + Enrich =====
+  app.get("/api/campaigns", (_req, res) => {
+    const list = storage.getCampaigns().map((c) => ({
+      ...c,
+      counts: storage.countCampaignAccountsByStatus(c.id),
+    }));
+    res.json(list);
+  });
+
+  app.get("/api/campaigns/:id", (req, res) => {
+    const c = storage.getCampaignById(Number(req.params.id));
+    if (!c) return res.status(404).json({ error: "Campaign not found" });
+    res.json({ ...c, counts: storage.countCampaignAccountsByStatus(c.id) });
+  });
+
+  app.post("/api/campaigns", (req, res) => {
+    try {
+      const parsed = createCampaignSchema.parse(req.body);
+      const now = new Date().toISOString();
+      const c = storage.createCampaign({ ...parsed, status: "draft", totalAccounts: 0, scoredAccounts: 0, enrichedAccounts: 0, createdAt: now, updatedAt: now });
+      res.json(c);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/campaigns/:id", (req, res) => {
+    storage.deleteCampaign(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  app.post("/api/campaigns/:id/import", (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campaign = storage.getCampaignById(id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      const parsed = importAccountsSchema.parse(req.body);
+      const now = new Date().toISOString();
+      const rows = parsed.accounts.map((a) => ({
+        campaignId: id,
+        accountName: a.accountName,
+        domain: a.domain ?? null,
+        state: a.state ?? null,
+        subVertical: a.subVertical ?? null,
+        revenue: typeof a.revenue === "number" ? a.revenue : null,
+        akafit: a.akafit ?? null,
+        walletGrade: a.walletGrade ?? null,
+        extraTagsJson: a.extraTags ? JSON.stringify(a.extraTags) : null,
+        enrichStatus: "pending" as const,
+        createdAt: now,
+      }));
+      const inserted = storage.bulkInsertCampaignAccounts(rows as any);
+      const counts = storage.countCampaignAccountsByStatus(id);
+      storage.updateCampaign(id, { totalAccounts: counts.total, updatedAt: now });
+      res.json({ inserted, total: counts.total });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/campaigns/:id/score-public", (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campaign = storage.getCampaignById(id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      const tpl = HEALTHCARE_HIPAA_TEMPLATE; // template-aware lookup can be added once more templates exist
+      const accts = storage.getCampaignAccounts(id, { limit: 10000 });
+      const updates = accts.map((a) => {
+        const targetLists = a.extraTagsJson ? (() => { try { const t = JSON.parse(a.extraTagsJson!); return t.target_lists || t.Target_Lists || ""; } catch { return ""; } })() : "";
+        const breakdown = scorePublic({
+          account: a.accountName,
+          sub_vertical: a.subVertical,
+          wallet_grade: a.walletGrade,
+          akafit: a.akafit,
+          revenue: a.revenue,
+          target_lists: targetLists,
+        }, tpl);
+        const finalScore = breakdown.publicSubtotal; // ATOM score adds later
+        return {
+          id: a.id,
+          scoreRegulatory: breakdown.regulatory,
+          scoreAccountFit: breakdown.accountFit,
+          scoreListDensity: breakdown.listDensity,
+          scoreSegmentation: breakdown.segmentation,
+          publicSubtotal: breakdown.publicSubtotal,
+          finalScore,
+          tier: tierOf(finalScore, tpl),
+        };
+      });
+      storage.bulkUpdateCampaignAccountScores(updates as any);
+      const counts = storage.countCampaignAccountsByStatus(id);
+      const now = new Date().toISOString();
+      storage.updateCampaign(id, { status: "scoring", scoredAccounts: counts.scored, updatedAt: now });
+      res.json({ scored: updates.length, counts });
+    } catch (err: any) {
+      console.error("score-public error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/campaigns/:id/accounts", (req, res) => {
+    const id = Number(req.params.id);
+    const tier = req.query.tier as string | undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : 500;
+    const offset = req.query.offset ? Number(req.query.offset) : 0;
+    const rows = storage.getCampaignAccounts(id, { tier, limit, offset });
+    res.json(rows);
+  });
+
+  app.post("/api/campaigns/:id/enrich", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const parsed = enrichRequestSchema.parse(req.body);
+      const campaign = storage.getCampaignById(id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+
+      // Mark all as running first so UI reflects immediately.
+      for (const accountId of parsed.accountIds) {
+        storage.updateCampaignAccount(accountId, { enrichStatus: "running" });
+      }
+      // Kick off background enrichment — uses Anthropic to produce ATOM-style buying signals.
+      void (async () => {
+        const tpl = HEALTHCARE_HIPAA_TEMPLATE;
+        for (const accountId of parsed.accountIds) {
+          const acct = storage.getCampaignAccountById(accountId);
+          if (!acct) continue;
+          try {
+            const prompt = `You are ΔTOM, an autonomous outbound enrichment agent. Produce a compact JSON for "${acct.accountName}" (${acct.subVertical || "healthcare"}, ${acct.state || "US"}). Return ONLY JSON with keys: buying_signals (array of 0-4 short strings), pain_points (0-3 strings), recent_news (0-2 strings), decision_makers (0-3 objects with title and seniority), atom_score (0-100). No prose.`;
+            const result = await anthropic.messages.create({
+              model: "claude-haiku-4-5",
+              max_tokens: 800,
+              messages: [{ role: "user", content: prompt }],
+            });
+            const text = result.content.find((b: any) => b.type === "text")?.text || "{}";
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            const data = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+            const atomBreakdown = scoreAtom({
+              atom_buying_signals: data.buying_signals,
+              atom_pain_points: data.pain_points,
+              atom_recent_news: data.recent_news,
+              atom_decision_makers: data.decision_makers,
+              atom_score: data.atom_score,
+            }, tpl);
+            const finalScore = (acct.publicSubtotal || 0) + atomBreakdown.atomSubtotal;
+            storage.updateCampaignAccount(accountId, {
+              scoreAtomIntent: atomBreakdown.intent,
+              scoreAtomPersonas: atomBreakdown.personas,
+              scoreAtomFreshness: atomBreakdown.freshness,
+              finalScore,
+              tier: tierOf(finalScore, tpl),
+              whyNow: atomBreakdown.whyNow.join(" | "),
+              atomBuyingSignalsJson: JSON.stringify(data.buying_signals || []),
+              atomPainPointsJson: JSON.stringify(data.pain_points || []),
+              atomRecentNewsJson: JSON.stringify(data.recent_news || []),
+              atomDecisionMakersJson: JSON.stringify(data.decision_makers || []),
+              atomEnrichedAt: new Date().toISOString(),
+              enrichStatus: "done",
+              enrichError: null,
+            });
+          } catch (err: any) {
+            storage.updateCampaignAccount(accountId, { enrichStatus: "failed", enrichError: err.message });
+          }
+        }
+        const counts = storage.countCampaignAccountsByStatus(id);
+        storage.updateCampaign(id, { enrichedAccounts: counts.enriched, status: counts.enriched >= counts.total ? "ready" : "enriching", updatedAt: new Date().toISOString() });
+      })();
+
+      res.json({ queued: parsed.accountIds.length });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/campaigns/:id/push", (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const parsed = pushRequestSchema.parse(req.body);
+      const campaign = storage.getCampaignById(id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      let count = 0;
+      for (const accountId of parsed.accountIds) {
+        const acct = storage.getCampaignAccountById(accountId);
+        if (!acct) continue;
+        if (parsed.target === "prospects") {
+          storage.createProspect({
+            companyName: acct.accountName,
+            domain: acct.domain || "",
+            industry: acct.subVertical || "Healthcare",
+            size: acct.walletGrade || "",
+            score: Math.round(acct.finalScore || 0),
+            status: "new",
+            buyingSignals: acct.atomBuyingSignalsJson || "[]",
+            decisionMakers: acct.atomDecisionMakersJson || "[]",
+            recommendedProducts: JSON.stringify([campaign.productSlug]),
+            createdAt: new Date().toISOString(),
+          } as any);
+        }
+        storage.updateCampaignAccount(accountId, { pushedTo: parsed.target });
+        count++;
+      }
+      res.json({ pushed: count, target: parsed.target });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/scoring-templates", (_req, res) => {
+    res.json(storage.getScoringTemplates());
   });
 }

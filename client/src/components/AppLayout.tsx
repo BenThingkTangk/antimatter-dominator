@@ -3,7 +3,7 @@ import { useTenant } from "@/lib/useTenant";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Megaphone, Brain,
-  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { href: "/prospects", icon: Radar, label: "ΔTOM Prospect" },
   { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Lead Gen" },
   { href: "/atom-campaign", icon: Megaphone, label: "ΔTOM Campaign" },
+  { href: "/campaigns", icon: ListChecks, label: "ΔTOM Campaigns" },
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
 

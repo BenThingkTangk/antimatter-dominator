@@ -3,11 +3,15 @@ import Database from "better-sqlite3";
 import { eq, desc, sql } from "drizzle-orm";
 import {
   products, pitches, objections, prospects, marketIntel,
+  campaigns, campaignAccounts, scoringTemplates,
   type Product, type InsertProduct,
   type Pitch, type InsertPitch,
   type Objection, type InsertObjection,
   type Prospect, type InsertProspect,
   type MarketIntel, type InsertMarketIntel,
+  type Campaign, type InsertCampaign,
+  type CampaignAccount, type InsertCampaignAccount,
+  type ScoringTemplate, type InsertScoringTemplate,
 } from "@shared/schema";
 
 const sqlite = new Database("antimatter.db");
@@ -75,6 +79,79 @@ sqlite.exec(`
     category TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS scoring_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    weights_json TEXT NOT NULL,
+    sub_vertical_profile_json TEXT NOT NULL,
+    revenue_tiers_json TEXT NOT NULL,
+    akafit_multipliers_json TEXT NOT NULL,
+    wallet_multipliers_json TEXT NOT NULL,
+    segmentation_fit_json TEXT NOT NULL,
+    tier_thresholds_json TEXT NOT NULL,
+    why_now_template TEXT NOT NULL,
+    recommended_move_json TEXT NOT NULL,
+    is_system INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    product_slug TEXT NOT NULL,
+    product_label TEXT NOT NULL,
+    scoring_template_slug TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    total_accounts INTEGER NOT NULL DEFAULT 0,
+    scored_accounts INTEGER NOT NULL DEFAULT 0,
+    enriched_accounts INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS campaign_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER NOT NULL,
+    account_name TEXT NOT NULL,
+    domain TEXT,
+    state TEXT,
+    sub_vertical TEXT,
+    revenue REAL,
+    akafit TEXT,
+    wallet_grade TEXT,
+    extra_tags_json TEXT,
+    score_regulatory REAL DEFAULT 0,
+    score_breach REAL DEFAULT 0,
+    score_account_fit REAL DEFAULT 0,
+    score_segmentation REAL DEFAULT 0,
+    score_list_density REAL DEFAULT 0,
+    score_atom_intent REAL DEFAULT 0,
+    score_atom_personas REAL DEFAULT 0,
+    score_atom_freshness REAL DEFAULT 0,
+    public_subtotal REAL DEFAULT 0,
+    final_score REAL DEFAULT 0,
+    tier TEXT,
+    why_now TEXT,
+    recommended_move TEXT,
+    atom_enriched_at TEXT,
+    atom_pain_points_json TEXT,
+    atom_buying_signals_json TEXT,
+    atom_recent_news_json TEXT,
+    atom_tech_stack_json TEXT,
+    atom_decision_makers_json TEXT,
+    direct_breach_json TEXT,
+    peer_breach_json TEXT,
+    enrich_status TEXT NOT NULL DEFAULT 'pending',
+    enrich_error TEXT,
+    pushed_to TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_campaign_accounts_campaign_id ON campaign_accounts(campaign_id);
+  CREATE INDEX IF NOT EXISTS idx_campaign_accounts_final_score ON campaign_accounts(final_score DESC);
 `);
 
 export interface IStorage {
@@ -100,6 +177,26 @@ export interface IStorage {
   // Market Intel
   getMarketIntel(): MarketIntel[];
   createMarketIntel(data: InsertMarketIntel): MarketIntel;
+
+  // Campaigns
+  getCampaigns(): Campaign[];
+  getCampaignById(id: number): Campaign | undefined;
+  createCampaign(data: InsertCampaign): Campaign;
+  updateCampaign(id: number, patch: Partial<InsertCampaign>): Campaign | undefined;
+  deleteCampaign(id: number): void;
+
+  // Campaign Accounts
+  getCampaignAccounts(campaignId: number, opts?: { tier?: string; limit?: number; offset?: number }): CampaignAccount[];
+  getCampaignAccountById(id: number): CampaignAccount | undefined;
+  bulkInsertCampaignAccounts(rows: InsertCampaignAccount[]): number;
+  updateCampaignAccount(id: number, patch: Partial<InsertCampaignAccount>): CampaignAccount | undefined;
+  bulkUpdateCampaignAccountScores(updates: Array<{ id: number } & Partial<InsertCampaignAccount>>): void;
+  countCampaignAccountsByStatus(campaignId: number): { total: number; scored: number; enriched: number };
+
+  // Scoring Templates
+  getScoringTemplates(): ScoringTemplate[];
+  getScoringTemplateBySlug(slug: string): ScoringTemplate | undefined;
+  createScoringTemplate(data: InsertScoringTemplate): ScoringTemplate;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -159,6 +256,111 @@ export class DatabaseStorage implements IStorage {
 
   createMarketIntel(data: InsertMarketIntel): MarketIntel {
     return db.insert(marketIntel).values(data).returning().get();
+  }
+
+  // ── Campaigns
+  getCampaigns(): Campaign[] {
+    return db.select().from(campaigns).orderBy(desc(campaigns.id)).all();
+  }
+
+  getCampaignById(id: number): Campaign | undefined {
+    return db.select().from(campaigns).where(eq(campaigns.id, id)).get();
+  }
+
+  createCampaign(data: InsertCampaign): Campaign {
+    return db.insert(campaigns).values(data).returning().get();
+  }
+
+  updateCampaign(id: number, patch: Partial<InsertCampaign>): Campaign | undefined {
+    return db.update(campaigns).set(patch).where(eq(campaigns.id, id)).returning().get();
+  }
+
+  deleteCampaign(id: number): void {
+    db.delete(campaignAccounts).where(eq(campaignAccounts.campaignId, id)).run();
+    db.delete(campaigns).where(eq(campaigns.id, id)).run();
+  }
+
+  // ── Campaign Accounts
+  getCampaignAccounts(campaignId: number, opts?: { tier?: string; limit?: number; offset?: number }): CampaignAccount[] {
+    let q: any = db.select().from(campaignAccounts).where(eq(campaignAccounts.campaignId, campaignId));
+    if (opts?.tier) {
+      q = db.select().from(campaignAccounts).where(
+        sql`${campaignAccounts.campaignId} = ${campaignId} AND ${campaignAccounts.tier} = ${opts.tier}`
+      );
+    }
+    q = q.orderBy(desc(campaignAccounts.finalScore));
+    if (opts?.limit) q = q.limit(opts.limit);
+    if (opts?.offset) q = q.offset(opts.offset);
+    return q.all();
+  }
+
+  getCampaignAccountById(id: number): CampaignAccount | undefined {
+    return db.select().from(campaignAccounts).where(eq(campaignAccounts.id, id)).get();
+  }
+
+  bulkInsertCampaignAccounts(rows: InsertCampaignAccount[]): number {
+    if (rows.length === 0) return 0;
+    // Use raw transaction for speed on large imports (up to 5000 rows).
+    const insert = sqlite.prepare(`
+      INSERT INTO campaign_accounts
+      (campaign_id, account_name, domain, state, sub_vertical, revenue, akafit, wallet_grade,
+       extra_tags_json, enrich_status, created_at)
+      VALUES (@campaignId, @accountName, @domain, @state, @subVertical, @revenue, @akafit, @walletGrade,
+              @extraTagsJson, @enrichStatus, @createdAt)
+    `);
+    const tx = sqlite.transaction((items: InsertCampaignAccount[]) => {
+      for (const r of items) {
+        insert.run({
+          campaignId: r.campaignId,
+          accountName: r.accountName,
+          domain: r.domain ?? null,
+          state: r.state ?? null,
+          subVertical: r.subVertical ?? null,
+          revenue: r.revenue ?? null,
+          akafit: r.akafit ?? null,
+          walletGrade: r.walletGrade ?? null,
+          extraTagsJson: r.extraTagsJson ?? null,
+          enrichStatus: r.enrichStatus ?? "pending",
+          createdAt: r.createdAt,
+        });
+      }
+    });
+    tx(rows);
+    return rows.length;
+  }
+
+  updateCampaignAccount(id: number, patch: Partial<InsertCampaignAccount>): CampaignAccount | undefined {
+    return db.update(campaignAccounts).set(patch as any).where(eq(campaignAccounts.id, id)).returning().get();
+  }
+
+  bulkUpdateCampaignAccountScores(updates: Array<{ id: number } & Partial<InsertCampaignAccount>>): void {
+    const tx = sqlite.transaction((items: any[]) => {
+      for (const u of items) {
+        const { id, ...patch } = u;
+        db.update(campaignAccounts).set(patch).where(eq(campaignAccounts.id, id)).run();
+      }
+    });
+    tx(updates);
+  }
+
+  countCampaignAccountsByStatus(campaignId: number): { total: number; scored: number; enriched: number } {
+    const total = (db.select({ c: sql<number>`count(*)` }).from(campaignAccounts).where(eq(campaignAccounts.campaignId, campaignId)).get() as any)?.c ?? 0;
+    const scored = (db.select({ c: sql<number>`count(*)` }).from(campaignAccounts).where(sql`${campaignAccounts.campaignId} = ${campaignId} AND ${campaignAccounts.publicSubtotal} > 0`).get() as any)?.c ?? 0;
+    const enriched = (db.select({ c: sql<number>`count(*)` }).from(campaignAccounts).where(sql`${campaignAccounts.campaignId} = ${campaignId} AND ${campaignAccounts.enrichStatus} = 'done'`).get() as any)?.c ?? 0;
+    return { total, scored, enriched };
+  }
+
+  // ── Scoring Templates
+  getScoringTemplates(): ScoringTemplate[] {
+    return db.select().from(scoringTemplates).orderBy(desc(scoringTemplates.id)).all();
+  }
+
+  getScoringTemplateBySlug(slug: string): ScoringTemplate | undefined {
+    return db.select().from(scoringTemplates).where(eq(scoringTemplates.slug, slug)).get();
+  }
+
+  createScoringTemplate(data: InsertScoringTemplate): ScoringTemplate {
+    return db.insert(scoringTemplates).values(data).returning().get();
   }
 }
 
@@ -344,3 +546,46 @@ function seedProducts() {
 }
 
 seedProducts();
+
+function seedScoringTemplates() {
+  const existing = storage.getScoringTemplates();
+  if (existing.length > 0) return;
+  const now = new Date().toISOString();
+  storage.createScoringTemplate({
+    slug: "healthcare-segmentation-hipaa",
+    name: "Healthcare × Segmentation (HIPAA-aligned)",
+    description: "Akamai Guardicore play. Scores PHI exposure, breach history, account fit, list density, segmentation relevance + ATOM live signals.",
+    weightsJson: JSON.stringify({ regulatory: 25, breach: 20, accountFit: 15, listDensity: 5, segmentation: 5, atomIntent: 12, atomPersonas: 10, atomFreshness: 8 }),
+    subVerticalProfileJson: JSON.stringify({
+      "Healthcare Provider": { phi: 1.0, seg: 1.0 },
+      "Healthcare Payer": { phi: 0.95, seg: 0.9 },
+      "Pharma and Biotech": { phi: 0.55, seg: 0.85 },
+      "Medical Devices and Equipment": { phi: 0.45, seg: 0.95 },
+      "Health Tech": { phi: 0.7, seg: 0.8 },
+    }),
+    revenueTiersJson: JSON.stringify([
+      { min: 50_000_000_000, factor: 1.0 },
+      { min: 10_000_000_000, factor: 0.92 },
+      { min: 2_000_000_000, factor: 0.78 },
+      { min: 500_000_000, factor: 0.62 },
+      { min: 100_000_000, factor: 0.45 },
+      { min: 0, factor: 0.25 },
+    ]),
+    akafitMultipliersJson: JSON.stringify({ A: 1.0, B: 0.65, C: 0.3 }),
+    walletMultipliersJson: JSON.stringify({ "Mega Strategic": 1.0, Strategic: 0.85, "Large Enterprise": 0.65 }),
+    segmentationFitJson: JSON.stringify({ Provider: 1.0, Devices: 0.95, Payer: 0.9, Pharma: 0.85, HealthTech: 0.8 }),
+    tierThresholdsJson: JSON.stringify({ t1: 75, t2: 60, t3: 45 }),
+    whyNowTemplate: "2025 HIPAA Security Rule mandates network segmentation (effective 2026) — Guardicore is the direct fulfillment vehicle.",
+    recommendedMoveJson: JSON.stringify({
+      T1: "CISO meeting THIS week. Lead with breach map + 30-day Guardicore POC.",
+      T2: "Executive briefing within 14 days. Frame as HIPAA-2026 compliance accelerator.",
+      T3: "Multi-touch sequence: warm intro → industry brief → demo.",
+      T4: "Nurture. Quarterly check-in unless a peer breach triggers urgency.",
+    }),
+    isSystem: true,
+    createdAt: now,
+  });
+  console.log("Seeded scoring templates: healthcare-segmentation-hipaa");
+}
+
+seedScoringTemplates();
