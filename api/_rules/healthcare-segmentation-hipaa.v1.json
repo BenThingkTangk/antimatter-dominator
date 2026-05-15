@@ -1,0 +1,53 @@
+{
+  "slug": "healthcare-segmentation-hipaa",
+  "version": "v1.0.0",
+  "name": "Healthcare × Segmentation (HIPAA-aligned)",
+  "description": "Akamai Guardicore play. Scores PHI exposure, breach history, account fit, list density, segmentation relevance + ATOM live signals.",
+  "engine": "healthcare-hipaa-v1",
+  "max_score": 100,
+  "weights": {
+    "regulatory": 25,
+    "breach": 20,
+    "account_fit": 15,
+    "list_density": 5,
+    "segmentation": 5,
+    "atom_intent": 12,
+    "atom_personas": 10,
+    "atom_freshness": 8
+  },
+  "sub_vertical_profile": {
+    "Healthcare Provider":            { "phi": 1.0,  "seg": 1.0,  "note": "Largest PHI volume + EHR/IoT segmentation pain; mandated by 2025 HIPAA rule" },
+    "Healthcare Payer":               { "phi": 0.95, "seg": 0.9,  "note": "Massive PHI; claims systems; high regulatory scrutiny" },
+    "Pharma and Biotech":             { "phi": 0.55, "seg": 0.85, "note": "Clinical-trial data + IP; OT/lab segmentation" },
+    "Medical Devices and Equipment":  { "phi": 0.45, "seg": 0.95, "note": "Connected devices = lateral-movement crown jewels" },
+    "Health Tech":                    { "phi": 0.7,  "seg": 0.8,  "note": "PHI handling varies; HIPAA BAA exposure" }
+  },
+  "revenue_factors": [
+    { "min": 50000000000, "factor": 1.0 },
+    { "min": 10000000000, "factor": 0.92 },
+    { "min": 2000000000,  "factor": 0.78 },
+    { "min": 500000000,   "factor": 0.62 },
+    { "min": 100000000,   "factor": 0.45 },
+    { "min": 0,           "factor": 0.25 }
+  ],
+  "akafit_multipliers": { "A": 1.0, "B": 0.65, "C": 0.3 },
+  "wallet_multipliers": { "Mega Strategic": 1.0, "Strategic": 0.85, "Large Enterprise": 0.65 },
+  "high_value_lists": {
+    "2026 NC Must Win TAL":                       1.0,
+    "North America ESG 2026 TAL Prospects":       0.9,
+    "2026 Bain Money Map":                        0.85,
+    "2026-H1 SDR Security Focus - Core":          1.0,
+    "North America API 2026 TAL Prospects":       0.7,
+    "API Sec NC Noname Tier 1.2 TAL":             0.6,
+    "2023 Unified Threat Shield":                 0.5,
+    "ESG Focus 30":                               0.95,
+    "2025 NC Must Win TAL":                       0.6,
+    "2024 NC Must Win TAL":                       0.4
+  },
+  "tiers": {
+    "T1": { "min": 75, "action": "executive_play — direct CISO outreach + Akamai Guardicore segmentation pitch" },
+    "T2": { "min": 60, "action": "automated_sequence — ATOM Voice Bridge + nurture" },
+    "T3": { "min": 45, "action": "nurture — content drip, watch for breach/regulatory triggers" },
+    "T4": { "min": 0,  "action": "hold — not a fit today" }
+  }
+}

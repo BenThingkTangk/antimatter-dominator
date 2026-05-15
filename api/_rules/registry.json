@@ -1,0 +1,7 @@
+{
+  "_doc": "ΔTOM rule pack registry. Maps a template slug → versioned JSON file. The DB row atom_scoring_templates.slug is just a pointer; the actual math lives in git.",
+  "rule_packs": [
+    { "slug": "healthcare-segmentation-hipaa", "file": "healthcare-segmentation-hipaa.v1.json", "engine": "healthcare-hipaa-v1" },
+    { "slug": "cloud-ai-infrastructure-v1",    "file": "cloud-ai-infrastructure.v1.json",    "engine": "cloud-ai-infra-v1" }
+  ]
+}

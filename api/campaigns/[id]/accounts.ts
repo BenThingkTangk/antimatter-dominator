@@ -51,6 +51,11 @@ function mapAccount(r: any) {
     enrichError: r.enrich_error,
     pushedTo: r.pushed_to,
     atomEnrichedAt: r.atom_enriched_at,
+    evidenceJson: r.evidence_json,
+    evidenceSource: r.evidence_source,
+    rulesVersion: r.rules_version,
+    ragContextJson: r.rag_context_json,
+    ragSourcesJson: r.rag_sources_json,
   };
 }
 
@@ -73,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       filter += `&tier=eq.${tier}`;
     }
     const rows = await sb(
-      `atom_campaign_accounts?${filter}&order=final_score.desc.nullslast&limit=${limit}`,
+      `atom_campaign_accounts?${filter}&order=final_score.desc.nullslast&limit=${limit}&select=*`,
     );
     return res.json((rows || []).map(mapAccount));
   } catch (e: any) {

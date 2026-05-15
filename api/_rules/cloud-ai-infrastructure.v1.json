@@ -1,0 +1,40 @@
+{
+  "slug": "cloud-ai-infrastructure-v1",
+  "version": "v1.0.0",
+  "name": "Cloud × AI Infrastructure (ΔTOM TARGET v1)",
+  "description": "Akamai + Linode edge / GPU inference / multicloud play. Pure-deterministic 4L+4S+4G+3E+3M+2T scorer per the ΔTOM TARGET architecture spec. Inputs: latency/security/gpu/egress/multicloud/trigger scores 1-5 OR segment fallback.",
+  "engine": "cloud-ai-infra-v1",
+  "formula": "4L + 4S + 4G + 3E + 3M + 2T",
+  "max_score": 100,
+  "weights": {
+    "latency": 4,
+    "security": 4,
+    "gpu_inference": 4,
+    "egress": 3,
+    "multicloud": 3,
+    "trigger": 2
+  },
+  "sub_vertical_profile": {
+    "ai_saas":         { "latency": 4, "security": 4, "gpu_inference": 5, "egress": 3, "multicloud": 3, "trigger": 3, "note": "Core inference product, heavy GPU + RAG/LLM dependency" },
+    "fintech_fraud":   { "latency": 5, "security": 5, "gpu_inference": 3, "egress": 2, "multicloud": 3, "trigger": 3, "note": "Real-time fraud detection, regulated, latency-critical" },
+    "voice_ai":        { "latency": 5, "security": 4, "gpu_inference": 5, "egress": 3, "multicloud": 3, "trigger": 4, "note": "Real-time voice + GPU inference, edge-native" },
+    "healthcare_ai":   { "latency": 4, "security": 5, "gpu_inference": 4, "egress": 2, "multicloud": 4, "trigger": 3, "note": "PHI + HIPAA + sovereignty mandate" },
+    "sports_media":    { "latency": 4, "security": 3, "gpu_inference": 3, "egress": 5, "multicloud": 3, "trigger": 3, "note": "Heavy media/files/global traffic, latency-sensitive playback" },
+    "enterprise_saas": { "latency": 3, "security": 4, "gpu_inference": 3, "egress": 3, "multicloud": 3, "trigger": 2, "note": "General enterprise workloads, moderate everything" },
+    "gov_defense":     { "latency": 3, "security": 5, "gpu_inference": 3, "egress": 2, "multicloud": 5, "trigger": 3, "note": "Sovereignty mandate, regulated, multicloud-required" }
+  },
+  "evidence_schema": {
+    "latency_score":      "1-5: 5=real-time voice/fraud/AI, 4=global interactive, 3=user-facing API, 2=internal API, 1=batch",
+    "security_score":     "1-5: 5=regulated+public API+bot/fraud risk, 4=two of three, 3=one of three, 2=mild, 1=none",
+    "gpu_inference_score":"1-5: 5=core inference product, 4=heavy RAG/LLM, 3=regular AI features, 2=light AI, 1=none",
+    "egress_score":       "1-5: 5=media/files/global traffic, 4=heavy API/model responses, 3=moderate, 2=low, 1=internal-only",
+    "multicloud_score":   "1-5: 5=explicit multicloud/sovereignty mandate, 4=K8s+Terraform+portability, 3=multi-region one cloud, 2=single cloud planning multi, 1=single cloud",
+    "trigger_score":      "1-5: 5=active migration/compliance/outage, 4=AI launch/funding <6mo, 3=hiring signal, 2=stagnant, 1=declining"
+  },
+  "tiers": {
+    "T1": { "min": 80, "action": "executive_play — direct CISO/CTO outreach + Akamai+Linode joint pitch" },
+    "T2": { "min": 65, "action": "automated_sequence — ATOM Voice Bridge + nurture" },
+    "T3": { "min": 50, "action": "nurture — content drip, watch for trigger events" },
+    "T4": { "min": 0,  "action": "hold — not a fit today" }
+  }
+}
