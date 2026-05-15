@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as XLSX from "xlsx";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -285,22 +286,58 @@ function NewCampaignWizard({
     enabled: open,
   });
 
+  function ingestRows(rows: string[][], fileLabel: string) {
+    if (rows.length < 2) {
+      toast({
+        title: "Empty file",
+        description: `${fileLabel}: need at least a header row + 1 data row.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setHeaders(rows[0].map((h) => (h || "").toString().trim()));
+    setCsvRows(rows.slice(1));
+    setMapping(guessMapping(rows[0]));
+    setStep(2);
+  }
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
+    const lower = f.name.toLowerCase();
+    const isExcel = lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".xlsm");
     const reader = new FileReader();
-    reader.onload = () => {
-      const rows = parseCSV(String(reader.result || ""));
-      if (rows.length < 2) {
-        toast({ title: "Empty file", description: "Need at least a header row + 1 data row.", variant: "destructive" });
-        return;
-      }
-      setHeaders(rows[0].map((h) => h.trim()));
-      setCsvRows(rows.slice(1));
-      setMapping(guessMapping(rows[0]));
-      setStep(2);
+    reader.onerror = () => {
+      toast({ title: "Read failed", description: "Could not read that file. Try CSV or XLSX.", variant: "destructive" });
     };
-    reader.readAsText(f);
+    if (isExcel) {
+      reader.onload = () => {
+        try {
+          const data = new Uint8Array(reader.result as ArrayBuffer);
+          const wb = XLSX.read(data, { type: "array" });
+          // Pick the first sheet with any data
+          const firstSheetName = wb.SheetNames[0];
+          if (!firstSheetName) {
+            toast({ title: "Empty workbook", description: "No sheets found in this workbook.", variant: "destructive" });
+            return;
+          }
+          const sheet = wb.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, blankrows: false, defval: "" }) as any[][];
+          // Coerce every cell to a string so downstream parsing is uniform
+          const stringRows = rows.map((r) => (r || []).map((c) => (c == null ? "" : String(c))));
+          ingestRows(stringRows, `${f.name} \u2192 ${firstSheetName}`);
+        } catch (err: any) {
+          toast({ title: "Excel parse error", description: err?.message || "Could not parse XLSX.", variant: "destructive" });
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    } else {
+      reader.onload = () => {
+        const rows = parseCSV(String(reader.result || ""));
+        ingestRows(rows, f.name);
+      };
+      reader.readAsText(f);
+    }
   }
 
   async function submit() {
@@ -392,10 +429,10 @@ function NewCampaignWizard({
               </Select>
             </div>
             <div>
-              <Label className="text-[#a2a3e9]">Upload CSV</Label>
+              <Label className="text-[#a2a3e9]">Upload target list</Label>
               <input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.xlsx,.xls,.xlsm,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 ref={fileRef}
                 onChange={handleFile}
                 className="hidden"
@@ -404,12 +441,13 @@ function NewCampaignWizard({
                 variant="outline"
                 className="w-full mt-1 border-dashed border-[#3e3f7e] hover:border-[#4c4dac] bg-transparent h-24"
                 onClick={() => fileRef.current?.click()}
-                disabled={!name}
+                disabled={!name || !templateSlug}
                 data-testid="button-upload-csv"
               >
                 <Upload className="w-5 h-5 mr-2" />
-                {name ? "Click to upload CSV" : "Enter a name first"}
+                {!name ? "Enter a campaign name first" : !templateSlug ? "Pick a scoring template" : "Click to upload CSV or Excel"}
               </Button>
+              <div className="text-[10px] text-[#a2a3e9]/50 mt-1">Accepts .csv, .xlsx, .xls — first sheet is used.</div>
             </div>
           </div>
         )}
