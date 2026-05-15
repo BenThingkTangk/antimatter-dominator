@@ -99,8 +99,11 @@ const PERPLEXITY_API_KEY = clean(process.env.PERPLEXITY_API_KEY);
 const PINECONE_API_KEY   = clean(process.env.PINECONE_API_KEY);
 const PINECONE_INDEX     = clean(process.env.PINECONE_INDEX) || "atom-intelligence-pplx";
 const ANTHROPIC_API_KEY  = clean(process.env.ANTHROPIC_API_KEY);
+const OPENAI_API_KEY     = clean(process.env.OPENAI_API_KEY);
 
-const a = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+// Anthropic instance only constructed if key is present. Otherwise we fall
+// back to OpenAI for synthesis below.
+const a = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
 // ─── Supabase helper ────────────────────────────────────────────────────────
 async function sb(path: string, init: RequestInit = {}): Promise<any> {
@@ -316,16 +319,46 @@ async function synthesizeAtomSignals(account: any, evidence: any, rag: any, _pac
     .replace("{{SUBV}}", account.sub_vertical || "")
     .replace("{{EVIDENCE}}", evidenceBlock.slice(0, 4000))
     .replace("{{RAG}}", ragBlock.slice(0, 4000));
+  // Prefer Anthropic Claude Haiku 4.5, fall back to OpenAI gpt-4o-mini if
+  // ANTHROPIC_API_KEY is not configured in this environment.
   try {
-    const resp = await a.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 900,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const text = (resp.content || []).map((b: any) => (b.type === "text" ? b.text : "")).join("").trim();
-    const m = text.match(/\{[\s\S]*\}/);
-    if (!m) return { ok: false, error: "No JSON in synthesis response" };
-    return { ok: true, data: JSON.parse(m[0]) };
+    if (a) {
+      const resp = await a.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 900,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const text = (resp.content || []).map((b: any) => (b.type === "text" ? b.text : "")).join("").trim();
+      const m = text.match(/\{[\s\S]*\}/);
+      if (!m) return { ok: false, error: "No JSON in synthesis response (anthropic)" };
+      return { ok: true, data: JSON.parse(m[0]) };
+    }
+    if (OPENAI_API_KEY) {
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Respond ONLY with a single valid JSON object. No prose, no markdown." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 900,
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        return { ok: false, error: `openai ${r.status}: ${txt.slice(0, 200)}` };
+      }
+      const d: any = await r.json();
+      const text = d?.choices?.[0]?.message?.content || "";
+      const m = text.match(/\{[\s\S]*\}/);
+      if (!m) return { ok: false, error: "No JSON in synthesis response (openai)" };
+      return { ok: true, data: JSON.parse(m[0]) };
+    }
+    return { ok: false, error: "No synthesis model configured (ANTHROPIC_API_KEY or OPENAI_API_KEY required)" };
   } catch (e: any) {
     return { ok: false, error: e?.message || "synthesis error" };
   }
@@ -496,7 +529,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       attempted: rows.length,
       template: templateSlug,
       rule_version: pack.version,
-      pipeline: ["sonar-pro:v1", "pinecone:" + PINECONE_INDEX, "claude-haiku-4-5"],
+      pipeline: ["sonar-pro:v1", "pinecone:" + PINECONE_INDEX, a ? "claude-haiku-4-5" : "gpt-4o-mini"],
     });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || "enrich failed" });
