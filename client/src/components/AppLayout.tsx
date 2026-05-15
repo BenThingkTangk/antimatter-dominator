@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
   { href: "/objections", icon: MessageSquareWarning, label: "ΔTOM Objection Handler" },
   { href: "/market", icon: Shield, label: "ΔTOM Market Intent" },
   { href: "/prospects", icon: Radar, label: "ΔTOM Prospect" },
-  { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Dial" },
+  { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Lead Gen" },
   { href: "/atom-campaign", icon: Megaphone, label: "ΔTOM Campaign" },
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
@@ -92,35 +92,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
-  // Build dynamic nav items
-  const dynamicNavItems: NavItem[] = [];
-
-  // Nirmata HQ at the very top for superAdmins
-  if (session.isSuperAdmin) {
-    dynamicNavItems.push({ href: "/admin/hq", icon: Crown, label: "Nirmata HQ" });
-    dynamicNavItems.push({ href: "/admin/hq/seat-costs", icon: Coins, label: "Seat Costs" });
-    dynamicNavItems.push({ href: "/admin/vibranium-ga", icon: Zap, label: "Vibranium GA" });
-  }
-
-  // All standard items — with the rep view trimmed to day-to-day modules.
-  // Manager and overlord see all 8 weapons; rep sees the production surfaces
-  // they actually use minute-to-minute (no WarBook playbook editing, no
-  // multi-deal War Room dashboard).
+  // Build dynamic nav items.
+  // Visual: the eight product modules are the headline list (matches the
+  // reference ATOM build sidebar). Super-admin platform surfaces (Nirmata
+  // HQ, Seat Costs, Vibranium GA, Billing, System Control) are grouped
+  // under a separate "PLATFORM" section below the modules so they remain
+  // one-click reachable without competing visually with day-to-day weapons.
   const visibleNavItems = session.role === "rep"
     ? navItems.filter(n =>
         n.href !== "/war-room" &&
         n.href !== "/company-intelligence"
       )
     : navItems;
-  dynamicNavItems.push(...visibleNavItems);
+  const dynamicNavItems: NavItem[] = [...visibleNavItems];
 
-  // Billing & Plan + ΔTOM System Control are SUPER-ADMIN ONLY — tenants only
-  // see the eight product modules (War Room, Pitch, Objection Handler, Market
-  // Intent, Prospect, Dial, Campaign, WarBook). Tenant-admin role does NOT
-  // grant access to platform-level surfaces.
+  // Super-admin only platform/admin entries. Kept here so the surface still
+  // exists; rendered as a separate group beneath the main modules.
+  const adminNavItems: NavItem[] = [];
   if (session.isSuperAdmin) {
-    dynamicNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
-    dynamicNavItems.push({ href: "/admin", icon: Building2, label: "ΔTOM System Control" });
+    adminNavItems.push({ href: "/admin/hq", icon: Crown, label: "Nirmata HQ" });
+    adminNavItems.push({ href: "/admin/hq/seat-costs", icon: Coins, label: "Seat Costs" });
+    adminNavItems.push({ href: "/admin/vibranium-ga", icon: Zap, label: "Vibranium GA" });
+    adminNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
+    adminNavItems.push({ href: "/admin", icon: Building2, label: "ΔTOM System Control" });
   }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -222,6 +216,57 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }
           return <div key={item.href}>{linkContent}</div>;
         })}
+
+        {/* Platform / admin (super-admin only) — visually separated so the
+           main 8 weapons match the reference ATOM build sidebar. */}
+        {adminNavItems.length > 0 && (
+          <>
+            <div
+              className="mt-4 mb-1 px-3 text-[10px] tracking-[0.22em] uppercase"
+              style={{
+                color: "rgba(255,255,255,0.35)",
+                display: collapsed && !isMobile ? "none" : "block",
+              }}
+            >
+              Platform
+            </div>
+            {!collapsed || isMobile ? null : (
+              <div className="my-2 mx-3 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+            )}
+            {adminNavItems.map((item) => {
+              const isActive = location === item.href;
+              const Icon = item.icon;
+              const linkContent = (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : ""}`}
+                  style={isActive ? {
+                    background: "color-mix(in oklab, var(--color-primary) 8%, transparent)",
+                    color: "var(--color-primary)",
+                    boxShadow: "inset 0 0 12px color-mix(in oklab, var(--color-primary) 8%, transparent)"
+                  } : {
+                    color: "rgba(255,255,255,0.40)"
+                  }}
+                  data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary-glow)" }} />}
+                  <Icon className="w-4 h-4 shrink-0" style={{ color: isActive ? "var(--color-primary)" : "rgba(255,255,255,0.40)" }} />
+                  {(!collapsed || isMobile) && <span className="truncate min-w-0 font-medium">{item.label}</span>}
+                </Link>
+              );
+              if (collapsed && !isMobile) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                    <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+              return <div key={item.href}>{linkContent}</div>;
+            })}
+          </>
+        )}
       </nav>
 
       {/* Footer */}
@@ -289,7 +334,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
             <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-              ΔTOM · © 2026
+              ΔTOM · Nirmata Holdings · © 2026
             </p>
           </div>
         )}
