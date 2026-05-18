@@ -6,23 +6,9 @@ import { AtomMarkSVG } from './DtomLogo.internal';
 /**
  * DtomBootLoader
  *
- * Cinematic classified aerospace ignition loader for ΔTOM.
+ * Boot loader overlay for ΔTOM Sales Dominator.
  *
- * Behavior sequence:
- *  1. Black-titanium field with drifting grid appears.
- *  2. ΔTOM mark spins counter-clockwise and calibrates.
- *  3. Scanline crosses the wordmark.
- *  4. Telemetry tags resolve: ΔTOM - NirmX-UFO, Pi3 - SiQ.
- *  5. Status lines stage in: Signal acquired → Voice engine online → Human interface ready.
- *  6. After minimumDrama ms, loader exits via opacity/visibility fade.
- *
- * No weapon-sight cursors. No gunsight motifs. Aerospace only.
- *
- * Reduced-motion: all animations collapsed, immediate final state, exits after
- * a brief accessible pause.
- *
- * @example
- * <DtomBootLoader onComplete={() => setReady(true)} minimumDrama={2200} />
+ * Reduced-motion: animations collapsed, exits after a brief accessible pause.
  */
 
 export interface DtomBootLoaderProps {
@@ -46,28 +32,11 @@ export interface DtomBootLoaderProps {
   className?: string;
 }
 
-const LEFT_RAIL_LINES = [
-  'NIRMATA BLACK OPS',
-  'QUANTUM VOICE BUS',
-  'ATOMDOMINATOR.COM',
-  'UFO LATTICE',
-  'Pi3 - SiQ ACTIVE',
-  'ANTIMATTER FIELD',
-];
-
-const RIGHT_RAIL_LINES = [
-  'IGNITION AUTH',
-  'COMMAND LOOP ∞',
-  'NirmX-UFO ONLINE',
-  'SIGNAL ACQUIRED',
-  'ZERO LATENCY',
-  'SYSTEM LIVE',
-];
-
 const STATUS_LINES = [
-  'Signal acquired',
-  'Voice engine online',
-  'Human interface ready',
+  'Sales intelligence loading',
+  'Pipeline systems online',
+  'Buyer signals syncing',
+  'Ready for launch',
 ];
 
 export function DtomBootLoader({
@@ -109,40 +78,21 @@ export function DtomBootLoader({
       className={`dtom-loader ${exiting ? 'dtom-loader--exiting' : ''} ${className}`.trim()}
       role="status"
       aria-live="polite"
-      aria-label="Loading ΔTOM interface"
+      aria-label="Loading ΔTOM Sales Dominator"
       aria-atomic="true"
     >
-      {/* Drifting aerospace grid */}
       <div className="dtom-loader__field" aria-hidden="true" />
 
-      {/* Precision corner brackets — aerospace only, no weapon sights */}
       <div className="dtom-loader__corner dtom-loader__corner--tl" aria-hidden="true" />
       <div className="dtom-loader__corner dtom-loader__corner--tr" aria-hidden="true" />
       <div className="dtom-loader__corner dtom-loader__corner--bl" aria-hidden="true" />
       <div className="dtom-loader__corner dtom-loader__corner--br" aria-hidden="true" />
 
-      {/* Left telemetry rail */}
-      <div className="dtom-loader__rail dtom-loader__rail--left" aria-hidden="true">
-        {LEFT_RAIL_LINES.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
-      </div>
-
-      {/* Right telemetry rail */}
-      <div className="dtom-loader__rail dtom-loader__rail--right" aria-hidden="true">
-        {RIGHT_RAIL_LINES.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
-      </div>
-
-      {/* Core content */}
       <div className="dtom-loader__core">
-        {/* Aerospace kicker */}
         <p className="dtom-loader__kicker" aria-hidden="true">
-          NIRMATA HOLDINGS · AEROSPACE IGNITION SEQUENCE
+          ΔTOM SALES DOMINATOR
         </p>
 
-        {/* Logo */}
         <div className="dtom-loader__logo-wrap">
           <AtomMarkSVG spinning={!reducedMotion} />
           <span className="dtom-loader__word" aria-hidden="true">
@@ -150,22 +100,10 @@ export function DtomBootLoader({
           </span>
         </div>
 
-        {/* Scanline */}
         <div className="dtom-loader__scanline" aria-hidden="true">
           <span className="dtom-loader__scanline-beam" />
         </div>
 
-        {/* Telemetry tags: LLM + Voice labels */}
-        <div className="dtom-loader__telemetry" aria-hidden="true">
-          <span className="dtom-loader__telemetry-tag">
-            LLM: ΔTOM - NirmX-UFO
-          </span>
-          <span className="dtom-loader__telemetry-tag">
-            Voice: Pi3 - SiQ
-          </span>
-        </div>
-
-        {/* Status lines */}
         <ol className="dtom-loader__status">
           {STATUS_LINES.map((line, i) => (
             <li
