@@ -1500,9 +1500,9 @@ export default function ATOMLeadGen() {
                     onClick={handleNewCall}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium"
                     style={{
-                      background: "linear-gradient(93.92deg, var(--color-primary-2) -13.51%, var(--color-primary) 40.91%, #ea580c 113.69%)", boxShadow: "0 0 15px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.3)",
+                      background: "linear-gradient(93.92deg, var(--color-primary-2) -13.51%, var(--color-primary) 40.91%, #ea580c 113.69%)",
+                      boxShadow: "0 0 15px var(--color-primary-glow-strong), inset 0 0 2px rgba(255,255,255,0.3)",
                       color: "white",
-                      boxShadow: "0 0 16px rgba(133,135,227,0.3)",
                       cursor: "pointer",
                     }}
                   >
