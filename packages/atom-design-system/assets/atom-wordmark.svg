@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" role="img" aria-labelledby="atom-wm-title atom-wm-desc" width="320" height="80">
-  <title id="atom-wm-title">ATOM wordmark</title>
-  <desc id="atom-wm-desc">Wordmark reading Δ T O M, where the first character is the Greek capital Delta. Δ, T and M are rendered in light cream; the O is a teal ring accent.</desc>
-  <style>
-    .wm { font-family: 'Cabinet Grotesk', 'Satoshi', 'Inter', system-ui, sans-serif; font-weight: 800; font-size: 64px; letter-spacing: -0.02em; fill: #e8e8ea; }
-  </style>
-  <!-- Δ T _ M -->
-  <text class="wm" x="6" y="60">Δ T</text>
-  <text class="wm" x="232" y="60">M</text>
-  <!-- O as teal ring (positioned between T and M) -->
-  <g transform="translate(178 28)">
-    <circle cx="22" cy="22" r="20" fill="none" stroke="#00c8c8" stroke-width="6"/>
-    <circle cx="22" cy="22" r="20" fill="none" stroke="#00c8c8" stroke-width="6" opacity="0.25" filter="blur(2px)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-labelledby="atom-wm-title atom-wm-desc" width="640" height="160">
+  <title id="atom-wm-title">ΔTOM wordmark</title>
+  <desc id="atom-wm-desc">Canonical ΔTOM wordmark. Δ, T, M are geometric stroked glyphs in light cream; the O is a teal ring at the same cap height. All four glyphs share a single baseline with tight, even tracking.</desc>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <!-- Δ — Greek capital Delta, thick stroked triangle -->
+    <polygon points="70,130 10,130 40,30" stroke="#e8e8ea" stroke-width="14"/>
+    <!-- T — top bar + stem -->
+    <line x1="100" y1="37" x2="220" y2="37" stroke="#e8e8ea" stroke-width="14"/>
+    <line x1="160" y1="37" x2="160" y2="130" stroke="#e8e8ea" stroke-width="14"/>
+    <!-- O — teal ring -->
+    <circle cx="320" cy="83" r="50" stroke="#00c8c8" stroke-width="14"/>
+    <!-- M — two verticals joined by a centered V -->
+    <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="#e8e8ea" stroke-width="14"/>
   </g>
 </svg>

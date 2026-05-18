@@ -621,7 +621,7 @@
 .dtom-loader__logo-wrap {
   display: inline-flex;
   align-items: center;
-  gap: var(--dtom-space-4);
+  justify-content: center;
   filter: drop-shadow(0 0 36px var(--dtom-color-primary-glow-strong));
 }
 
@@ -629,12 +629,25 @@
   --dtom-logo-size: clamp(72px, 12vw, 128px);
 }
 
+/* Canonical ΔTOM wordmark — inline SVG so the lockup is identical regardless
+   of which display font has loaded. Δ, T, M inherit currentColor; the O is
+   a teal ring at the same cap-height as the other glyphs. */
+.dtom-loader__wordmark {
+  display: block;
+  width: clamp(240px, 44vw, 560px);
+  height: auto;
+  color: #edf8f8;
+}
+
+/* Legacy text-based wordmark — retained in case downstream consumers still
+   render the old markup; tight tracking and no inline gaps. */
 .dtom-loader__word {
   font-family: var(--dtom-font-display);
   font-size: clamp(2.5rem, 8vw, 7rem);
   font-weight: 900;
-  letter-spacing: -0.07em;
+  letter-spacing: -0.04em;
   line-height: 0.85;
+  white-space: nowrap;
 }
 
 .dtom-loader__word-o { color: var(--dtom-color-primary); }

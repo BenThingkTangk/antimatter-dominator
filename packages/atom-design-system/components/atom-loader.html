@@ -64,29 +64,14 @@
   }
 
   #atom-loader .atom-loader__mark {
-    font-family: var(--atom-font-display, 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif);
-    font-weight: 800;
-    font-size: clamp(2rem, 6vw, 3rem);
-    letter-spacing: -0.02em;
-    line-height: 1;
+    display: block;
+    width: clamp(220px, 38vw, 420px);
+    height: auto;
+    margin: 0 auto var(--space-4, 1rem);
     color: var(--atom-text, #e8e8ea);
-    display: inline-flex;
-    gap: 0.04em;
-    margin-bottom: var(--space-4, 1rem);
+    filter: drop-shadow(0 0 24px rgba(0, 200, 200, 0.35));
   }
-  #atom-loader .atom-loader__mark span:nth-child(3) {
-    color: var(--atom-primary, #00c8c8);
-    text-shadow: 0 0 18px rgba(0, 200, 200, 0.5);
-  }
-  #atom-loader .atom-loader__mark span {
-    opacity: 0;
-    transform: translateY(0.4em);
-    animation: atom-reveal-fade 600ms var(--ease-atom, cubic-bezier(0.16,1,0.3,1)) forwards;
-  }
-  #atom-loader .atom-loader__mark span:nth-child(1) { animation-delay: 200ms; }
-  #atom-loader .atom-loader__mark span:nth-child(2) { animation-delay: 340ms; }
-  #atom-loader .atom-loader__mark span:nth-child(3) { animation-delay: 480ms; }
-  #atom-loader .atom-loader__mark span:nth-child(4) { animation-delay: 620ms; }
+  #atom-loader .atom-loader__mark svg { display: block; width: 100%; height: auto; }
 
   #atom-loader .atom-loader__caption {
     font-family: var(--atom-font-mono, 'JetBrains Mono', ui-monospace, monospace);
@@ -152,8 +137,16 @@
       </svg>
       <div class="atom-loader__nucleus"></div>
     </div>
-    <div class="atom-loader__mark" aria-label="ΔTOM">
-      <span>Δ</span><span>T</span><span>O</span><span>M</span>
+    <div class="atom-loader__mark" role="img" aria-label="ΔTOM">
+      <svg viewBox="0 0 640 160" preserveAspectRatio="xMidYMid meet">
+        <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+          <polygon points="70,130 10,130 40,30" stroke="currentColor" stroke-width="14"/>
+          <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" stroke-width="14"/>
+          <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" stroke-width="14"/>
+          <circle cx="320" cy="83" r="50" stroke="var(--atom-primary, #00c8c8)" stroke-width="14"/>
+          <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" stroke-width="14"/>
+        </g>
+      </svg>
     </div>
     <div class="atom-loader__caption">
       <span class="atom-loader__mantra-word atom-loader__mantra-word--accent">PRECISION.</span>

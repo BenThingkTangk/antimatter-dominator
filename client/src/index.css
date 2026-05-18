@@ -1147,6 +1147,7 @@
 }
 .dtom-loader__word { color: #edf8f8; }
 .dtom-loader__word-o { color: #00e6d3; text-shadow: 0 0 28px rgba(0,230,211,0.55); }
+.dtom-loader__wordmark { color: #edf8f8; }
 .dtom-loader__corner { border-color: #00c8c8; }
 .dtom-loader__scanline-beam {
   background: linear-gradient(90deg, transparent, #00e6d3, transparent) !important;

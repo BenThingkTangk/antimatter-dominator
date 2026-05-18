@@ -587,22 +587,31 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
   const enrichMutation = useMutation({
     mutationFn: async (ids: number[]) =>
-      (await apiRequest("POST", `/api/campaigns/${id}/enrich`, { accountIds: ids })).json(),
+      (await apiRequest("POST", `/api/campaigns/${id}/enrich`, ids.length > 0 ? { accountIds: ids } : {})).json(),
     onSuccess: (res) => {
-      toast({ title: "Enrichment queued", description: `${res.queued} accounts → ATOM enrichment running.` });
+      const n = res.enriched ?? res.queued ?? res.attempted ?? 0;
+      toast({
+        title: "Enrichment complete",
+        description: `${n} accounts enriched via ${(res.pipeline || []).join(" → ") || "ATOM pipeline"}.`,
+      });
       qc.invalidateQueries({ queryKey: [`/api/campaigns/${id}/accounts`] });
       setSelected(new Set());
     },
-    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Enrichment failed", description: e.message, variant: "destructive" }),
   });
 
   const pushMutation = useMutation({
-    mutationFn: async (target: string) =>
-      (await apiRequest("POST", `/api/campaigns/${id}/push`, { accountIds: Array.from(selected), target })).json(),
+    mutationFn: async (target: string) => {
+      const ids = Array.from(selected);
+      const effective = ids.length > 0 ? ids : (accounts || []).map((a) => a.id);
+      return (await apiRequest("POST", `/api/campaigns/${id}/push`, { accountIds: effective, target })).json();
+    },
     onSuccess: (res) => {
       toast({ title: "Pushed", description: `${res.pushed} accounts → ${res.target}.` });
+      qc.invalidateQueries({ queryKey: [`/api/campaigns/${id}/accounts`] });
       setSelected(new Set());
     },
+    onError: (e: any) => toast({ title: "Push failed", description: e.message, variant: "destructive" }),
   });
 
   const tierCounts = useMemo(() => {
@@ -634,22 +643,25 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
         </div>
         <div className="flex gap-2">
           <Button
-            disabled={selected.size === 0 || enrichMutation.isPending}
+            disabled={enrichMutation.isPending}
             onClick={() => enrichMutation.mutate(Array.from(selected))}
             className="bg-[#3e3f7e] hover:bg-[#4c4dac]"
             data-testid="button-enrich-selected"
+            title={selected.size > 0 ? `Enrich ${selected.size} selected` : "Enrich all pending accounts (up to 20)"}
           >
             {enrichMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Enrich {selected.size > 0 && `(${selected.size})`}
+            Enrich {selected.size > 0 ? `(${selected.size})` : "all pending"}
           </Button>
           <Button
-            disabled={selected.size === 0}
+            disabled={pushMutation.isPending || (accounts?.length || 0) === 0}
             onClick={() => pushMutation.mutate("prospects")}
             variant="outline"
             className="border-[#3e3f7e] hover:bg-[#3e3f7e]/20"
             data-testid="button-push-selected"
+            title={selected.size > 0 ? `Push ${selected.size} selected to Prospects` : `Push all ${accounts?.length || 0} visible accounts to Prospects`}
           >
-            <Send className="w-4 h-4 mr-2" /> Push to Prospects
+            {pushMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+            Push to Prospects {selected.size > 0 ? `(${selected.size})` : ""}
           </Button>
         </div>
       </div>
@@ -709,9 +721,9 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
                       </td>
                       <td className="p-2 text-xs text-[#a2a3e9]/70 max-w-md truncate">{a.whyNow || ""}</td>
                       <td className="p-2 text-center text-xs">
-                        {a.enrichStatus === "done" ? <CheckCircle2 className="w-4 h-4 text-[#a2a3e9] mx-auto" />
+                        {(a.enrichStatus === "ok" || a.enrichStatus === "done") ? <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto" data-testid={`enrich-ok-${a.id}`} />
                           : a.enrichStatus === "running" ? <Loader2 className="w-4 h-4 animate-spin mx-auto text-[#696aac]" />
-                          : a.enrichStatus === "failed" ? <span className="text-red-400">!</span>
+                          : a.enrichStatus === "failed" ? <span className="text-red-400" title="failed">!</span>
                           : <span className="text-[#a2a3e9]/40">—</span>}
                       </td>
                     </tr>

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AtomMarkSVG } from './DtomLogo.internal';
 
 /**
  * DtomBootLoader
@@ -91,10 +90,43 @@ export function DtomBootLoader({
 
       <div className="dtom-loader__core">
         <div className="dtom-loader__logo-wrap">
-          <AtomMarkSVG spinning={!reducedMotion} />
-          <span className="dtom-loader__word" aria-hidden="true">
-            ΔT<span className="dtom-loader__word-o">O</span>M
-          </span>
+          <svg
+            className="dtom-loader__wordmark"
+            viewBox="0 0 640 160"
+            role="img"
+            aria-label="ΔTOM"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <title>ΔTOM</title>
+            <g className="dtom-loader__wordmark-glyphs" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+              {/* Δ — Greek capital Delta as a thick stroked triangle outline */}
+              <polygon
+                points="70,130 10,130 40,30"
+                stroke="currentColor"
+                strokeWidth="14"
+                fill="none"
+              />
+              {/* T — top bar + stem */}
+              <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
+              <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
+              {/* O — teal ring, same cap-height as the other glyphs */}
+              <circle
+                cx="320"
+                cy="83"
+                r="50"
+                stroke="var(--dtom-color-primary, #00e6d3)"
+                strokeWidth="14"
+                fill="none"
+              />
+              {/* M — two verticals joined by a centered V */}
+              <polyline
+                points="410,130 410,37 470,110 530,37 530,130"
+                stroke="currentColor"
+                strokeWidth="14"
+                fill="none"
+              />
+            </g>
+          </svg>
         </div>
 
         <div className="dtom-loader__scanline" aria-hidden="true">
