@@ -47,6 +47,31 @@ export default function LandingPage() {
         secondaryCta={{ label: "Run Live Demo", href: "/#/pitch?demo=1" }}
       />
 
+      {/* ATOM design-system wordmark band — uses Unicode Δ U+0394 and the
+          canonical .atom-wordmark / .atom-wordmark__o classes from
+          @nirmata/atom-design-system so the teal O is rendered by the
+          design system itself, not hard-coded in this file. */}
+      <section className="px-6 md:px-10 pt-4 pb-10 max-w-5xl mx-auto text-center">
+        <span className="eyebrow" style={{ justifyContent: "center" }}>ATOM Design System · v1</span>
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <span className="atom-wordmark" style={{ fontSize: "var(--text-2xl)" }}>
+            <span>Δ</span>
+            <span>T</span>
+            <span className="atom-wordmark__o">O</span>
+            <span>M</span>
+          </span>
+        </div>
+        <p className="muted" style={{ marginTop: "var(--space-3)", fontSize: "var(--text-sm)" }}>
+          Cinematic dark-first tokens, motion primitives, and component primitives shared across the ΔTOM suite.
+        </p>
+        <div className="row" style={{ justifyContent: "center", marginTop: "var(--space-4)" }}>
+          <span className="tag tag--teal">Tokens</span>
+          <span className="tag tag--claude">Components</span>
+          <span className="tag tag--gpt">Motion</span>
+          <span className="status-badge"><span aria-hidden>●</span> Live</span>
+        </div>
+      </section>
+
       {/* Feature tiles */}
       <section className="px-6 md:px-10 pb-24 max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,7 +81,7 @@ export default function LandingPage() {
               <a
                 key={f.title}
                 href={`/#${f.href}`}
-                className="atom-card group flex items-start gap-4 cursor-pointer"
+                className="atom-card arch-node group flex items-start gap-4 cursor-pointer"
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
