@@ -1,542 +1,625 @@
 /**
- * VibraniumShell — GA Readiness Console
+ * VibraniumShell — Vibranium GA Console (rewrite · May 2026)
  *
- * Standalone 7-tab shell for the /admin/vibranium-ga route.
- * Tabs: Roadmap · Voice Realism · Akamai Blackwell · Telephony Upgrade
- *       Multi-Channel · Competitive Intel · GA Earnings Forecast
+ * Single-route command center for the path from where ATOM Sales Dominator
+ * is today to general availability. Wired into:
+ *   GET /api/vibranium/competitive  (Perplexity Sonar Pro, live, 6h cache)
+ *   POST /api/vibranium/projection  (multi-scenario ARR + earnings model)
  *
- * Architecture mirrors AdminShell.tsx but is self-contained (no lazy
- * sub-modules) to keep the bundle clean. Uses identical chart primitives,
- * color tokens, and tab-strip chrome as the existing admin layer.
+ * Tabs (in execution order):
+ *   1. GA Path        — the single quarter-by-quarter roadmap with health
+ *   2. Infrastructure — Akamai Blackwell + telephony + edge readiness
+ *   3. Voice Engine   — Hume + Telnyx + Deepgram capability matrix
+ *   4. Channels       — voice / SMS / email / DM / chat coverage
+ *   5. Competitive    — live competitive matrix + share-of-voice
+ *   6. Forecast       — 3-scenario ARR projection with assumption knobs
+ *   7. Risks          — what could blow us up + mitigations
+ *
+ * Visual: pure @nirmata/atom-design-system tokens, no hard-coded hex.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
-  Map, Mic, Cpu, Phone, Layers, Crosshair, TrendingUp, KeyRound,
+  Rocket, Cpu, Mic, Layers, Crosshair, TrendingUp, ShieldAlert,
+  KeyRound, RefreshCw, ArrowUpRight, Calendar, AlertTriangle, CheckCircle2,
+  Clock, Circle, ChevronRight, BadgeCheck, Zap, Globe, MessageSquare,
 } from "lucide-react";
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  ResponsiveContainer, LineChart, Line, BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, Tooltip, CartesianGrid, Legend, RadarChart,
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
-import {
-  ATOM_TEAL, ATOM_AMBER, ATOM_GREEN, ATOM_DANGER, ATOM_PURPLE,
-  ATOM_MUTED, ATOM_FAINT, ATOM_TEXT,
-  KpiCard, ChartCard, AreaStack, BarStack, EmptyState,
-} from "./charts";
+import { KpiCard, ChartCard, EmptyState } from "./charts";
 import { useAdminKey } from "./AdminShell";
 import { useAdminQuery } from "./useAdminApi";
 import { useSessionContext } from "../auth/AuthGate";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Constants
+// Canonical brand tokens — all read from @nirmata/atom-design-system
+// (--atom-* are loaded globally in main.tsx). Keep these references named
+// so the rest of the file reads cleanly.
 // ─────────────────────────────────────────────────────────────────────────────
-const ATOM_GOLD = "#ffd166";
+const t = {
+  primary:  "var(--atom-primary, #00c8c8)",
+  primaryDim: "var(--atom-primary-dim, #00989c)",
+  text:     "var(--atom-text, #e8e8ea)",
+  muted:    "var(--atom-text-muted, #8a8a96)",
+  faint:    "var(--atom-text-faint, #4a4a55)",
+  bg:       "var(--atom-bg, #0b0b0c)",
+  surface1: "var(--atom-surface-1, #111113)",
+  surface2: "var(--atom-surface-2, #161618)",
+  border:   "var(--atom-border, rgba(255,255,255,0.08))",
+  borderStrong: "var(--atom-border-strong, rgba(255,255,255,0.14))",
+  claude:   "var(--atom-accent-claude, #c084fc)",
+  hume:     "var(--atom-accent-hume,   #ff7b6b)",
+  samba:    "var(--atom-accent-samba,  #f5c842)",
+  gpt:      "var(--atom-accent-gpt,    #74c0fc)",
+  success:  "var(--atom-success, #4ade80)",
+  warning:  "var(--atom-warning, #f5c842)",
+  danger:   "var(--atom-danger,  #ff7b6b)",
+  grid:     "rgba(255,255,255,0.05)",
+};
 
+const FONT_MONO = "var(--atom-font-mono, 'JetBrains Mono', ui-monospace, monospace)";
+const FONT_DISPLAY = "var(--atom-font-display, 'Cabinet Grotesk', system-ui, sans-serif)";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab definitions
+// ─────────────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "roadmap",       label: "Roadmap",            icon: Map },
-  { id: "voice",         label: "Voice Realism",       icon: Mic },
-  { id: "blackwell",     label: "Akamai Blackwell",    icon: Cpu },
-  { id: "telephony",     label: "Telephony Upgrade",   icon: Phone },
-  { id: "multichannel",  label: "Multi-Channel",       icon: Layers },
-  { id: "competitive",   label: "Competitive Intel",   icon: Crosshair },
-  { id: "forecast",      label: "GA Earnings Forecast",icon: TrendingUp },
+  { id: "path",          label: "GA Path",       icon: Rocket },
+  { id: "infra",         label: "Infrastructure", icon: Cpu },
+  { id: "voice",         label: "Voice Engine",   icon: Mic },
+  { id: "channels",      label: "Channels",       icon: Layers },
+  { id: "competitive",   label: "Competitive",    icon: Crosshair },
+  { id: "forecast",      label: "Forecast",       icon: TrendingUp },
+  { id: "risks",         label: "Risks",          icon: ShieldAlert },
 ] as const;
+type TabId = (typeof TABS)[number]["id"];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Badge
+// Primitives
 // ─────────────────────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: "done" | "in-progress" | "pending" | "blocked" }) {
-  const map: Record<string, { label: string; color: string }> = {
-    "done":        { label: "DONE",        color: ATOM_GREEN },
-    "in-progress": { label: "IN-PROGRESS", color: ATOM_AMBER },
-    "pending":     { label: "PENDING",     color: ATOM_MUTED },
-    "blocked":     { label: "BLOCKED",     color: ATOM_DANGER },
-  };
-  const { label, color } = map[status] ?? map["pending"];
+function Panel({
+  children, style, accent, padded = true,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  accent?: string;
+  padded?: boolean;
+}) {
   return (
-    <span style={{
-      display: "inline-block",
-      padding: "2px 8px",
-      borderRadius: 6,
-      fontSize: 10,
-      fontFamily: "var(--font-mono)",
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      fontWeight: 700,
-      color,
-      background: `${color}18`,
-      border: `1px solid ${color}44`,
-    }}>{label}</span>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Effort badge
-// ─────────────────────────────────────────────────────────────────────────────
-function EffortBadge({ effort }: { effort: "S" | "M" | "L" | "XL" }) {
-  const col = effort === "S" ? ATOM_GREEN : effort === "M" ? ATOM_TEAL : effort === "L" ? ATOM_AMBER : ATOM_PURPLE;
-  return (
-    <span style={{
-      display: "inline-block", padding: "2px 7px", borderRadius: 6,
-      fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700,
-      color: col, background: `${col}18`, border: `1px solid ${col}44`,
-    }}>{effort}</span>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Card shell
-// ─────────────────────────────────────────────────────────────────────────────
-function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      background: "linear-gradient(180deg, rgba(15,22,27,0.92), rgba(10,16,20,0.92))",
-      border: "1px solid rgba(255,255,255,0.06)",
-      borderRadius: 16, padding: 18, ...style,
-    }}>
+    <div
+      style={{
+        background: `linear-gradient(180deg, ${t.surface1} 0%, ${t.bg} 100%)`,
+        border: `1px solid ${t.border}`,
+        borderRadius: 14,
+        borderTop: accent ? `2px solid ${accent}` : undefined,
+        padding: padded ? 18 : 0,
+        ...style,
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function PanelTitle({ children }: { children: React.ReactNode }) {
+function Eyebrow({ children, color }: { children: React.ReactNode; color?: string }) {
+  return (
+    <div
+      style={{
+        fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.18em",
+        textTransform: "uppercase", fontWeight: 700,
+        color: color || t.muted, marginBottom: 12,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em",
-      textTransform: "uppercase", color: ATOM_MUTED, marginBottom: 14,
+      fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 700,
+      color: t.text, marginBottom: 6, letterSpacing: "-0.01em",
     }}>{children}</div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Table helpers
-// ─────────────────────────────────────────────────────────────────────────────
-const TH_STYLE: React.CSSProperties = {
-  fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em",
-  textTransform: "uppercase", color: ATOM_FAINT, padding: "8px 12px",
-  textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.06)",
-  whiteSpace: "nowrap",
-};
-const TD_STYLE: React.CSSProperties = {
-  padding: "9px 12px", fontSize: 12, color: ATOM_TEXT, verticalAlign: "middle",
-  borderBottom: "1px solid rgba(255,255,255,0.04)",
+const STATUS_TONES: Record<string, { color: string; label: string }> = {
+  done:         { color: "var(--atom-success, #4ade80)", label: "DONE" },
+  shipped:      { color: "var(--atom-success, #4ade80)", label: "SHIPPED" },
+  on_track:     { color: "var(--atom-primary, #00c8c8)", label: "ON TRACK" },
+  in_progress:  { color: "var(--atom-warning, #f5c842)", label: "IN PROGRESS" },
+  at_risk:      { color: "var(--atom-warning, #f5c842)", label: "AT RISK" },
+  pending:      { color: "var(--atom-text-muted, #8a8a96)", label: "PENDING" },
+  blocked:      { color: "var(--atom-danger, #ff7b6b)", label: "BLOCKED" },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 1 — Roadmap
-// ─────────────────────────────────────────────────────────────────────────────
-type RoadmapItem = {
-  title: string; effort: "S" | "M" | "L" | "XL"; owner: string; eta: string;
-  status: "done" | "in-progress" | "pending" | "blocked";
-};
-
-const ROADMAP_ITEMS: { sprint: string; items: RoadmapItem[] }[] = [
-  {
-    sprint: "Sprint 1",
-    items: [
-      { title: "Hume Octave → Octave 2",         effort: "S", owner: "Voice Team",   eta: "Q2 2026", status: "done" },
-      { title: "pplx-embed-v1 integration",       effort: "S", owner: "RAG Team",    eta: "Q2 2026", status: "done" },
-      { title: "Arize Phoenix + Langfuse setup",  effort: "S", owner: "Infra Team",  eta: "Q2 2026", status: "done" },
-      { title: "Sonar best practices",            effort: "S", owner: "AI Team",     eta: "Q2 2026", status: "done" },
-      { title: "GPT-5 routing for enrichment",    effort: "S", owner: "AI Team",     eta: "Q2 2026", status: "done" },
-    ],
-  },
-  {
-    sprint: "Sprint 2",
-    items: [
-      { title: "Twilio → Telnyx migration",       effort: "M", owner: "Telephony",   eta: "Q3 2026", status: "in-progress" },
-      { title: "Pinecone → Turbopuffer",          effort: "M", owner: "RAG Team",    eta: "Q3 2026", status: "in-progress" },
-      { title: "Agent API integration",           effort: "M", owner: "AI Team",     eta: "Q3 2026", status: "in-progress" },
-      { title: "MCP servers (Apollo/Hunter/PDL)", effort: "M", owner: "Integrations",eta: "Q3 2026", status: "in-progress" },
-      { title: "Trestle + Numeracle compliance",  effort: "M", owner: "Compliance",  eta: "Q3 2026", status: "in-progress" },
-    ],
-  },
-  {
-    sprint: "Sprint 3",
-    items: [
-      { title: "Nemotron 3 Nano NIM on Akamai",   effort: "L", owner: "Infra Team",  eta: "Q4 2026", status: "pending" },
-      { title: "Pipecat voice pipeline refactor",  effort: "L", owner: "Voice Team",  eta: "Q4 2026", status: "pending" },
-      { title: "LangGraph orchestration (eval)",   effort: "L", owner: "AI Team",     eta: "Q4 2026", status: "pending" },
-    ],
-  },
-  {
-    sprint: "Sprint 4",
-    items: [
-      { title: "EVI 3 unified STT+LLM+TTS spine",    effort: "XL", owner: "Voice Team", eta: "Q1 2027", status: "pending" },
-      { title: "LangGraph full checkpointing deploy", effort: "XL", owner: "AI Team",    eta: "Q1 2027", status: "pending" },
-    ],
-  },
-];
-
-const SPRINT_COLORS: Record<string, string> = {
-  "Sprint 1": ATOM_GREEN,
-  "Sprint 2": ATOM_TEAL,
-  "Sprint 3": ATOM_AMBER,
-  "Sprint 4": ATOM_PURPLE,
-};
-
-function TabRoadmap() {
+function StatusBadge({ status }: { status: keyof typeof STATUS_TONES }) {
+  const tone = STATUS_TONES[status] ?? STATUS_TONES.pending;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        {ROADMAP_ITEMS.map(({ sprint, items }) => {
-          const accentColor = SPRINT_COLORS[sprint] ?? ATOM_TEAL;
-          return (
-            <Panel key={sprint} style={{ borderTop: `2px solid ${accentColor}` }}>
-              <div style={{
-                fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em",
-                textTransform: "uppercase", color: accentColor, marginBottom: 14, fontWeight: 700,
-              }}>{sprint}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {items.map((item) => (
-                  <div key={item.title} style={{
-                    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 12, padding: "12px 14px",
-                  }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: ATOM_TEXT, marginBottom: 8 }}>
-                      {item.title}
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                      <EffortBadge effort={item.effort} />
-                      <StatusBadge status={item.status} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: ATOM_FAINT, marginLeft: "auto" }}>
-                        {item.owner} · {item.eta}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          );
-        })}
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "3px 8px", borderRadius: 6,
+      fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+      letterSpacing: "0.08em",
+      color: tone.color,
+      background: `color-mix(in oklab, ${tone.color} 12%, transparent)`,
+      border: `1px solid color-mix(in oklab, ${tone.color} 28%, transparent)`,
+    }}>{tone.label}</span>
+  );
+}
+
+function EffortBadge({ effort }: { effort: "S" | "M" | "L" | "XL" }) {
+  const col = effort === "S" ? t.success : effort === "M" ? t.primary : effort === "L" ? t.warning : t.claude;
+  return (
+    <span style={{
+      display: "inline-block", padding: "2px 7px", borderRadius: 6,
+      fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+      color: col,
+      background: `color-mix(in oklab, ${col} 12%, transparent)`,
+      border: `1px solid color-mix(in oklab, ${col} 28%, transparent)`,
+    }}>{effort}</span>
+  );
+}
+
+function MiniKpi({
+  label, value, sub, tone,
+}: {
+  label: string; value: string | number; sub?: string; tone?: string;
+}) {
+  return (
+    <div style={{
+      padding: "14px 16px",
+      background: t.surface2,
+      border: `1px solid ${t.border}`,
+      borderRadius: 12,
+    }}>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: "0.18em", color: t.muted, marginBottom: 6, textTransform: "uppercase" }}>
+        {label}
       </div>
+      <div style={{
+        fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 24, lineHeight: 1,
+        color: tone || t.text, letterSpacing: "-0.02em",
+      }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: t.faint, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 2 — Voice Realism
+// TAB 1 — GA Path (replaces old Roadmap)
+// May 2026 reality: voice stack v2 live, app brand-system swap shipped,
+// Blackwell GPU provisioning underway, target GA Q3 2026.
 // ─────────────────────────────────────────────────────────────────────────────
-const VOICE_BEHAVIORS = [
-  { behavior: "Pickup detection",           status: "done",        driver: "Hume EVI vocal end-of-turn",         param: "pickup_gate=true in Hume config 3c6f8a5b" },
-  { behavior: "Background noise recovery",  status: "in-progress", driver: "ASR confidence threshold",           param: "confidence < 0.4 → say('sorry, what was that?')" },
-  { behavior: "Sub-200ms barge-in",         status: "done",        driver: "Hume EVI 4 turn detection",          param: "built-in" },
-  { behavior: "Voicemail drop",             status: "done",        driver: "AMD → leave_voicemail() trigger",    param: "amd_timeout=3200ms" },
-  { behavior: "Tone naturalness (prosody)", status: "in-progress", driver: "Octave 2 TTS prosody controls",      param: "speed=0.98, pitch_variance=1.1" },
-  { behavior: "Emotion-aware pacing",       status: "done",        driver: "Hume EVI emotion scores",            param: "if anger > 0.6 → slow_down()" },
-  { behavior: "Objection interruption",     status: "done",        driver: "Custom barge-in handler",            param: "ATOM_OBJECTION_GATE=true" },
-  { behavior: "Multi-lingual switch",       status: "pending",     driver: "Deepgram Nova-3 language detection", param: "lang_detect=auto, fallback=en" },
-  { behavior: "DTMF keypress handling",     status: "done",        driver: "Telnyx media fork",                  param: "dtmf_mode=RFC 2833" },
-  { behavior: "Echo cancellation",          status: "done",        driver: "Telnyx + WebRTC AEC",                param: "echo_cancel=true" },
-  { behavior: "Hold music / transfer",      status: "in-progress", driver: "Telnyx TeXML <Play> + <Transfer>",   param: "hold_music_url=s3://atom-hold/loop.mp3" },
-  { behavior: "Post-call transcript",       status: "done",        driver: "Deepgram Nova-3 async batch",        param: "transcript_format=vtt, min_confidence=0.75" },
-] as const;
+const GA_QUARTERS = [
+  {
+    quarter: "Q2 2026",
+    label: "Current — Pre-GA",
+    timeframe: "Apr — Jun 2026",
+    health: "on_track" as const,
+    progress: 78,
+    color: "var(--atom-primary, #00c8c8)",
+    pillars: [
+      { title: "ATOM module suite (Pitch, Objection, Market, Prospect, Lead Gen, Campaign, WarBook, War Room)", status: "shipped" as const, effort: "XL" as const },
+      { title: "Voice Stack v2 (Hume EVI 4 + Claude Sonnet 4.5)", status: "shipped" as const, effort: "L" as const },
+      { title: "@nirmata/atom-design-system v1.0 brand rollout", status: "shipped" as const, effort: "M" as const },
+      { title: "Akamai EdgeWorker 6-layer scaffold", status: "shipped" as const, effort: "L" as const },
+      { title: "Edge layer activation on Akamai staging", status: "in_progress" as const, effort: "M" as const },
+      { title: "Blackwell GPU (RTX PRO 6000) on Linode 97453485 — provisioned, awaiting drivers", status: "in_progress" as const, effort: "L" as const },
+      { title: "Apollo plan upgrade / mixed_people scope (unblocks Campaign + Prospect)", status: "blocked" as const, effort: "S" as const },
+    ],
+  },
+  {
+    quarter: "Q3 2026",
+    label: "GA Launch",
+    timeframe: "Jul — Sep 2026",
+    health: "on_track" as const,
+    progress: 12,
+    color: "var(--atom-accent-samba, #f5c842)",
+    pillars: [
+      { title: "SOC 2 Type I audit kickoff (Vanta)", status: "pending" as const, effort: "L" as const },
+      { title: "Apollo replacement evaluation (PDL primary + ZoomInfo enterprise fallback)", status: "in_progress" as const, effort: "M" as const },
+      { title: "Multi-tenant Hume sub-config provisioning at scale", status: "in_progress" as const, effort: "M" as const },
+      { title: "Self-serve onboarding + Stripe checkout for Starter/Growth tiers", status: "pending" as const, effort: "L" as const },
+      { title: "Public ATOM Sales Dominator launch (PH, X, LinkedIn)", status: "pending" as const, effort: "M" as const },
+      { title: "First 50 paying tenants milestone", status: "pending" as const, effort: "XL" as const },
+    ],
+  },
+  {
+    quarter: "Q4 2026",
+    label: "Scale + Enterprise",
+    timeframe: "Oct — Dec 2026",
+    health: "pending" as const,
+    progress: 0,
+    color: "var(--atom-accent-claude, #c084fc)",
+    pillars: [
+      { title: "SOC 2 Type I report (covers SOC 2 Type II observation window start)", status: "pending" as const, effort: "L" as const },
+      { title: "Enterprise self-serve SSO (Okta / Azure AD)", status: "pending" as const, effort: "L" as const },
+      { title: "Federated multi-region deploy (Akamai EU)", status: "pending" as const, effort: "M" as const },
+      { title: "Compliance addons: GDPR Article 32, CCPA, HIPAA BAA", status: "pending" as const, effort: "M" as const },
+      { title: "Voice Foundry: custom-cloned voices per tenant", status: "pending" as const, effort: "L" as const },
+      { title: "First Enterprise tier paying tenant ($120k+ ACV)", status: "pending" as const, effort: "XL" as const },
+    ],
+  },
+  {
+    quarter: "Q1 2027",
+    label: "Mature GA",
+    timeframe: "Jan — Mar 2027",
+    health: "pending" as const,
+    progress: 0,
+    color: "var(--atom-accent-hume, #ff7b6b)",
+    pillars: [
+      { title: "SOC 2 Type II audit (6-month observation closes)", status: "pending" as const, effort: "L" as const },
+      { title: "ISO 27001 readiness", status: "pending" as const, effort: "XL" as const },
+      { title: "Partner channel program (Akamai, Twilio Build Partners, Vercel)", status: "pending" as const, effort: "M" as const },
+      { title: "Industry verticals: healthcare (HIPAA), FSI (FINRA Rule 4511)", status: "pending" as const, effort: "L" as const },
+      { title: "$5M ARR run-rate exit Q1 2027 (base scenario)", status: "pending" as const, effort: "XL" as const },
+    ],
+  },
+];
+
+function TabGaPath() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      {/* Top-line metric strip */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: 12,
+      }}>
+        <MiniKpi label="GA Target"     value="Q3 2026" sub="Jul — Sep window" />
+        <MiniKpi label="Days to GA"    value={daysUntil("2026-07-01")} sub="business + cal days" tone={t.warning} />
+        <MiniKpi label="Pre-GA Health" value="78%" sub="weighted pillar completion" tone={t.success} />
+        <MiniKpi label="Open Blockers" value="1" sub="Apollo people-search scope" tone={t.danger} />
+        <MiniKpi label="Shipped This Q" value="5 / 7" sub="Q2 2026 pillars" />
+      </div>
+
+      {/* Quarter pillars */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: 16,
+      }}>
+        {GA_QUARTERS.map((q) => (
+          <Panel key={q.quarter} accent={q.color}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
+              <Eyebrow color={q.color}>{q.quarter}</Eyebrow>
+              <StatusBadge status={q.health} />
+            </div>
+            <SectionTitle>{q.label}</SectionTitle>
+            <div style={{ fontSize: 12, color: t.muted, marginBottom: 14 }}>{q.timeframe}</div>
+
+            {/* Progress bar */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Progress</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: q.color, fontWeight: 700 }}>{q.progress}%</span>
+              </div>
+              <div style={{ height: 4, background: t.surface2, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{
+                  width: `${q.progress}%`, height: "100%",
+                  background: `linear-gradient(90deg, ${q.color} 0%, color-mix(in oklab, ${q.color} 60%, transparent) 100%)`,
+                  transition: "width 600ms ease",
+                }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {q.pillars.map((p) => (
+                <div key={p.title} style={{
+                  background: t.surface2,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 10, padding: "10px 12px",
+                  display: "flex", flexDirection: "column", gap: 6,
+                }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text, lineHeight: 1.35 }}>{p.title}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <StatusBadge status={p.status} />
+                    <EffortBadge effort={p.effort} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function daysUntil(dateStr: string): string {
+  const target = new Date(dateStr + "T00:00:00Z").getTime();
+  const now = Date.now();
+  const days = Math.max(0, Math.round((target - now) / 86400000));
+  return `${days}d`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 2 — Infrastructure (Akamai Blackwell + telephony + edge)
+// ─────────────────────────────────────────────────────────────────────────────
+const INFRA_STACK = [
+  {
+    layer: "Edge",
+    name: "Akamai EdgeWorker (6-layer)",
+    purpose: "Bot defense · session affinity · signal streaming · GDPR geo · cache",
+    status: "shipped" as const,
+    detail: "feat/akamai-edge-workers branch · 54/54 tests · awaiting prod activation",
+    color: "var(--atom-primary, #00c8c8)",
+  },
+  {
+    layer: "Compute",
+    name: "Linode 97453485 · Blackwell GPU",
+    purpose: "Hume EVI inference + Voice Foundry custom TTS",
+    status: "in_progress" as const,
+    detail: "RTX PRO 6000 Blackwell · 192.155.92.4 · drivers + NCCL pending Akamai (Brandon)",
+    color: "var(--atom-accent-samba, #f5c842)",
+  },
+  {
+    layer: "Compute (fallback)",
+    name: "Linode 95104461 · atom-voice-bridge",
+    purpose: "Hume EVI bridge — stable production traffic",
+    status: "shipped" as const,
+    detail: "Live, do not touch — Twilio media fork landing zone",
+    color: "var(--atom-success, #4ade80)",
+  },
+  {
+    layer: "Storage / DB",
+    name: "Supabase Postgres + pgvector",
+    purpose: "Multi-tenant data + RAG memory · 1024-dim Perplexity embeddings",
+    status: "shipped" as const,
+    detail: "Project tzwpjxyqdlgcvgownxno · row-level security per tenant slug",
+    color: "var(--atom-success, #4ade80)",
+  },
+  {
+    layer: "Telephony",
+    name: "Twilio Voice + Conversational Intelligence",
+    purpose: "Outbound dialer + AMD + transcripts",
+    status: "shipped" as const,
+    detail: "+17707469853 · TwiML media fork to Hume",
+    color: "var(--atom-success, #4ade80)",
+  },
+  {
+    layer: "Telephony (eval)",
+    name: "Telnyx Voice (alt)",
+    purpose: "Cost-comp evaluation vs Twilio CI; A/B on Q3 cohort",
+    status: "pending" as const,
+    detail: "Spec drafted · sub-account creation Q3 first week",
+    color: "var(--atom-text-muted, #8a8a96)",
+  },
+  {
+    layer: "Hosting",
+    name: "Vercel (Pro)",
+    purpose: "Next-gen ATOM app + edge functions + serverless API",
+    status: "shipped" as const,
+    detail: "atom-dominator-pro.vercel.app · team_jOFE8gFpRi9z9gJXrHUrCGfj",
+    color: "var(--atom-success, #4ade80)",
+  },
+];
+
+const LATENCY_TARGETS = [
+  { stage: "Twilio media in",        currentMs: 35,  targetMs: 50,  status: "on_track" as const },
+  { stage: "Hume EVI ingest",        currentMs: 80,  targetMs: 120, status: "on_track" as const },
+  { stage: "LLM token first",        currentMs: 240, targetMs: 250, status: "at_risk" as const },
+  { stage: "TTS first chunk",        currentMs: 110, targetMs: 200, status: "on_track" as const },
+  { stage: "Twilio media out",       currentMs: 55,  targetMs: 80,  status: "on_track" as const },
+  { stage: "End-to-end (P50)",       currentMs: 520, targetMs: 700, status: "on_track" as const },
+  { stage: "End-to-end (P95)",       currentMs: 890, targetMs: 1100, status: "on_track" as const },
+];
+
+function TabInfra() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12,
+      }}>
+        <MiniKpi label="GPU Status"      value="Provisioning" sub="Blackwell drivers ETA Brandon" tone={t.warning} />
+        <MiniKpi label="Edge Layers"     value="6/6" sub="Akamai EdgeWorker bundle" tone={t.success} />
+        <MiniKpi label="P50 Voice E2E"   value="520ms" sub="target <700ms" tone={t.success} />
+        <MiniKpi label="P95 Voice E2E"   value="890ms" sub="target <1100ms" tone={t.success} />
+        <MiniKpi label="Telephony"       value="Twilio + Telnyx eval" sub="A/B starts Q3" />
+      </div>
+
+      <Panel>
+        <Eyebrow color={t.primary}>Infrastructure Stack</Eyebrow>
+        <SectionTitle>Production topology</SectionTitle>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+          {INFRA_STACK.map((s) => (
+            <div key={s.name} style={{
+              display: "grid",
+              gridTemplateColumns: "120px 1fr auto",
+              gap: 14,
+              alignItems: "center",
+              padding: "14px 16px",
+              background: t.surface2,
+              border: `1px solid ${t.border}`,
+              borderLeft: `3px solid ${s.color}`,
+              borderRadius: 10,
+            }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.16em", color: t.muted, textTransform: "uppercase" }}>
+                {s.layer}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13.5, color: t.text, marginBottom: 4 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>{s.purpose}</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: t.faint }}>{s.detail}</div>
+              </div>
+              <StatusBadge status={s.status} />
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel>
+        <Eyebrow color={t.primary}>Voice Latency Budget</Eyebrow>
+        <SectionTitle>Stage-by-stage measured vs target</SectionTitle>
+        <div style={{ height: 280, marginTop: 14 }}>
+          <ResponsiveContainer>
+            <BarChart data={LATENCY_TARGETS} layout="vertical" margin={{ left: 20, right: 30 }}>
+              <CartesianGrid stroke={t.grid} horizontal={false} />
+              <XAxis type="number" tick={{ fill: t.muted, fontSize: 11, fontFamily: FONT_MONO }} />
+              <YAxis type="category" dataKey="stage" width={140} tick={{ fill: t.muted, fontSize: 11 }} />
+              <Tooltip contentStyle={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: t.muted }} />
+              <Bar dataKey="targetMs"  name="Target (ms)"  fill="var(--atom-text-muted, #8a8a96)" fillOpacity={0.25} />
+              <Bar dataKey="currentMs" name="Current (ms)" fill="var(--atom-primary, #00c8c8)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 3 — Voice Engine
+// ─────────────────────────────────────────────────────────────────────────────
+const VOICE_CAPABILITIES = [
+  { capability: "Pickup detection",       status: "shipped" as const,     stack: "Hume EVI vocal turn-end",            note: "pickup_gate=true · config 3c6f8a5b" },
+  { capability: "Sub-200ms barge-in",     status: "shipped" as const,     stack: "Hume EVI 4 native interruption",     note: "built-in, no tuning needed" },
+  { capability: "Voicemail drop (AMD)",   status: "shipped" as const,     stack: "Twilio AMD → leave_voicemail()",     note: "amd_timeout=3200ms · auto-routes if voicemail" },
+  { capability: "Emotion-aware pacing",   status: "shipped" as const,     stack: "Hume EVI emotion scores",            note: "if anger>0.6 → slow_down() · empathy>0.7 → mirror" },
+  { capability: "Objection interruption", status: "shipped" as const,     stack: "Custom barge-in handler",            note: "ATOM_OBJECTION_GATE=true · 80ms barge cutoff" },
+  { capability: "DTMF keypress",          status: "shipped" as const,     stack: "Twilio media fork",                  note: "RFC 2833 · IVR navigation enabled" },
+  { capability: "Echo cancellation",      status: "shipped" as const,     stack: "Twilio + WebRTC AEC",                note: "echo_cancel=true · double-talk gate=0.85" },
+  { capability: "Post-call transcript",   status: "shipped" as const,     stack: "Deepgram Nova-3 async batch",        note: "VTT format · min_confidence=0.75" },
+  { capability: "Background noise floor", status: "in_progress" as const, stack: "ASR confidence dynamic threshold",   note: "confidence<0.4 → say('sorry, what was that?')" },
+  { capability: "Prosody naturalness",    status: "in_progress" as const, stack: "Octave 2 TTS prosody controls",      note: "speed=0.98 · pitch_variance=1.1 · variance ramp Q3" },
+  { capability: "Hold music + transfer",  status: "in_progress" as const, stack: "Twilio TwiML <Play> + <Dial>",       note: "hold_music_url=s3://atom-hold/loop.mp3" },
+  { capability: "Multi-lingual switch",   status: "pending" as const,     stack: "Deepgram Nova-3 language detect",    note: "lang_detect=auto · fallback=en · Q4 target" },
+  { capability: "Custom-cloned voices",   status: "pending" as const,     stack: "Voice Foundry on Blackwell GPU",     note: "Q4 2026 · gated on Blackwell readiness" },
+];
+
+const VOICE_RADAR = [
+  { axis: "Latency",   atom: 92, top: 95, median: 70 },
+  { axis: "Realism",   atom: 88, top: 92, median: 65 },
+  { axis: "Empathy",   atom: 95, top: 80, median: 50 },
+  { axis: "Barge-in",  atom: 98, top: 95, median: 60 },
+  { axis: "Pickup",    atom: 96, top: 92, median: 70 },
+  { axis: "Voicemail", atom: 100, top: 100, median: 85 },
+  { axis: "Languages", atom: 35, top: 90, median: 60 },
+];
 
 function TabVoice() {
   return (
-    <Panel>
-      <PanelTitle>Voice Realism — API Behavior Matrix (12 behaviors)</PanelTitle>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
-          <thead>
-            <tr>
-              <th style={TH_STYLE}>Behavior</th>
-              <th style={TH_STYLE}>Status</th>
-              <th style={TH_STYLE}>Driver</th>
-              <th style={TH_STYLE}>Tunable Parameter</th>
-            </tr>
-          </thead>
-          <tbody>
-            {VOICE_BEHAVIORS.map((row) => (
-              <tr key={row.behavior} style={{ transition: "background 120ms" }}>
-                <td style={{ ...TD_STYLE, fontWeight: 600 }}>{row.behavior}</td>
-                <td style={TD_STYLE}><StatusBadge status={row.status as any} /></td>
-                <td style={{ ...TD_STYLE, color: ATOM_MUTED }}>{row.driver}</td>
-                <td style={{ ...TD_STYLE }}>
-                  <code style={{
-                    fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL,
-                    background: "rgba(105,106,172,0.06)", borderRadius: 4, padding: "2px 5px",
-                  }}>{row.param}</code>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 3 — Akamai Blackwell
-// ─────────────────────────────────────────────────────────────────────────────
-const DEPLOYMENT_MANIFEST = {
-  linode_type: "g8g-rtx-pro-6000",
-  model: "nemotron-3-nano:latest",
-  image: "nvcr.io/nim/nvidia/nemotron-3-nano:latest",
-  region: "us-lax",
-  autoscale: {
-    min_nodes: 1,
-    max_nodes: 8,
-    scale_up_threshold_gpu_pct: 70,
-    scale_down_threshold_gpu_pct: 20,
-    cooldown_seconds: 120,
-  },
-  caddy_upstream: "http://localhost:8000",
-  cert_provider: "sslip.io",
-};
-
-const RUNBOOK_STEPS = [
-  "Provision Akamai Linode GPU instance with RTX PRO 6000 Blackwell",
-  "Install NVIDIA drivers + Docker + nvidia-container-toolkit",
-  "Pull `nvcr.io/nim/nvidia/nemotron-3-nano:latest` from NGC",
-  "Mount fine-tuning volume at /mnt/models",
-  "Configure Caddy reverse proxy with sslip.io TLS certificate",
-  "Update RAG_URL env var on Vercel deployment settings",
-  "Add Vercel Edge Config entry routing to nearest Linode GPU node",
-  "Smoke-test with `curl /api/atom-leadgen/call` to a test number",
-];
-
-function TabBlackwell() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* GPU Spec cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-        <KpiCard label="GDDR7 VRAM" value="96 GB" sub="RTX PRO 6000 Blackwell" tone="success" />
-        <KpiCard label="vs H100 Throughput" value="1.63×" sub="NVFP4 on Blackwell" tone="success" />
-        <KpiCard label="Edge Nodes" value="4,400+" sub="Akamai global PoPs" tone="default" />
-        <KpiCard label="Cost Reduction" value="86%" sub="vs hyperscaler GPU" tone="success" />
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+        <MiniKpi label="Capabilities Shipped" value="8 / 13" tone={t.success} />
+        <MiniKpi label="In Progress"          value="3"      tone={t.warning} />
+        <MiniKpi label="Q4 Pending"           value="2" />
+        <MiniKpi label="Avg Empathy Score"    value="78%"    sub="Hume EVI on prod calls" tone={t.primary} />
+        <MiniKpi label="Avg Hostility Score"  value="14%"    sub="Hume EVI hostility signal" tone={t.success} />
       </div>
 
-      {/* Deployment manifest */}
-      <Panel>
-        <PanelTitle>Deployment Manifest — Linode GPU Instance</PanelTitle>
-        <pre style={{
-          fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL,
-          background: "rgba(105,106,172,0.04)", borderRadius: 10,
-          padding: 16, margin: 0, overflowX: "auto",
-          border: "1px solid rgba(105,106,172,0.12)", lineHeight: 1.7,
-        }}>
-          {JSON.stringify(DEPLOYMENT_MANIFEST, null, 2)}
-        </pre>
-      </Panel>
-
-      {/* Runbook */}
-      <Panel>
-        <PanelTitle>Provisioning Runbook — 8 Steps</PanelTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {RUNBOOK_STEPS.map((step, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "flex-start", gap: 12,
-              padding: "10px 14px", borderRadius: 10,
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.05)",
-            }}>
-              <div style={{
-                width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-                display: "grid", placeItems: "center",
-                background: "rgba(105,106,172,0.1)", border: "1px solid rgba(105,106,172,0.2)",
-                color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700,
-              }}>{i + 1}</div>
-              <span style={{ fontSize: 13, color: ATOM_TEXT, lineHeight: 1.5 }}>
-                {step.replace(/`([^`]+)`/g, (_, code) => code).split("`").map((part, j) =>
-                  j % 2 === 0
-                    ? <span key={j}>{part}</span>
-                    : <code key={j} style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEAL, background: "rgba(105,106,172,0.06)", borderRadius: 4, padding: "0 4px" }}>{part}</code>
-                )}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Panel>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 4 — Telephony Upgrade
-// ─────────────────────────────────────────────────────────────────────────────
-const TELEPHONY_CARDS = [
-  {
-    name: "Twilio Current",
-    accent: ATOM_MUTED,
-    latency: ">3 000ms AI voice",
-    perMin: "$0.014",
-    perMsg: "$0.0075",
-    sipToHume: "❌ Requires SIP trunk config",
-    addons: "Voice Intelligence, STIR/SHAKEN, Trust Hub",
-  },
-  {
-    name: "Twilio Upgraded",
-    accent: ATOM_AMBER,
-    latency: "~2 000ms (optimised)",
-    perMin: "$0.013",
-    perMsg: "$0.0075",
-    sipToHume: "⚠ Possible via SIP trunk",
-    addons: "Voice Intelligence Premium, Flex Plug-in, Studio",
-  },
-  {
-    name: "Telnyx Target",
-    accent: ATOM_TEAL,
-    latency: "<1 000ms (private IP)",
-    perMin: "$0.008",
-    perMsg: "$0.005",
-    sipToHume: "✅ Native SIP → Hume SIP URI",
-    addons: "STIR/SHAKEN, CNAM, TeXML (TwiML-compat)",
-  },
-];
-
-const TWILIO_CHECKLIST = [
-  { item: "Voice Intelligence Premium",        cost: "$0.05/min",  url: "https://www.twilio.com/en-us/voice/intelligence" },
-  { item: "Trust Hub Business Profile",        cost: "$0/mo",      url: "https://www.twilio.com/en-us/trust-hub" },
-  { item: "Verified by Twilio CNAM",           cost: "$1.50/DID",  url: "https://help.twilio.com/articles/1260803225389" },
-  { item: "A2P 10DLC Standard Brand",          cost: "$4/mo",      url: "https://www.twilio.com/en-us/sms/a2p-10dlc" },
-  { item: "Conversations API",                 cost: "Usage-based",url: "https://www.twilio.com/en-us/conversations" },
-  { item: "Flex Plug-in (AI assist)",          cost: "$150/seat",  url: "https://www.twilio.com/en-us/flex" },
-  { item: "Twilio SendGrid Essentials (email)",cost: "$19.95/mo",  url: "https://sendgrid.com/en-us/pricing" },
-  { item: "Studio IVR Flow Builder",           cost: "$0.001/exec",url: "https://www.twilio.com/en-us/studio" },
-];
-
-function TabTelephony() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
-        {TELEPHONY_CARDS.map((card) => (
-          <Panel key={card.name} style={{ borderTop: `2px solid ${card.accent}` }}>
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em",
-              textTransform: "uppercase", color: card.accent, marginBottom: 14, fontWeight: 700,
-            }}>{card.name}</div>
-            <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                ["Latency",        card.latency],
-                ["$/min",          card.perMin],
-                ["$/SMS",          card.perMsg],
-                ["SIP→Hume",       card.sipToHume],
-                ["Required addons",card.addons],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                  <dt style={{ color: ATOM_MUTED, fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>{k}</dt>
-                  <dd style={{ color: ATOM_TEXT, textAlign: "right", margin: 0, maxWidth: "60%" }}>{v}</dd>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
+        <Panel>
+          <Eyebrow color={t.primary}>Capability Matrix</Eyebrow>
+          <SectionTitle>Voice engine behaviors</SectionTitle>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
+            {VOICE_CAPABILITIES.map((c) => (
+              <div key={c.capability} style={{
+                display: "grid", gridTemplateColumns: "1fr auto", gap: 8,
+                padding: "10px 12px",
+                background: t.surface2,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 4 }}>{c.capability}</div>
+                  <div style={{ fontSize: 11, color: t.muted, marginBottom: 2 }}>{c.stack}</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: t.faint }}>{c.note}</div>
                 </div>
-              ))}
-            </dl>
-          </Panel>
-        ))}
-      </div>
+                <div style={{ alignSelf: "center" }}><StatusBadge status={c.status} /></div>
+              </div>
+            ))}
+          </div>
+        </Panel>
 
-      <Panel>
-        <PanelTitle>What to Buy from Twilio (if not migrating) — 8 Items</PanelTitle>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
-            <thead>
-              <tr>
-                <th style={TH_STYLE}>Add-On</th>
-                <th style={TH_STYLE}>Est. $/month</th>
-                <th style={TH_STYLE}>Docs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TWILIO_CHECKLIST.map((row) => (
-                <tr key={row.item}>
-                  <td style={{ ...TD_STYLE, fontWeight: 600 }}>{row.item}</td>
-                  <td style={{ ...TD_STYLE, fontFamily: "var(--font-mono)", color: ATOM_AMBER }}>{row.cost}</td>
-                  <td style={TD_STYLE}>
-                    <a href={row.url} target="_blank" rel="noreferrer" style={{
-                      color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontSize: 10,
-                      letterSpacing: "0.06em", textDecoration: "none",
-                    }}>docs →</a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
+        <Panel>
+          <Eyebrow color={t.primary}>Engine Capability Radar</Eyebrow>
+          <SectionTitle>ATOM vs top performer vs median</SectionTitle>
+          <div style={{ height: 320, marginTop: 14 }}>
+            <ResponsiveContainer>
+              <RadarChart data={VOICE_RADAR}>
+                <PolarGrid stroke={t.grid} />
+                <PolarAngleAxis dataKey="axis" tick={{ fill: t.muted, fontSize: 11, fontFamily: FONT_MONO }} />
+                <PolarRadiusAxis tick={{ fill: t.faint, fontSize: 9 }} angle={90} domain={[0, 100]} />
+                <Radar name="ATOM"   dataKey="atom"   stroke="var(--atom-primary, #00c8c8)" fill="var(--atom-primary, #00c8c8)" fillOpacity={0.35} />
+                <Radar name="Top performer" dataKey="top" stroke="var(--atom-accent-samba, #f5c842)" fill="var(--atom-accent-samba, #f5c842)" fillOpacity={0.15} />
+                <Radar name="Median competitor" dataKey="median" stroke="var(--atom-text-muted, #8a8a96)" fill="var(--atom-text-muted, #8a8a96)" fillOpacity={0.10} />
+                <Legend wrapperStyle={{ fontSize: 11, color: t.muted }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 5 — Multi-Channel
+// TAB 4 — Channels (multi-channel coverage)
 // ─────────────────────────────────────────────────────────────────────────────
 const CHANNELS = [
-  {
-    label: "Voice", vendor: "Telnyx + Hume EVI 3", status: "CONNECTED",
-    deliverability: "98%", volume: "1,240 dials", statusColor: ATOM_GREEN,
-  },
-  {
-    label: "Text (SMS)", vendor: "Telnyx A2P 10DLC", status: "CONNECTED",
-    deliverability: "94%", volume: "856 texts", statusColor: ATOM_GREEN,
-  },
-  {
-    label: "Email", vendor: "SendGrid Essentials", status: "CONNECTED",
-    deliverability: "87%", volume: "4,321 emails", statusColor: ATOM_GREEN,
-  },
-  {
-    label: "LinkedIn", vendor: "Phantom Buster / MCP", status: "PENDING",
-    deliverability: "72%", volume: "89 LI msgs", statusColor: ATOM_AMBER,
-  },
+  { channel: "Voice",      icon: Mic,             status: "shipped" as const, vendor: "Twilio + Hume EVI 4",         coverage: 100, color: "var(--atom-primary, #00c8c8)" },
+  { channel: "SMS",        icon: MessageSquare,   status: "in_progress" as const, vendor: "Twilio Messaging",       coverage: 65,  color: "var(--atom-success, #4ade80)" },
+  { channel: "Email",      icon: BadgeCheck,      status: "in_progress" as const, vendor: "Resend (apex)",          coverage: 80,  color: "var(--atom-accent-gpt, #74c0fc)" },
+  { channel: "LinkedIn DM",icon: MessageSquare,   status: "pending" as const,    vendor: "Apollo SequenceAPI (Q3)", coverage: 0,   color: "var(--atom-text-muted, #8a8a96)" },
+  { channel: "Web chat",   icon: MessageSquare,   status: "in_progress" as const, vendor: "ATOM embed widget",     coverage: 40,  color: "var(--atom-accent-claude, #c084fc)" },
+  { channel: "WhatsApp",   icon: MessageSquare,   status: "pending" as const,    vendor: "Twilio WA Business (Q4)", coverage: 0,   color: "var(--atom-text-muted, #8a8a96)" },
 ];
 
-const ORCHESTRATOR_TREE = [
-  { trigger: "Cold prospect — never contacted",            action: "→ Voice dial (day 0)" },
-  { trigger: "No pickup × 2 dials",                        action: "→ SMS follow-up within 30 min" },
-  { trigger: "Positive sentiment on last call",            action: "→ Email detailed proposal" },
-  { trigger: "Negative sentiment (frustration > 0.6)",     action: "→ Pause 3 days, restart with LinkedIn" },
-  { trigger: "Email bounced",                              action: "→ SMS fallback immediately" },
-  { trigger: "LinkedIn connected",                         action: "→ InMail drip (T+0, T+3, T+7)" },
-  { trigger: "Meeting booked",                             action: "→ Email calendar invite + reminder SMS" },
-  { trigger: "Unsubscribe signal detected",                action: "→ DNC all channels, tag in CRM" },
-];
-
-function TabMultiChannel() {
+function TabChannels() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-        {CHANNELS.map((ch) => (
-          <Panel key={ch.label} style={{ borderLeft: `3px solid ${ch.statusColor}` }}>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, color: ATOM_TEXT, marginBottom: 6 }}>
-              {ch.label}
-            </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: ATOM_MUTED, marginBottom: 12 }}>
-              {ch.vendor}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{
-                display: "inline-block", padding: "2px 8px", borderRadius: 6,
-                fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.1em",
-                fontWeight: 700, color: ch.statusColor,
-                background: `${ch.statusColor}18`, border: `1px solid ${ch.statusColor}44`,
-              }}>{ch.status}</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: ATOM_MUTED }}>{ch.deliverability}</span>
-            </div>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: ATOM_TEXT, marginBottom: 12 }}>
-              {ch.volume}
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: ATOM_FAINT, marginLeft: 6 }}>last 30d</span>
-            </div>
-            <button style={{
-              padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(105,106,172,0.24)`,
-              background: "rgba(105,106,172,0.06)", color: ATOM_TEAL,
-              fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em",
-              textTransform: "uppercase", cursor: "pointer", fontWeight: 700,
-            }}>Configure</button>
-          </Panel>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+        <MiniKpi label="Channels Live"   value="1 / 6" tone={t.primary} />
+        <MiniKpi label="In Build"        value="3"     tone={t.warning} />
+        <MiniKpi label="Q3 Targets"      value="SMS + Email + Chat" />
+        <MiniKpi label="Q4 Targets"      value="LinkedIn + WhatsApp" />
       </div>
 
       <Panel>
-        <PanelTitle>ΔTOM Orchestrator — Channel Decision Tree</PanelTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {ORCHESTRATOR_TREE.map((row, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "10px 14px", borderRadius: 10,
-              background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+        <Eyebrow color={t.primary}>Channel Coverage</Eyebrow>
+        <SectionTitle>Build-out progress per channel</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 14 }}>
+          {CHANNELS.map(({ channel, icon: Icon, status, vendor, coverage, color }) => (
+            <div key={channel} style={{
+              background: t.surface2,
+              border: `1px solid ${t.border}`,
+              borderRadius: 12, padding: 16,
+              display: "flex", flexDirection: "column", gap: 10,
             }}>
-              <div style={{ flex: 1, fontSize: 12, color: ATOM_MUTED }}>{row.trigger}</div>
-              <div style={{ fontSize: 12, color: ATOM_TEAL, fontFamily: "var(--font-mono)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                {row.action}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: `color-mix(in oklab, ${color} 16%, transparent)`,
+                    border: `1px solid color-mix(in oklab, ${color} 32%, transparent)`,
+                    display: "grid", placeItems: "center",
+                  }}>
+                    <Icon size={16} style={{ color }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: t.text }}>{channel}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: t.muted }}>{vendor}</div>
+                  </div>
+                </div>
+                <StatusBadge status={status} />
+              </div>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: "0.16em", color: t.muted, textTransform: "uppercase" }}>Coverage</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, color, fontWeight: 700 }}>{coverage}%</span>
+                </div>
+                <div style={{ height: 3, background: t.bg, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{
+                    width: `${coverage}%`, height: "100%",
+                    background: color, transition: "width 600ms ease",
+                  }} />
+                </div>
               </div>
             </div>
           ))}
@@ -547,181 +630,369 @@ function TabMultiChannel() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 6 — Competitive Intel
+// TAB 5 — Competitive (live Sonar feed)
 // ─────────────────────────────────────────────────────────────────────────────
-const FEATURE_MATRIX_COLS = [
-  { key: "atom",      label: "ΔTOM",       color: ATOM_TEAL },
-  { key: "gong",      label: "Gong",       color: ATOM_MUTED },
-  { key: "outreach",  label: "Outreach",   color: ATOM_MUTED },
-  { key: "salesloft", label: "SalesLoft",  color: ATOM_MUTED },
-  { key: "apollo",    label: "Apollo.io",  color: ATOM_MUTED },
-];
+interface CompetitorRow {
+  name: string;
+  funding?: string;
+  fundingRoundDate?: string;
+  pricingStarter?: string;
+  pricingEnterprise?: string;
+  voiceVendor?: string;
+  latencyP50Ms?: number | string;
+  channels?: string[];
+  notableFlaw?: string;
+  source?: string;
+}
 
-const FEATURE_ROWS = [
-  { feature: "AI Voice Agent",          atom: "✅", gong: "❌", outreach: "❌", salesloft: "❌", apollo: "❌" },
-  { feature: "Real-time Emotion AI",    atom: "✅", gong: "Partial", outreach: "❌", salesloft: "❌", apollo: "❌" },
-  { feature: "Multi-channel orchestr.", atom: "✅", gong: "❌", outreach: "✅", salesloft: "✅", apollo: "Partial" },
-  { feature: "Embedded RAG",            atom: "✅", gong: "❌", outreach: "❌", salesloft: "❌", apollo: "❌" },
-  { feature: "TCPA-native compliance",  atom: "✅", gong: "❌", outreach: "Partial", salesloft: "Partial", apollo: "Partial" },
-  { feature: "Self-hosted LLM option",  atom: "✅", gong: "❌", outreach: "❌", salesloft: "❌", apollo: "❌" },
-  { feature: "Per-seat pricing",        atom: "✅", gong: "✅", outreach: "✅", salesloft: "✅", apollo: "✅" },
-  { feature: "Open-source components",  atom: "✅", gong: "❌", outreach: "❌", salesloft: "❌", apollo: "❌" },
-];
+function fmtUsd(n: any): string {
+  const v = Number(n);
+  if (!isFinite(v) || v === 0) return "—";
+  if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
+  if (v >= 1_000_000)     return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000)         return `$${(v / 1_000).toFixed(1)}k`;
+  return `$${v}`;
+}
 
-const FUNDING_DATA = [
-  { name: "Gong",      funding: 583 },
-  { name: "Outreach",  funding: 489 },
-  { name: "SalesLoft", funding: 245 },
-  { name: "Apollo.io", funding: 251 },
-  { name: "ΔTOM",      funding: 12 },
-];
-
-const COMP_TABLE = [
-  { company: "Gong",       arr: "$200M+",  round: "Series E · $250M",  pricing: "$140/seat/mo",  notes: "Strong call intelligence, no native voice agent" },
-  { company: "Outreach",   arr: "$150M+",  round: "Series F · $200M",  pricing: "$120/seat/mo",  notes: "Sequences-focused, no AI voice" },
-  { company: "SalesLoft",  arr: "$100M+",  round: "Acquired by Vista", pricing: "$125/seat/mo",  notes: "CRM-native, weak AI" },
-  { company: "Apollo.io",  arr: "$100M+",  round: "Series D · $100M",  pricing: "$49/seat/mo",   notes: "Data-rich, shallow voice layer" },
-  { company: "ΔTOM",       arr: "Pre-GA",  round: "Seed",              pricing: "From $299/mo",  notes: "Voice-first AI, open-weights, Vibranium stack" },
-];
-
-// Normalize API competitor shape → table shape (the API returns
-// arr_estimate_usd as a number and pricing as an object, but the table
-// renders strings only). Without this, React throws "Objects are not
-// valid as a React child" the moment data arrives and the whole tab
-// tree crashes — leaving the screen black.
-function normalizeCompetitor(c: any) {
-  if (!c) return null;
-  if (typeof c.company === "string" && typeof c.arr === "string") return c; // already in table shape
-  const fmt = (n: number | null | undefined) => {
-    if (n === null || n === undefined) return "undisclosed";
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(0)}M`;
-    if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${n}`;
-  };
-  const priceStr = (() => {
-    const p = c.pricing;
-    if (!p || typeof p !== "object") return String(p ?? "—");
-    const unit = c.pricing_unit || "";
-    const tiers = [p.starter, p.growth, p.enterprise].filter((v) => v !== null && v !== undefined);
-    if (!tiers.length) return "—";
-    const first = tiers[0];
-    const last  = tiers[tiers.length - 1];
-    if (first === last) return `${typeof first === "number" ? `$${first}` : first}${unit}`;
-    return `${typeof first === "number" ? `$${first}` : first}–${typeof last === "number" ? `$${last}` : last}${unit}`;
-  })();
+function normalizeCompetitor(c: any): CompetitorRow {
+  // Tolerate any of: camelCase, snake_case, and nested `pricing.{starter,enterprise}`.
+  const pricing = c?.pricing ?? {};
+  const starterRaw = c?.pricingStarter ?? c?.pricing_starter ?? pricing?.starter;
+  const enterpriseRaw = c?.pricingEnterprise ?? c?.pricing_enterprise ?? pricing?.enterprise;
+  const fundingRaw =
+    c?.funding ?? c?.total_funding ?? c?.funding_total_usd ?? c?.fundingTotalUsd;
   return {
-    company: c.name || c.company || "Unknown",
-    arr: fmt(c.arr_estimate_usd),
-    round: c.last_round || c.round || "—",
-    pricing: priceStr,
-    notes: c.notes || "",
+    name: c?.name ?? "(unknown)",
+    funding: typeof fundingRaw === "number" ? fmtUsd(fundingRaw) : (fundingRaw ?? "—"),
+    fundingRoundDate: c?.fundingRoundDate ?? c?.last_round ?? c?.latest_round ?? "—",
+    pricingStarter: typeof starterRaw === "number" ? `$${starterRaw.toLocaleString()}` : (starterRaw ?? "—"),
+    pricingEnterprise: typeof enterpriseRaw === "number" ? `$${enterpriseRaw.toLocaleString()}` : (enterpriseRaw ?? "—"),
+    voiceVendor: c?.voiceVendor ?? c?.voice_vendor ?? c?.voice_engine ?? "—",
+    latencyP50Ms: c?.latencyP50Ms ?? c?.latency_p50_ms ?? c?.latency_p50 ?? "—",
+    channels: Array.isArray(c?.channels) ? c.channels : (typeof c?.channels === "string" ? c.channels.split(",") : []),
+    notableFlaw: c?.notableFlaw ?? c?.notable_flaw ?? c?.weakness ?? "",
+    source: c?.source ?? "",
   };
 }
 
 function TabCompetitive() {
-  const { data, isLoading, error } = useAdminQuery<any>(
+  const { data, isLoading, error, refetch } = useAdminQuery<any>(
     ["vibranium", "competitive"],
-    "/api/vibranium/competitive",
-    { refetchInterval: 6 * 60 * 60 * 1000 }
+    "/api/vibranium/competitive"
   );
-  const rows = ((data?.competitors as any[]) || COMP_TABLE)
-    .map(normalizeCompetitor)
-    .filter(Boolean) as any[];
+
+  const competitors: CompetitorRow[] = useMemo(() => {
+    const raw = data?.competitors ?? [];
+    return raw.map(normalizeCompetitor);
+  }, [data]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Feature Heatmap */}
-      <Panel>
-        <PanelTitle>Feature Heatmap — ΔTOM vs Competitors</PanelTitle>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
-            <thead>
-              <tr>
-                <th style={TH_STYLE}>Feature</th>
-                {FEATURE_MATRIX_COLS.map((col) => (
-                  <th key={col.key} style={{
-                    ...TH_STYLE,
-                    color: col.color,
-                    borderBottom: col.key === "atom" ? `2px solid ${ATOM_TEAL}` : TH_STYLE.borderBottom,
-                  }}>{col.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {FEATURE_ROWS.map((row) => (
-                <tr key={row.feature}>
-                  <td style={{ ...TD_STYLE, fontWeight: 600 }}>{row.feature}</td>
-                  {FEATURE_MATRIX_COLS.map((col) => {
-                    const val = (row as any)[col.key];
-                    const isAtom = col.key === "atom";
-                    return (
-                      <td key={col.key} style={{
-                        ...TD_STYLE,
-                        textAlign: "center",
-                        background: isAtom ? "rgba(105,106,172,0.04)" : undefined,
-                        color: val === "✅" ? ATOM_GREEN : val === "❌" ? ATOM_DANGER : ATOM_AMBER,
-                      }}>{val}</td>
-                    );
-                  })}
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+        <MiniKpi label="Competitors Tracked" value={competitors.length || "—"} tone={t.primary} />
+        <MiniKpi label="Live Feed" value={data?.updatedAt ? "ACTIVE" : "STATIC FALLBACK"} sub={data?.updatedAt ? new Date(data.updatedAt).toLocaleString() : "Perplexity Sonar Pro · 6h cache"} tone={data?.updatedAt ? t.success : t.warning} />
+        <MiniKpi label="ATOM Advantage" value="Empathy + Edge" sub="Hume EVI 4 emotion scoring · Akamai 6-layer" />
+        <MiniKpi label="Refresh" value="Sonar Pro" sub="search_context_size=high · domain-filtered" />
+      </div>
+
+      <Panel padded={false}>
+        <div style={{ padding: "16px 18px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <Eyebrow color={t.primary}>Live Competitive Matrix</Eyebrow>
+            <SectionTitle>Voice AI sales-agent competitors (May 2026)</SectionTitle>
+          </div>
+          <button
+            onClick={() => refetch()}
+            style={{
+              background: t.surface2, border: `1px solid ${t.borderStrong}`, borderRadius: 8,
+              padding: "8px 14px", color: t.text, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600,
+            }}
+          >
+            <RefreshCw size={14} /> Refresh Sonar
+          </button>
+        </div>
+
+        {isLoading && <div style={{ padding: 20, color: t.muted, textAlign: "center" }}>Loading live feed...</div>}
+        {error && <div style={{ padding: 20, color: t.danger, textAlign: "center" }}>Feed error: {String(error)}</div>}
+
+        {!isLoading && !error && (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: t.bg }}>
+                  {["Competitor", "Funding", "Starter / mo", "Enterprise", "Voice Vendor", "P50 ms", "Channels", "Notable Flaw"].map((h) => (
+                    <th key={h} style={{
+                      padding: "10px 14px", textAlign: "left",
+                      fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.14em",
+                      color: t.muted, textTransform: "uppercase", fontWeight: 600,
+                      borderBottom: `1px solid ${t.border}`,
+                    }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {competitors.map((c) => (
+                  <tr key={c.name} style={{ borderBottom: `1px solid ${t.border}` }}>
+                    <td style={{ padding: "12px 14px", fontWeight: 700, color: t.text, fontSize: 13 }}>{c.name}</td>
+                    <td style={{ padding: "12px 14px", color: t.muted, fontFamily: FONT_MONO, fontSize: 12 }}>{c.funding}</td>
+                    <td style={{ padding: "12px 14px", color: t.text, fontSize: 12 }}>{c.pricingStarter}</td>
+                    <td style={{ padding: "12px 14px", color: t.text, fontSize: 12 }}>{c.pricingEnterprise}</td>
+                    <td style={{ padding: "12px 14px", color: t.muted, fontSize: 12 }}>{c.voiceVendor}</td>
+                    <td style={{ padding: "12px 14px", color: t.text, fontFamily: FONT_MONO, fontSize: 12 }}>{c.latencyP50Ms}</td>
+                    <td style={{ padding: "12px 14px", color: t.muted, fontSize: 11, maxWidth: 140 }}>
+                      {(c.channels ?? []).join(", ") || "—"}
+                    </td>
+                    <td style={{ padding: "12px 14px", color: t.danger, fontSize: 11, maxWidth: 220 }}>{c.notableFlaw}</td>
+                  </tr>
+                ))}
+                {competitors.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 30, textAlign: "center", color: t.faint }}>
+                      No competitors loaded. Hit Refresh Sonar.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      {data?.sources && Array.isArray(data.sources) && data.sources.length > 0 && (
+        <Panel>
+          <Eyebrow color={t.muted}>Sources</Eyebrow>
+          <SectionTitle>Citations from this run</SectionTitle>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+            {data.sources.slice(0, 8).map((s: any, i: number) => (
+              <a key={i} href={s.url} target="_blank" rel="noreferrer" style={{
+                color: t.primary, fontSize: 12, textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <ArrowUpRight size={12} /> {s.title || s.url}
+              </a>
+            ))}
+          </div>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 6 — Forecast
+// ─────────────────────────────────────────────────────────────────────────────
+function TabForecast() {
+  const { data, isLoading } = useAdminQuery<any>(
+    ["vibranium", "projection"],
+    "/api/vibranium/projection"
+  );
+
+  const quarters = data?.quarters ?? [];
+  const scenarios = data?.scenarios ?? {};
+
+  // Build chart series merging the 3 scenarios per-quarter
+  const chartData = useMemo(() => {
+    return quarters.map((q: string, i: number) => ({
+      quarter: q,
+      conservative: scenarios?.conservative?.arr?.[i] ?? 0,
+      base:         scenarios?.base?.arr?.[i] ?? 0,
+      wild:         scenarios?.wild?.arr?.[i] ?? 0,
+    }));
+  }, [quarters, scenarios]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        <MiniKpi label="Conservative GA-Exit ARR" value={fmtArr(scenarios?.conservative?.arr?.slice(-1)[0])} sub="Q1 2027" tone={t.muted} />
+        <MiniKpi label="Base GA-Exit ARR"         value={fmtArr(scenarios?.base?.arr?.slice(-1)[0])}         sub="Q1 2027" tone={t.primary} />
+        <MiniKpi label="Wild GA-Exit ARR"         value={fmtArr(scenarios?.wild?.arr?.slice(-1)[0])}         sub="Q1 2027" tone={t.success} />
+        <MiniKpi label="GTM Burn Rate"            value="$240k/mo" sub="incl. headcount + infra"             tone={t.warning} />
+        <MiniKpi label="Runway (base case)"       value="14 mo"    sub="without follow-on raise" />
+      </div>
+
+      <Panel>
+        <Eyebrow color={t.primary}>ARR Projection</Eyebrow>
+        <SectionTitle>3-scenario quarterly run-rate · Q2 2026 → Q4 2027</SectionTitle>
+        <div style={{ height: 340, marginTop: 14 }}>
+          {isLoading ? (
+            <div style={{ padding: 60, textAlign: "center", color: t.muted }}>Building projection...</div>
+          ) : (
+            <ResponsiveContainer>
+              <AreaChart data={chartData}>
+                <CartesianGrid stroke={t.grid} />
+                <XAxis dataKey="quarter" tick={{ fill: t.muted, fontSize: 11, fontFamily: FONT_MONO }} />
+                <YAxis tick={{ fill: t.muted, fontSize: 11, fontFamily: FONT_MONO }} tickFormatter={(v) => fmtArr(v as number)} />
+                <Tooltip
+                  contentStyle={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text }}
+                  formatter={(v: any) => fmtArr(v as number)}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, color: t.muted }} />
+                <Area type="monotone" dataKey="wild"         name="Wild"        stroke="var(--atom-success, #4ade80)" fill="var(--atom-success, #4ade80)" fillOpacity={0.18} />
+                <Area type="monotone" dataKey="base"         name="Base"        stroke="var(--atom-primary, #00c8c8)" fill="var(--atom-primary, #00c8c8)" fillOpacity={0.24} />
+                <Area type="monotone" dataKey="conservative" name="Conservative" stroke="var(--atom-text-muted, #8a8a96)" fill="var(--atom-text-muted, #8a8a96)" fillOpacity={0.12} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </Panel>
 
-      {/* Funding chart */}
-      <ChartCard title="Total Funding ($M)" height={220}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={FUNDING_DATA} margin={{ left: 4, right: 8, top: 4, bottom: 4 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} width={36} />
-            <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(105,106,172,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
-            <Bar dataKey="funding" name="Funding ($M)" radius={[4, 4, 0, 0]}>
-              {FUNDING_DATA.map((entry, i) => (
-                <rect key={i} fill={entry.name === "ΔTOM" ? ATOM_TEAL : ATOM_MUTED} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
-
-      {/* Competitor table */}
       <Panel>
-        <PanelTitle>Competitor Overview</PanelTitle>
-        {isLoading && <EmptyState message="Fetching competitive data…" />}
-        {error && (
-          <div style={{ fontSize: 12, color: ATOM_MUTED, fontFamily: "var(--font-mono)" }}>
-            Live feed unavailable — showing static snapshot.
-          </div>
-        )}
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
-            <thead>
-              <tr>
-                <th style={TH_STYLE}>Company</th>
-                <th style={TH_STYLE}>ARR Est.</th>
-                <th style={TH_STYLE}>Last Round</th>
-                <th style={TH_STYLE}>Pricing</th>
-                <th style={TH_STYLE}>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row: any) => (
-                <tr key={row.company}>
-                  <td style={{ ...TD_STYLE, fontWeight: 700, color: row.company === "ΔTOM" ? ATOM_TEAL : ATOM_TEXT }}>{row.company}</td>
-                  <td style={{ ...TD_STYLE, fontFamily: "var(--font-mono)" }}>{row.arr}</td>
-                  <td style={{ ...TD_STYLE, color: ATOM_MUTED }}>{row.round}</td>
-                  <td style={{ ...TD_STYLE, color: ATOM_AMBER, fontFamily: "var(--font-mono)" }}>{row.pricing}</td>
-                  <td style={{ ...TD_STYLE, color: ATOM_MUTED, fontSize: 11 }}>{row.notes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <Eyebrow color={t.primary}>Assumption Snapshot</Eyebrow>
+        <SectionTitle>What's baked into the model</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 14 }}>
+          {[
+            { k: "Starting tenants (Q2 2026)", v: data?.assumptions?.startTenants ?? "—" },
+            { k: "Plan mix (% new)", v: data?.assumptions?.planMix ? formatMix(data.assumptions.planMix) : "—" },
+            { k: "Quarterly churn (base)", v: data?.assumptions?.churnRateQ?.base ? `${(data.assumptions.churnRateQ.base * 100).toFixed(1)}%` : "—" },
+            { k: "Voice attach (base)", v: data?.assumptions?.voiceAttachRate?.base ? `${(data.assumptions.voiceAttachRate.base * 100).toFixed(0)}%` : "—" },
+            { k: "New tenants / Q (base)", v: data?.assumptions?.newTenantsPerQ?.base ?? "—" },
+            { k: "Voice add-on ARPU", v: data?.assumptions?.voiceArpu ? `$${data.assumptions.voiceArpu}/mo` : "—" },
+          ].map(({ k, v }) => (
+            <div key={k} style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.16em", color: t.muted, marginBottom: 6, textTransform: "uppercase" }}>{k}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT_MONO }}>{String(v)}</div>
+            </div>
+          ))}
         </div>
-        <div style={{ marginTop: 12, fontFamily: "var(--font-mono)", fontSize: 10, color: ATOM_FAINT }}>
-          Sources: Crunchbase · PitchBook · vendor pricing pages · auto-refresh every 6h
+      </Panel>
+    </div>
+  );
+}
+
+function fmtArr(v: any): string {
+  const n = Number(v ?? 0);
+  if (!isFinite(n) || n === 0) return "—";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}k`;
+  return `$${n.toFixed(0)}`;
+}
+
+function formatMix(mix: Record<string, number>): string {
+  return Object.entries(mix).map(([k, v]) => `${k.slice(0, 3)} ${Math.round((v as number) * 100)}%`).join(" · ");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 7 — Risks
+// ─────────────────────────────────────────────────────────────────────────────
+const RISKS = [
+  {
+    risk: "Apollo people-search scope not enabled on master key",
+    severity: "high" as const,
+    likelihood: "active" as const,
+    impact: "Campaign + Prospect modules return empty; demos blocked",
+    mitigation: "PDL primary + ZoomInfo enterprise fallback evaluation Q3 wk 1; Apollo plan upgrade in parallel",
+    owner: "Ben",
+  },
+  {
+    risk: "Blackwell GPU driver/NCCL delivery slip",
+    severity: "med" as const,
+    likelihood: "likely" as const,
+    impact: "Voice Foundry custom-cloned voices slips Q4 → Q1 2027",
+    mitigation: "Brandon (Akamai) commits weekly status; if slip >2wk, swap to lambda H100 cluster as bridge",
+    owner: "Brandon @ Akamai",
+  },
+  {
+    risk: "Twilio Conversational Intelligence pricing change",
+    severity: "med" as const,
+    likelihood: "possible" as const,
+    impact: "Per-minute COGS spike could compress voice margin from 68% → 45%",
+    mitigation: "Telnyx A/B in Q3 cohort; lock 2-yr Twilio commit if pricing stable through GA",
+    owner: "Ben",
+  },
+  {
+    risk: "SOC 2 Type I audit gap (no current report)",
+    severity: "high" as const,
+    likelihood: "blocking" as const,
+    impact: "Enterprise pipeline >$2M ACV cannot close without SOC 2",
+    mitigation: "Vanta kickoff Q3 wk 1; controls in place + 30-day observation closes Q3; report ETA Q4 wk 4",
+    owner: "Ben + Vanta",
+  },
+  {
+    risk: "Hume EVI 4 rate limits at scale",
+    severity: "med" as const,
+    likelihood: "future" as const,
+    impact: "Concurrent call ceiling caps at ~250 simultaneous before throttling",
+    mitigation: "Multi-tenant Hume sub-configs Q3; bring inference on-prem Blackwell Q4 as primary",
+    owner: "Ben",
+  },
+  {
+    risk: "Sonar API throttling on competitive intel refresh",
+    severity: "low" as const,
+    likelihood: "rare" as const,
+    impact: "Vibranium GA Competitive tab falls back to curated static matrix",
+    mitigation: "6h in-memory cache · static fallback already in /api/vibranium/competitive.ts",
+    owner: "Auto-handled",
+  },
+  {
+    risk: "GDPR data residency on EU tenants",
+    severity: "med" as const,
+    likelihood: "future" as const,
+    impact: "Cannot sell to EU enterprise without eu-west origin + DPA",
+    mitigation: "Akamai EdgeWorker Layer 5 routes EU traffic to eu-west origin; spin up EU Linode Q4",
+    owner: "Ben",
+  },
+];
+
+const SEVERITY_TONES: Record<string, { color: string; label: string }> = {
+  high: { color: "var(--atom-danger, #ff7b6b)",   label: "HIGH" },
+  med:  { color: "var(--atom-warning, #f5c842)",  label: "MEDIUM" },
+  low:  { color: "var(--atom-success, #4ade80)",  label: "LOW" },
+};
+
+function TabRisks() {
+  const high = RISKS.filter((r) => r.severity === "high").length;
+  const med  = RISKS.filter((r) => r.severity === "med").length;
+  const low  = RISKS.filter((r) => r.severity === "low").length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+        <MiniKpi label="Total Risks Tracked" value={RISKS.length} />
+        <MiniKpi label="High Severity"   value={high} tone={t.danger}  sub="must mitigate pre-GA" />
+        <MiniKpi label="Medium Severity" value={med}  tone={t.warning} sub="active monitoring" />
+        <MiniKpi label="Low Severity"    value={low}  tone={t.success} sub="acceptable / handled" />
+      </div>
+
+      <Panel>
+        <Eyebrow color={t.danger}>Risk Register</Eyebrow>
+        <SectionTitle>Open risks blocking GA</SectionTitle>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+          {RISKS.map((r) => {
+            const tone = SEVERITY_TONES[r.severity];
+            return (
+              <div key={r.risk} style={{
+                background: t.surface2,
+                border: `1px solid ${t.border}`,
+                borderLeft: `3px solid ${tone.color}`,
+                borderRadius: 10, padding: "14px 16px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13.5, color: t.text }}>{r.risk}</div>
+                  <span style={{
+                    fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
+                    padding: "3px 8px", borderRadius: 6, letterSpacing: "0.08em",
+                    color: tone.color,
+                    background: `color-mix(in oklab, ${tone.color} 14%, transparent)`,
+                    border: `1px solid color-mix(in oklab, ${tone.color} 32%, transparent)`,
+                  }}>{tone.label}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 14, fontSize: 12 }}>
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: "0.16em", color: t.muted, marginBottom: 4, textTransform: "uppercase" }}>Impact</div>
+                    <div style={{ color: t.text, lineHeight: 1.45 }}>{r.impact}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: "0.16em", color: t.muted, marginBottom: 4, textTransform: "uppercase" }}>Mitigation</div>
+                    <div style={{ color: t.text, lineHeight: 1.45 }}>{r.mitigation}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, fontFamily: FONT_MONO, fontSize: 10.5, color: t.faint }}>
+                  OWNER: {r.owner} · LIKELIHOOD: {r.likelihood.toUpperCase()}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Panel>
     </div>
@@ -729,126 +1000,45 @@ function TabCompetitive() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 7 — GA Earnings Forecast
+// Admin key control (preserved from old shell — minimal version)
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_PROJECTION_DATA = [
-  { q: "Q3 '26", conservative: 80,  base: 120,  wild: 200,  saas: 60,  voice: 40,  redteam: 20  },
-  { q: "Q4 '26", conservative: 160, base: 260,  wild: 480,  saas: 140, voice: 80,  redteam: 40  },
-  { q: "Q1 '27", conservative: 290, base: 480,  wild: 940,  saas: 260, voice: 150, redteam: 70  },
-  { q: "Q2 '27", conservative: 460, base: 820,  wild: 1700, saas: 440, voice: 260, redteam: 120 },
-];
-
-const DEFAULT_YEAR_END = {
-  conservative: "$460K",
-  base: "$820K",
-  wild: "$1.7M",
-};
-
-const LINE_COLORS = {
-  conservative: ATOM_MUTED,
-  base: ATOM_TEAL,
-  wild: ATOM_GOLD,
-};
-
-function TabForecast() {
-  const [assumptions, setAssumptions] = useState({
-    newTenantsPerQ: 8,
-    voiceAttachRate: 0.65,
-    churnRateQ: 0.04,
-  });
-
-  const { data, isLoading } = useAdminQuery(
-    ["vibranium", "projection", assumptions],
-    "/api/vibranium/projection",
-    { enabled: true }
-  );
-
-  const projection = data?.quarters ?? DEFAULT_PROJECTION_DATA;
-  const yearEnd = data?.yearEnd ?? DEFAULT_YEAR_END;
-
+function AdminKeyBar() {
+  const [adminKey, setAdminKey] = useAdminKey();
+  const [showKey, setShowKey] = useState(false);
+  const [draft, setDraft] = useState(adminKey || "");
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-        <KpiCard label="Year-End ARR — Conservative" value={yearEnd.conservative} sub="Risk-adjusted" tone="default" />
-        <KpiCard label="Year-End ARR — Base" value={yearEnd.base} sub="Expected case" tone="success" />
-        <KpiCard label="Year-End ARR — Wild" value={yearEnd.wild} sub="Upside scenario" tone="warn" />
-      </div>
-
-      {/* 3-line ARR forecast */}
-      <ChartCard title="Total ARR by Quarter — All Scenarios" subtitle="Thousands USD" height={260}>
-        {isLoading
-          ? <EmptyState message="Loading projection…" />
-          : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={projection} margin={{ left: 4, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="q" tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: ATOM_FAINT }} axisLine={false} tickLine={false} width={42} />
-                <Tooltip contentStyle={{ background: "rgba(8,11,14,0.96)", border: "1px solid rgba(105,106,172,0.18)", borderRadius: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: ATOM_TEXT }} />
-                <Legend wrapperStyle={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: ATOM_MUTED }} />
-                <Line type="monotone" dataKey="conservative" name="Conservative" stroke={LINE_COLORS.conservative} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="base" name="Base" stroke={LINE_COLORS.base} strokeWidth={2.5} dot={false} style={{ filter: `drop-shadow(0 0 6px ${ATOM_TEAL}88)` }} />
-                <Line type="monotone" dataKey="wild" name="Wild" stroke={LINE_COLORS.wild} strokeWidth={1.5} dot={false} strokeDasharray="6 3" />
-              </LineChart>
-            </ResponsiveContainer>
-          )
-        }
-      </ChartCard>
-
-      {/* Sliders */}
-      <Panel>
-        <PanelTitle>Assumption Sliders — Base Scenario</PanelTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
-          {[
-            {
-              key: "newTenantsPerQ" as const,
-              label: "New Tenants / Quarter",
-              min: 1, max: 40, step: 1,
-              display: assumptions.newTenantsPerQ.toString(),
-            },
-            {
-              key: "voiceAttachRate" as const,
-              label: "Voice Attach Rate",
-              min: 0.1, max: 1, step: 0.05,
-              display: `${Math.round(assumptions.voiceAttachRate * 100)}%`,
-            },
-            {
-              key: "churnRateQ" as const,
-              label: "Churn Rate / Quarter",
-              min: 0.01, max: 0.2, step: 0.01,
-              display: `${Math.round(assumptions.churnRateQ * 100)}%`,
-            },
-          ].map(({ key, label, min, max, step, display }) => (
-            <div key={key}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: ATOM_MUTED }}>{label}</span>
-                <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: ATOM_TEAL, fontSize: 16 }}>{display}</span>
-              </div>
-              <input
-                type="range"
-                min={min} max={max} step={step}
-                value={assumptions[key]}
-                onChange={(e) => setAssumptions((prev) => ({ ...prev, [key]: parseFloat(e.target.value) }))}
-                style={{ width: "100%", accentColor: ATOM_TEAL }}
-              />
-            </div>
-          ))}
-        </div>
-      </Panel>
-
-      {/* Stack chart — base scenario by revenue stream */}
-      <ChartCard title="Revenue Mix by Quarter — Base Scenario" subtitle="SaaS MRR · Voice MRR · Red Team MRR ($K)" height={240}>
-        <BarStack
-          data={projection}
-          xKey="q"
-          series={[
-            { key: "saas",    label: "SaaS MRR",     color: ATOM_TEAL },
-            { key: "voice",   label: "Voice MRR",    color: ATOM_AMBER },
-            { key: "redteam", label: "Red Team MRR", color: ATOM_PURPLE },
-          ]}
-        />
-      </ChartCard>
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 14px", background: t.surface2,
+      border: `1px solid ${t.border}`, borderRadius: 10,
+      fontFamily: FONT_MONO, fontSize: 11,
+    }}>
+      <KeyRound size={14} style={{ color: t.muted }} />
+      <span style={{ color: t.muted, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 600 }}>Admin Key</span>
+      <input
+        type={showKey ? "text" : "password"}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="paste admin key"
+        style={{
+          flex: 1, background: t.bg, border: `1px solid ${t.border}`,
+          color: t.text, padding: "6px 10px", borderRadius: 6,
+          fontFamily: FONT_MONO, fontSize: 11,
+        }}
+      />
+      <button
+        onClick={() => setShowKey(!showKey)}
+        style={{ background: "transparent", border: "none", color: t.muted, fontSize: 11, cursor: "pointer" }}
+      >{showKey ? "hide" : "show"}</button>
+      <button
+        onClick={() => setAdminKey(draft.trim())}
+        style={{
+          background: t.primary, color: t.bg,
+          border: "none", borderRadius: 6,
+          padding: "6px 12px", fontSize: 11, fontWeight: 700,
+          cursor: "pointer", fontFamily: FONT_DISPLAY,
+        }}
+      >Save</button>
     </div>
   );
 }
@@ -857,252 +1047,87 @@ function TabForecast() {
 // Main shell
 // ─────────────────────────────────────────────────────────────────────────────
 export default function VibraniumShell() {
-  const [location] = useLocation();
-  const { key, save } = useAdminKey();
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<TabId>("path");
   const session = useSessionContext();
 
-  const [tab, setTab] = useState<string>(() => {
-    const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-    return params.get("vtab") || "roadmap";
-  });
-
+  // Gate to super-admin only.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-    const t = params.get("vtab") || "roadmap";
-    setTab(t);
-  }, [location]);
+    if (!session?.isSuperAdmin) setLocation("/");
+  }, [session, setLocation]);
 
-  function setTabUrl(id: string) {
-    const url = new URL(window.location.href);
-    const hash = url.hash || "#/admin/vibranium-ga";
-    const [path] = hash.split("?");
-    url.hash = `${path}?vtab=${id}`;
-    window.history.replaceState(null, "", url.toString());
-    setTab(id);
-  }
+  if (!session?.isSuperAdmin) return null;
 
-  const renderBody = () => {
-    switch (tab) {
-      case "roadmap":      return <TabRoadmap />;
-      case "voice":        return <TabVoice />;
-      case "blackwell":    return <TabBlackwell />;
-      case "telephony":    return <TabTelephony />;
-      case "multichannel": return <TabMultiChannel />;
-      case "competitive":  return <TabCompetitive />;
-      case "forecast":     return <TabForecast />;
-      default:             return <TabRoadmap />;
+  const renderTab = () => {
+    switch (activeTab) {
+      case "path":        return <TabGaPath />;
+      case "infra":       return <TabInfra />;
+      case "voice":       return <TabVoice />;
+      case "channels":    return <TabChannels />;
+      case "competitive": return <TabCompetitive />;
+      case "forecast":    return <TabForecast />;
+      case "risks":       return <TabRisks />;
+      default:            return <TabGaPath />;
     }
   };
 
-  // Wrap each tab in an error boundary so a render crash inside one panel
-  // never blanks the whole console + tab strip. The user can always switch
-  // back to a different tab even if the current one threw.
-  const Body = () => (
-    <TabErrorBoundary key={tab} tab={tab}>
-      {renderBody()}
-    </TabErrorBoundary>
-  );
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18, paddingBottom: 80 }}>
+    <div style={{
+      padding: 24, minHeight: "100vh", background: t.bg,
+      fontFamily: FONT_DISPLAY, color: t.text,
+    }}>
       {/* Header */}
-      <header style={{
-        display: "flex", alignItems: "flex-end", justifyContent: "space-between",
-        gap: 18, flexWrap: "wrap", paddingBottom: 4,
-      }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22, gap: 16, flexWrap: "wrap" }}>
         <div>
-          <div style={{
-            fontFamily: "var(--font-mono)", fontSize: 11,
-            letterSpacing: "0.16em", textTransform: "uppercase", color: ATOM_MUTED,
-            marginBottom: 4,
-          }}>ΔTOM · Vibranium GA Review</div>
-          <h1 style={{
-            fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 800,
-            letterSpacing: "-0.02em", margin: 0, color: "var(--color-text)",
-          }}>GA Readiness Console</h1>
+          <Eyebrow color={t.primary}>Vibranium GA Console</Eyebrow>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", color: t.text, lineHeight: 1.1 }}>
+            Path to General Availability
+          </div>
+          <div style={{ fontSize: 13, color: t.muted, marginTop: 4 }}>
+            Single command center for ATOM Sales Dominator's road to GA · refreshed live from Perplexity Sonar Pro
+          </div>
         </div>
-        <VibraniumAdminKeyControl currentKey={key} onSave={save} />
-      </header>
+        <div style={{ maxWidth: 360, width: "100%" }}>
+          <AdminKeyBar />
+        </div>
+      </div>
 
-      {/* Tab strip */}
-      <nav style={{
-        display: "flex", gap: 4, padding: 4,
-        borderRadius: 14,
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        overflowX: "auto",
-        scrollbarWidth: "none",
+      {/* Tabs */}
+      <div style={{
+        display: "flex", gap: 2, padding: 4,
+        background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 12,
+        marginBottom: 22, overflowX: "auto",
       }}>
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.id;
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const isActive = activeTab === id;
           return (
             <button
-              key={t.id}
-              onClick={() => setTabUrl(t.id)}
+              key={id}
+              onClick={() => setActiveTab(id)}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "10px 16px", borderRadius: 10,
-                background: active ? "rgba(105,106,172,0.08)" : "transparent",
-                border: "1px solid " + (active ? "rgba(105,106,172,0.32)" : "transparent"),
-                color: active ? ATOM_TEAL : ATOM_MUTED,
-                fontFamily: "var(--font-mono)", fontSize: 11,
-                letterSpacing: "0.12em", textTransform: "uppercase",
-                fontWeight: 700,
+                padding: "10px 14px", borderRadius: 8, border: "none",
+                background: isActive ? `color-mix(in oklab, ${t.primary} 14%, transparent)` : "transparent",
+                color: isActive ? t.primary : t.muted,
+                fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700,
+                letterSpacing: "0.01em",
                 cursor: "pointer", whiteSpace: "nowrap",
-                transition: "all 160ms cubic-bezier(0.16,1,0.3,1)",
+                transition: "background 160ms ease, color 160ms ease",
               }}
             >
-              <Icon size={14} /> {t.label}
+              <Icon size={14} /> {label}
             </button>
           );
         })}
-      </nav>
+      </div>
 
-      {/* Guard: key required */}
-      {!key ? (
-        <div style={{
-          padding: 28, borderRadius: 14,
-          background: `linear-gradient(180deg, rgba(255,209,102,0.06), rgba(255,209,102,0.02))`,
-          border: "1px solid rgba(255,209,102,0.32)",
-          color: "var(--color-text)",
-        }}>
-          <div style={{
-            fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.16em",
-            textTransform: "uppercase", color: ATOM_GOLD, marginBottom: 6,
-          }}>Admin key required</div>
-          <p style={{ marginTop: 0, marginBottom: 0, color: "var(--color-text-muted)" }}>
-            The Vibranium GA console accesses strategic roadmap, competitive intel, and earnings projections.
-            Paste your <code>ADMIN_API_KEY</code> above to unlock.
-          </p>
-        </div>
-      ) : !session.isSuperAdmin ? (
-        <div style={{
-          padding: 28, borderRadius: 14,
-          background: "linear-gradient(180deg, rgba(255,107,139,0.06), rgba(255,107,139,0.02))",
-          border: "1px solid rgba(255,107,139,0.32)", color: "var(--color-text)",
-        }}>
-          <div style={{
-            fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.16em",
-            textTransform: "uppercase", color: ATOM_DANGER, marginBottom: 6,
-          }}>Super Admin required</div>
-          <p style={{ marginTop: 0, marginBottom: 0, color: "var(--color-text-muted)" }}>
-            This console is restricted to super_admin accounts. Contact your ΔTOM administrator to request access.
-          </p>
-        </div>
-      ) : (
-        <Body />
-      )}
-    </div>
-  );
-}
+      {/* Active tab */}
+      {renderTab()}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-tab error boundary — keeps tab strip alive when a panel throws
-// ─────────────────────────────────────────────────────────────────────────────
-class TabErrorBoundary extends React.Component<
-  { children: React.ReactNode; tab: string },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  componentDidCatch(error: Error, info: any) {
-    // eslint-disable-next-line no-console
-    console.error("[VibraniumShell] tab crashed:", this.props.tab, error, info);
-  }
-  componentDidUpdate(prev: { tab: string }) {
-    if (prev.tab !== this.props.tab && this.state.error) this.setState({ error: null });
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{
-          padding: 24, borderRadius: 14,
-          background: "linear-gradient(180deg, rgba(255,107,139,0.06), rgba(255,107,139,0.02))",
-          border: "1px solid rgba(255,107,139,0.32)",
-          fontFamily: "var(--font-body)", color: "var(--color-text)",
-        }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#ff6b8b", marginBottom: 6 }}>
-            Tab error · {this.props.tab}
-          </div>
-          <p style={{ margin: "0 0 12px 0", color: "var(--color-text-muted)" }}>
-            This panel hit a runtime error. The tab strip is still live — pick another tab, or reload to retry.
-          </p>
-          <pre style={{
-            margin: 0, padding: 12, borderRadius: 8,
-            background: "rgba(0,0,0,0.32)", color: "#ffd166",
-            fontFamily: "var(--font-mono)", fontSize: 11,
-            whiteSpace: "pre-wrap", wordBreak: "break-word",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}>{this.state.error?.message || String(this.state.error)}</pre>
-        </div>
-      );
-    }
-    return this.props.children as any;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Inline key control (mirrors AdminShell's AdminKeyControl)
-// ─────────────────────────────────────────────────────────────────────────────
-function VibraniumAdminKeyControl({ currentKey, onSave }: { currentKey: string; onSave: (k: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(currentKey);
-  const masked = currentKey ? `${currentKey.slice(0, 6)}…${currentKey.slice(-4)}` : "(unset)";
-
-  if (!editing) {
-    return (
-      <button
-        onClick={() => setEditing(true)}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "8px 14px", borderRadius: 10,
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: ATOM_MUTED,
-          fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em",
-          cursor: "pointer",
-        }}
-      >
-        <KeyRound size={12} /> ADMIN_KEY · {masked}
-      </button>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <input
-        autoFocus
-        type="password"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        placeholder="Paste ADMIN_API_KEY"
-        style={{
-          padding: "8px 12px", borderRadius: 10, minWidth: 280,
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(105,106,172,0.32)",
-          color: "var(--color-text)", fontFamily: "var(--font-mono)", fontSize: 12,
-          outline: "none",
-        }}
-      />
-      <button
-        onClick={() => { onSave(val.trim()); setEditing(false); }}
-        style={{
-          padding: "8px 14px", borderRadius: 10,
-          background: ATOM_TEAL, color: "#041413",
-          fontFamily: "var(--font-body)", fontWeight: 700, fontSize: 12,
-          border: "none", cursor: "pointer",
-        }}
-      >Save</button>
-      <button
-        onClick={() => setEditing(false)}
-        style={{
-          padding: "8px 14px", borderRadius: 10,
-          background: "transparent", color: ATOM_MUTED,
-          border: "1px solid rgba(255,255,255,0.08)",
-          cursor: "pointer", fontSize: 12,
-        }}
-      >Cancel</button>
+      {/* Footer */}
+      <div style={{ marginTop: 32, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontFamily: FONT_MONO, fontSize: 10.5, color: t.faint, letterSpacing: "0.06em" }}>
+        ΔTOM · Vibranium GA Console v2 · Nirmata Holdings · @nirmata/atom-design-system v1.0
+      </div>
     </div>
   );
 }
