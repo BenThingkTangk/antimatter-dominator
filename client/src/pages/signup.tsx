@@ -93,43 +93,50 @@ export default function SignupPage() {
       style={{ background: "radial-gradient(120% 80% at 50% 32%, #14141c 0%, #08080c 58%, #020202 100%)" }}
     >
       <div className="w-full max-w-lg space-y-8">
-        {/* Logo */}
+        {/* Canonical ΔTOM full lockup — orbital icon + wordmark per brand spec */}
         <div className="flex flex-col items-center gap-3">
-          <svg
-            className="atom-mark"
-            style={{ width: 52, height: 52 }}
-            viewBox="0 0 64 64"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle className="atom-atmosphere" cx="32" cy="32" r="30" />
-            <g className="atom-orbits">
-              <ellipse className="atom-orbit atom-orbit-a" cx="32" cy="32" rx="12" ry="29" />
-              <ellipse className="atom-orbit atom-orbit-b" cx="32" cy="32" rx="29" ry="12" />
-              <ellipse className="atom-orbit atom-orbit-c" cx="32" cy="32" rx="23" ry="10" transform="rotate(45 32 32)" />
-            </g>
-            <circle className="atom-nucleus" cx="32" cy="32" r="4.25" />
-            <circle className="atom-electron atom-electron-a" cx="32" cy="3" r="2.6" />
-            <circle className="atom-electron atom-electron-b" cx="61" cy="32" r="2.4" />
-            <circle className="atom-electron atom-electron-c" cx="15.5" cy="48.5" r="2.2" />
-          </svg>
-          {/* Canonical ΔTOM wordmark — geometric SVG, never relies on Unicode Δ font rendering */}
-          <svg
-            aria-label="ΔTOM"
+          <div
             role="img"
-            className="atom-wordmark"
-            viewBox="0 0 640 160"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ width: "min(220px, 60vw)", height: "auto", color: "var(--color-text)" }}
+            aria-label="ΔTOM"
+            style={{
+              width: "min(340px, 78vw)",
+              color: "var(--color-text, #f0f0f0)",
+              filter: "drop-shadow(0 0 22px rgba(0,200,200,0.35))",
+            }}
           >
-            <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-              <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
-              <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
-              <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
-              <circle cx="320" cy="83" r="50" stroke="var(--color-primary, #00c8c8)" strokeWidth="14" />
-              <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
-            </g>
-          </svg>
+            <svg viewBox="0 0 1100 240" preserveAspectRatio="xMidYMid meet" style={{ display: "block", width: "100%", height: "auto" }}>
+              <defs>
+                <radialGradient id="signup-core" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+                  <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
+                  <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
+                </radialGradient>
+                <radialGradient id="signup-shell" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
+                  <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
+                </radialGradient>
+              </defs>
+              <g transform="translate(20 20)">
+                <g fill="none" stroke="var(--color-primary, #3fb5b5)" strokeWidth="5" strokeLinecap="round">
+                  <ellipse cx="100" cy="100" rx="82" ry="32" />
+                  <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
+                  <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
+                </g>
+                <circle cx="100" cy="100" r="26" fill="url(#signup-shell)" />
+                <circle cx="100" cy="100" r="18" fill="url(#signup-core)" />
+                <circle cx="100" cy="100" r="5" fill="#ffffff" />
+              </g>
+              <g transform="translate(290 20)" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+                <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
+                <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
+                <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
+                <circle cx="430" cy="102" r="70" stroke="var(--color-primary, #3fb5b5)" strokeWidth="18" />
+                <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
+              </g>
+            </svg>
+          </div>
           <p style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
             {step === 1 ? "Create your account" : "Choose your plan"}
           </p>

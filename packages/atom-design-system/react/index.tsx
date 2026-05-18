@@ -101,9 +101,9 @@ export function AtomLogo({
       className={`atom-logo atom-logo--${size} ${className || ''}`.trim()}
       style={{ display: 'inline-flex', alignItems: 'center', gap: dims.gap, ...style }}
     >
-      {/* Orbital icon */}
+      {/* Orbital icon — canonical: 3 ellipses at 0°/60°/120° + glowing nucleus */}
       <svg
-        viewBox="0 0 64 64"
+        viewBox="0 0 200 200"
         width={dims.icon}
         height={dims.icon}
         aria-hidden="true"
@@ -113,11 +113,27 @@ export function AtomLogo({
           filter: 'drop-shadow(0 0 14px rgba(0,200,200,0.45))',
         }}
       >
-        <ellipse cx="32" cy="32" rx="26" ry="10" fill="none" stroke="var(--atom-primary, #00c8c8)" strokeWidth="1.6" opacity="0.9" />
-        <ellipse cx="32" cy="32" rx="26" ry="10" fill="none" stroke="var(--atom-primary, #00c8c8)" strokeWidth="1.6" opacity="0.55" transform="rotate(60 32 32)" />
-        <ellipse cx="32" cy="32" rx="26" ry="10" fill="none" stroke="var(--atom-primary, #00c8c8)" strokeWidth="1.6" opacity="0.35" transform="rotate(120 32 32)" />
-        <circle cx="32" cy="32" r="4" fill="#ffffff" />
-        <circle cx="32" cy="32" r="9" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+        <defs>
+          <radialGradient id="atomlogo-core" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
+            <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="atomlogo-shell" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
+            <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
+            <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
+          </radialGradient>
+        </defs>
+        <g fill="none" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="4.5" strokeLinecap="round">
+          <ellipse cx="100" cy="100" rx="82" ry="32" />
+          <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
+          <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
+        </g>
+        <circle cx="100" cy="100" r="26" fill="url(#atomlogo-shell)" />
+        <circle cx="100" cy="100" r="18" fill="url(#atomlogo-core)" />
+        <circle cx="100" cy="100" r="5" fill="#ffffff" />
       </svg>
 
       {/* ΔTOM wordmark — canonical geometric SVG, no Unicode Δ font fallback */}
@@ -125,21 +141,21 @@ export function AtomLogo({
         <svg
           className="atom-logo__wordmark"
           aria-hidden="true"
-          viewBox="0 0 640 160"
+          viewBox="0 0 720 200"
           preserveAspectRatio="xMidYMid meet"
           style={{
             display: 'inline-block',
-            height: dims.word * 1.25,
+            height: dims.word * 1.4,
             width: 'auto',
-            color: 'var(--atom-text, #e8e8ea)',
+            color: 'var(--atom-text, #f0f0f0)',
           }}
         >
           <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-            <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
-            <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
-            <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
-            <circle cx="320" cy="83" r="50" stroke="var(--atom-primary, #00c8c8)" strokeWidth="14" />
-            <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+            <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
+            <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
+            <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
+            <circle cx="430" cy="102" r="70" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="18" />
+            <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
           </g>
         </svg>
       )}
@@ -334,71 +350,75 @@ export function AtomBootLoader({
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <div style={{ position: 'relative', width: 'min(420px, 86vw)', textAlign: 'center' }}>
-        {/* Orbital rings */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'relative',
-            width: 180,
-            height: 180,
-            margin: '0 auto 32px',
-          }}
-        >
-          {[
-            { rot: 0,   opacity: 0.9,  dur: '6s' },
-            { rot: 60,  opacity: 0.55, dur: '7.5s' },
-            { rot: 120, opacity: 0.35, dur: '9s' },
-          ].map((r, i) => (
-            <svg
-              key={i}
-              viewBox="0 0 180 180"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                transform: `rotate(${r.rot}deg)`,
-                animation: `atom-orbit-spin ${r.dur} linear infinite reverse`,
-              }}
-            >
-              <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity={r.opacity} />
-            </svg>
-          ))}
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 18,
-              height: 18,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, #ffffff 0%, rgba(255,255,255,0.85) 35%, transparent 75%)',
-              boxShadow:
-                '0 0 12px rgba(255,255,255,0.9), 0 0 36px rgba(0,200,200,0.6), 0 0 80px rgba(0,200,200,0.35)',
-              animation: 'atom-pulse-dot 2.2s ease-in-out infinite',
-            }}
-          />
-        </div>
-
-        {/* ΔTOM wordmark */}
+      <div style={{ position: 'relative', width: 'min(720px, 92vw)', textAlign: 'center' }}>
+        {/* Canonical full lockup — orbital icon + ΔTOM wordmark, horizontal */}
         <div
           role="img"
           aria-label="ΔTOM"
           style={{
             display: 'block',
-            width: 'clamp(220px, 38vw, 420px)',
-            margin: '0 auto 16px',
-            color: 'var(--atom-text, #e8e8ea)',
-            filter: 'drop-shadow(0 0 24px rgba(0,200,200,0.35))',
+            width: 'clamp(320px, 70vw, 720px)',
+            margin: '0 auto 28px',
+            color: 'var(--atom-text, #f0f0f0)',
+            filter: 'drop-shadow(0 0 28px rgba(0,200,200,0.35))',
           }}
         >
-          <svg viewBox="0 0 640 160" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', width: '100%' }}>
-            <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-              <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
-              <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
-              <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
-              <circle cx="320" cy="83" r="50" stroke="var(--atom-primary, #00c8c8)" strokeWidth="14" />
-              <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+          <svg
+            viewBox="0 0 1100 240"
+            preserveAspectRatio="xMidYMid meet"
+            style={{ display: 'block', width: '100%', height: 'auto' }}
+          >
+            <defs>
+              <radialGradient id="bootloader-core" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+                <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
+                <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
+              </radialGradient>
+              <radialGradient id="bootloader-shell" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
+                <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
+                <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
+              </radialGradient>
+            </defs>
+
+            {/* Orbital icon — spins as a group */}
+            <g transform="translate(20 20)">
+              <g
+                fill="none"
+                stroke="var(--atom-primary, #3fb5b5)"
+                strokeWidth="5"
+                strokeLinecap="round"
+                style={{
+                  transformOrigin: '100px 100px',
+                  animation: 'atom-orbit-spin 14s linear infinite reverse',
+                }}
+              >
+                <ellipse cx="100" cy="100" rx="82" ry="32" />
+                <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
+                <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
+              </g>
+              <circle cx="100" cy="100" r="26" fill="url(#bootloader-shell)" />
+              <circle
+                cx="100"
+                cy="100"
+                r="18"
+                fill="url(#bootloader-core)"
+                style={{
+                  transformOrigin: '100px 100px',
+                  animation: 'atom-pulse-dot 2.2s ease-in-out infinite',
+                }}
+              />
+              <circle cx="100" cy="100" r="5" fill="#ffffff" />
+            </g>
+
+            {/* ΔTOM wordmark — geometric strokes */}
+            <g transform="translate(290 20)" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+              <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
+              <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
+              <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
+              <circle cx="430" cy="102" r="70" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="18" />
+              <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
             </g>
           </svg>
         </div>

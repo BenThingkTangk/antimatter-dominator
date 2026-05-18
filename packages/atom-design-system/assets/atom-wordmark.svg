@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-labelledby="atom-wm-title atom-wm-desc" width="640" height="160">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" role="img" aria-labelledby="atom-wm-title atom-wm-desc" width="720" height="200">
   <title id="atom-wm-title">ΔTOM wordmark</title>
-  <desc id="atom-wm-desc">Canonical ΔTOM wordmark. Δ, T, M are geometric stroked glyphs in light cream; the O is a teal ring at the same cap height. All four glyphs share a single baseline with tight, even tracking.</desc>
+  <desc id="atom-wm-desc">Canonical ΔTOM wordmark. Δ, T, M are geometric stroked glyphs in light cream; the O is a teal ring at the same cap height. All four glyphs share a single baseline with elegant, even tracking.</desc>
   <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
-    <!-- Δ — Greek capital Delta, thick stroked triangle -->
-    <polygon points="70,130 10,130 40,30" stroke="#e8e8ea" stroke-width="14"/>
+    <!-- Δ — Greek capital Delta, clean hollow triangle -->
+    <polygon points="100,170 10,170 55,30" stroke="#f0f0f0" stroke-width="18"/>
     <!-- T — top bar + stem -->
-    <line x1="100" y1="37" x2="220" y2="37" stroke="#e8e8ea" stroke-width="14"/>
-    <line x1="160" y1="37" x2="160" y2="130" stroke="#e8e8ea" stroke-width="14"/>
-    <!-- O — teal ring -->
-    <circle cx="320" cy="83" r="50" stroke="#00c8c8" stroke-width="14"/>
+    <line x1="150" y1="35" x2="310" y2="35" stroke="#f0f0f0" stroke-width="18"/>
+    <line x1="230" y1="35" x2="230" y2="170" stroke="#f0f0f0" stroke-width="18"/>
+    <!-- O — teal ring (same cap height as letters) -->
+    <circle cx="430" cy="102" r="70" stroke="#3fb5b5" stroke-width="18"/>
     <!-- M — two verticals joined by a centered V -->
-    <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="#e8e8ea" stroke-width="14"/>
+    <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="#f0f0f0" stroke-width="18"/>
   </g>
 </svg>

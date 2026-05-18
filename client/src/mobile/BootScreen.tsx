@@ -7,7 +7,6 @@
  * the tenant resolver completes before that.
  */
 import { useEffect, useState } from "react";
-import { AtomOrbit } from "./AtomOrbit";
 
 interface BootScreenProps {
   onDone: () => void;
@@ -26,20 +25,49 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
 
   return (
     <div className={`m-boot${leaving ? " is-leaving" : ""}`} role="status" aria-label="ATOM booting">
-      <div className="m-boot-mark"><AtomOrbit size={170} /></div>
-      <div className="m-boot-wordmark" aria-label="ΔTOM" role="img">
+      {/* Canonical ΔTOM full lockup — orbital icon + wordmark per brand spec */}
+      <div className="m-boot-lockup" role="img" aria-label="ΔTOM" style={{ width: "min(420px, 86vw)", margin: "0 auto", filter: "drop-shadow(0 0 24px rgba(0,200,200,0.35))" }}>
         <svg
           aria-hidden="true"
-          viewBox="0 0 640 160"
+          viewBox="0 0 1100 240"
           preserveAspectRatio="xMidYMid meet"
-          style={{ display: "block", width: "min(260px, 70vw)", height: "auto", color: "currentColor" }}
+          style={{ display: "block", width: "100%", height: "auto", color: "currentColor" }}
         >
-          <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-            <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
-            <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
-            <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
-            <circle cx="320" cy="83" r="50" stroke="var(--color-primary, #00c8c8)" strokeWidth="14" />
-            <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+          <defs>
+            <radialGradient id="mboot-core" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+              <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
+              <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="mboot-shell" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
+              <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
+              <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
+            </radialGradient>
+          </defs>
+          <g transform="translate(20 20)">
+            <g
+              fill="none"
+              stroke="var(--color-primary, #3fb5b5)"
+              strokeWidth="5"
+              strokeLinecap="round"
+              style={{ transformOrigin: "100px 100px", animation: "atom-orbit-spin 14s linear infinite reverse" }}
+            >
+              <ellipse cx="100" cy="100" rx="82" ry="32" />
+              <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
+              <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
+            </g>
+            <circle cx="100" cy="100" r="26" fill="url(#mboot-shell)" />
+            <circle cx="100" cy="100" r="18" fill="url(#mboot-core)" />
+            <circle cx="100" cy="100" r="5" fill="#ffffff" />
+          </g>
+          <g transform="translate(290 20)" fill="none" strokeLinecap="square" strokeLinejoin="miter">
+            <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
+            <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
+            <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
+            <circle cx="430" cy="102" r="70" stroke="var(--color-primary, #3fb5b5)" strokeWidth="18" />
+            <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
           </g>
         </svg>
       </div>
