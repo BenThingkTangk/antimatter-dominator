@@ -366,6 +366,64 @@ async function synthesizeAtomSignals(account: any, evidence: any, rag: any, _pac
 
 // ─── Scoring helpers ───────────────────────────────────────────────────────
 function r2(n: number) { return Math.round(n * 100) / 100; }
+
+// Inlined from score-public.ts (Vercel nft cannot bundle sibling .ts imports).
+// Mirrors scoreHealthcare() exactly — keep in sync if score-public.ts changes.
+function revFactorLocal(rev: number | null | undefined, table: any[]): number {
+  if (typeof rev !== "number" || rev <= 0) return (table.find((t: any) => t.min === 0)?.factor) ?? 0.25;
+  for (const t of table) {
+    if (rev >= t.min) return t.factor;
+  }
+  return 0.25;
+}
+
+function computeHealthcarePublic(r: any, pack: any) {
+  const W = pack.weights || {};
+  const SUBV = pack.sub_vertical_profile || {};
+  const LISTS = pack.high_value_lists || {};
+  const AKAFIT = pack.akafit_multipliers || {};
+  const WALLET = pack.wallet_multipliers || {};
+  const REVTBL = pack.revenue_factors || [];
+
+  const sub = r.sub_vertical || "";
+  const profile = SUBV[sub] || { phi: 0.3, seg: 0.3, note: "Unknown sub-vertical" };
+  const rev = typeof r.revenue === "number" ? r.revenue : null;
+  const rFac = revFactorLocal(rev, REVTBL);
+  const wFac = WALLET[r.wallet_grade || ""] ?? 0.4;
+  const aFac = AKAFIT[(r.akafit || "").toUpperCase()] ?? 0.3;
+
+  const extra = r.extra_tags_json || {};
+  const tlRaw = (extra.target_lists || "").toString();
+  const tokens = tlRaw.split(";").map((t: string) => t.trim()).filter(Boolean);
+  let listScore = 0;
+  const matched: string[] = [];
+  for (const t of tokens) {
+    if (LISTS[t] !== undefined) { listScore = Math.max(listScore, LISTS[t]); matched.push(t); }
+  }
+  const density = Math.min(1.0, tokens.length / 8.0);
+  const combined = 0.65 * listScore + 0.35 * density;
+
+  const sReg = (W.regulatory || 0) * (0.6 * profile.phi + 0.4 * rFac);
+  const sFit = (W.account_fit || 0) * (0.5 * aFac + 0.5 * wFac);
+  const sDen = (W.list_density || 0) * combined;
+  const sSeg = (W.segmentation || 0) * profile.seg;
+  const publicSub = r2(sReg + sFit + sDen + sSeg);
+
+  const whyNow: string[] = [];
+  if (matched.length) whyNow.push(`Lists: ${matched.slice(0, 2).join(", ")}`);
+  whyNow.push(`Profile: ${profile.note}`);
+  if (rev && rev >= 10_000_000_000) whyNow.push("Mega-revenue: strategic priority");
+
+  return {
+    score_regulatory: r2(sReg),
+    score_account_fit: r2(sFit),
+    score_list_density: r2(sDen),
+    score_segmentation: r2(sSeg),
+    public_subtotal: publicSub,
+    public_why_now: whyNow.join(" | "),
+  };
+}
+
 function tierFromPack(score: number, pack: any): "T1" | "T2" | "T3" | "T4" {
   const T = pack.tiers || {};
   if (score >= (T.T1?.min ?? 75)) return "T1";
@@ -436,7 +494,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const idsCsv = accountIds.join(",");
     const rows: any[] = await sb(
-      `atom_campaign_accounts?id=in.(${idsCsv})&select=id,account_name,domain,sub_vertical,public_subtotal`,
+      `atom_campaign_accounts?id=in.(${idsCsv})&select=id,account_name,domain,sub_vertical,revenue,akafit,wallet_grade,extra_tags_json,public_subtotal`,
     );
 
     await sb(`atom_campaign_accounts?id=in.(${idsCsv})`, {
@@ -480,16 +538,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 3. Recompute final_score with ATOM weights
         const enr = synth.data;
         const atom = scoreAtomSignals(enr, pack);
-        const finalScore = r2((r.public_subtotal || 0) + atom.intent + atom.personas + atom.freshness);
+
+        // Backfill deterministic public_subtotal if score-public was never run on this row.
+        // Healthcare engine only — Cloud/AI engine uses different scoring (score-public is the entry point there).
+        const needsPublicBackfill = pack.engine === "healthcare-hipaa-v1"
+          && (r.public_subtotal == null || r.public_subtotal === 0);
+        const pubComputed = needsPublicBackfill ? computeHealthcarePublic(r, pack) : null;
+        const publicSubtotal = pubComputed ? pubComputed.public_subtotal : (r.public_subtotal || 0);
+
+        const finalScore = r2(publicSubtotal + atom.intent + atom.personas + atom.freshness);
         const tier = tierFromPack(finalScore, pack);
         const whyParts: string[] = [];
+        if (pubComputed?.public_why_now) whyParts.push(pubComputed.public_why_now);
         if (enr.atom_rationale) whyParts.push(enr.atom_rationale);
         if (enr.atom_buying_signals?.length) whyParts.push(`Signal: ${enr.atom_buying_signals[0]}`);
         if (enr.atom_pain_points?.length) whyParts.push(`Pain: ${enr.atom_pain_points[0]}`);
 
-        await sb(`atom_campaign_accounts?id=eq.${r.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({
+        const patchBody: any = {
             atom_buying_signals_json: enr.atom_buying_signals || [],
             atom_pain_points_json: enr.atom_pain_points || [],
             atom_recent_news_json: enr.atom_recent_news || [],
@@ -508,7 +573,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             enrich_status: "ok",
             enrich_error: null,
             atom_enriched_at: new Date().toISOString(),
-          }),
+        };
+
+        if (pubComputed) {
+          patchBody.score_regulatory = pubComputed.score_regulatory;
+          patchBody.score_account_fit = pubComputed.score_account_fit;
+          patchBody.score_list_density = pubComputed.score_list_density;
+          patchBody.score_segmentation = pubComputed.score_segmentation;
+          patchBody.score_breach = 0;
+          patchBody.public_subtotal = pubComputed.public_subtotal;
+        }
+
+        await sb(`atom_campaign_accounts?id=eq.${r.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(patchBody),
           headers: { Prefer: "return=minimal" },
         });
         okCount++;
