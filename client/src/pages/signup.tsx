@@ -113,9 +113,23 @@ export default function SignupPage() {
             <circle className="atom-electron atom-electron-b" cx="61" cy="32" r="2.4" />
             <circle className="atom-electron atom-electron-c" cx="15.5" cy="48.5" r="2.2" />
           </svg>
-          <h1 className="atom-wordmark text-2xl" style={{ color: "var(--color-text)" }}>
-            ΔT<span>O</span>M
-          </h1>
+          {/* Canonical ΔTOM wordmark — geometric SVG, never relies on Unicode Δ font rendering */}
+          <svg
+            aria-label="ΔTOM"
+            role="img"
+            className="atom-wordmark"
+            viewBox="0 0 640 160"
+            preserveAspectRatio="xMidYMid meet"
+            style={{ width: "min(220px, 60vw)", height: "auto", color: "var(--color-text)" }}
+          >
+            <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
+              <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
+              <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
+              <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
+              <circle cx="320" cy="83" r="50" stroke="var(--color-primary, #00c8c8)" strokeWidth="14" />
+              <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+            </g>
+          </svg>
           <p style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
             {step === 1 ? "Create your account" : "Choose your plan"}
           </p>

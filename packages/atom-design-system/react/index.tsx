@@ -120,24 +120,28 @@ export function AtomLogo({
         <circle cx="32" cy="32" r="9" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
       </svg>
 
-      {/* ΔTOM wordmark */}
+      {/* ΔTOM wordmark — canonical geometric SVG, no Unicode Δ font fallback */}
       {showWordmark && (
-        <span
+        <svg
           className="atom-logo__wordmark"
+          aria-hidden="true"
+          viewBox="0 0 640 160"
+          preserveAspectRatio="xMidYMid meet"
           style={{
-            fontFamily: "var(--atom-font-display, 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif)",
-            fontWeight: 800,
-            fontSize: dims.word,
-            letterSpacing: '-0.02em',
-            lineHeight: 1,
+            display: 'inline-block',
+            height: dims.word * 1.25,
+            width: 'auto',
             color: 'var(--atom-text, #e8e8ea)',
           }}
         >
-          <span aria-hidden="true">Δ</span>
-          <span aria-hidden="true">T</span>
-          <span aria-hidden="true" style={{ color: 'var(--atom-primary, #00c8c8)' }}>O</span>
-          <span aria-hidden="true">M</span>
-        </span>
+          <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
+            <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
+            <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
+            <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
+            <circle cx="320" cy="83" r="50" stroke="var(--atom-primary, #00c8c8)" strokeWidth="14" />
+            <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+          </g>
+        </svg>
       )}
     </span>
   );

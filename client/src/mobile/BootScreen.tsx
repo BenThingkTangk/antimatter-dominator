@@ -27,7 +27,22 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
   return (
     <div className={`m-boot${leaving ? " is-leaving" : ""}`} role="status" aria-label="ATOM booting">
       <div className="m-boot-mark"><AtomOrbit size={170} /></div>
-      <div className="m-boot-wordmark">ΔT<span className="m-o">O</span>M</div>
+      <div className="m-boot-wordmark" aria-label="ΔTOM" role="img">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 640 160"
+          preserveAspectRatio="xMidYMid meet"
+          style={{ display: "block", width: "min(260px, 70vw)", height: "auto", color: "currentColor" }}
+        >
+          <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
+            <polygon points="70,130 10,130 40,30" stroke="currentColor" strokeWidth="14" />
+            <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
+            <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
+            <circle cx="320" cy="83" r="50" stroke="var(--color-primary, #00c8c8)" strokeWidth="14" />
+            <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="currentColor" strokeWidth="14" />
+          </g>
+        </svg>
+      </div>
       <div className="m-boot-bar"><div className="m-boot-bar-fill" /></div>
       <div className="m-boot-lines">
         <div className="m-boot-line">
