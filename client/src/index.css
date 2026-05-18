@@ -836,7 +836,7 @@
 }
 .atom-mobile-root .m-boot-bar-fill {
   position: absolute; inset: 0; right: auto;
-  background: linear-gradient(90deg, var(--m-teal) 0%, #9b7bff 100%);
+  background: linear-gradient(90deg, var(--m-teal) 0%, #00e6d3 100%);
   border-radius: 2px;
   box-shadow: 0 0 14px var(--m-teal-glow);
   animation: m-boot-progress 2.4s var(--ease-out) forwards;
@@ -1083,3 +1083,344 @@
   min-height: 40px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   GA VISUAL HARDENING — ATOM brand uniformity pass
+   ───────────────────────────────────────────────────────────────────────────
+   This layer is loaded last so it wins over both shadcn defaults and the
+   vendored @nirmata/dtom-brand-system / @nirmata/atom-design-system tokens.
+   Goals:
+     1. Force ATOM teal as the loader/brand accent (no purple loader).
+     2. Give every form control (select, native select, input, textarea,
+        combobox triggers, search bars) a visible boxed surface with a 1px
+        border, consistent radius, height, padding and teal focus ring.
+     3. Normalize module-level typography so titles, eyebrows, body, labels
+        and tabular data feel like the same product.
+     4. Layer dark surfaces, borders, radii and shadows on dashboard cards,
+        module shells and tab strips so the desktop UI feels uniform.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 1. Loader / boot — override dtom-brand-system purple to ATOM teal ──── */
+/* The vendored dtom-brand-system ships with a lavender primary. Within the
+   ATOM brand, the cinematic loader must read as black-titanium + teal plasma,
+   matching the wider ΔTOM identity. We override at the data-dtom-brand scope
+   so the brand system tokens themselves are remapped rather than fighting
+   inline rules.                                                              */
+[data-dtom-brand="atom"],
+[data-dtom-brand="atom"][data-dtom-theme="dark"] {
+  --dtom-color-bg:                  #0b0b0c;
+  --dtom-color-bg-2:                #0f1112;
+  --dtom-color-surface:             #101316;
+  --dtom-color-surface-2:           #15191d;
+  --dtom-color-surface-3:           #1b2026;
+  --dtom-color-surface-glass:       color-mix(in oklab, #11151a 72%, transparent);
+  --dtom-color-border:              rgba(255,255,255,0.10);
+  --dtom-color-border-strong:       rgba(255,255,255,0.18);
+  --dtom-color-divider:             rgba(255,255,255,0.06);
+
+  --dtom-color-text:                #edf8f8;
+  --dtom-color-text-muted:          #9ca8ad;
+  --dtom-color-text-faint:          #5e6970;
+
+  --dtom-color-primary:             #00c8c8;
+  --dtom-color-primary-2:           #00e6d3;
+  --dtom-color-primary-dim:         #00a89e;
+  --dtom-color-primary-glow:        rgba(0,200,200,0.22);
+  --dtom-color-primary-glow-strong: rgba(0,230,211,0.38);
+  --dtom-color-primary-cinematic:   #00e6d3;
+  --dtom-brand-accent:              #00c8c8;
+}
+
+/* Belt-and-braces: even if the brand attribute is missing or a downstream
+   override slips in, the loader element itself must read teal. */
+.dtom-loader {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(0,230,211,0.22), transparent 26%),
+    linear-gradient(180deg, #06080a, #0b0b0c) !important;
+}
+.dtom-loader__word,
+.dtom-loader__word-o,
+.dtom-loader__corner,
+.dtom-loader__rail,
+.dtom-loader__telemetry-tag,
+.dtom-loader__scanline-beam {
+  color: #00e6d3;
+}
+.dtom-loader__word { color: #edf8f8; }
+.dtom-loader__word-o { color: #00e6d3; text-shadow: 0 0 28px rgba(0,230,211,0.55); }
+.dtom-loader__corner { border-color: #00c8c8; }
+.dtom-loader__scanline-beam {
+  background: linear-gradient(90deg, transparent, #00e6d3, transparent) !important;
+}
+.dtom-loader__telemetry-tag {
+  color: #00e6d3;
+  border-color: rgba(0,230,211,0.32);
+  background: rgba(0,230,211,0.06);
+}
+.dtom-loader__logo-wrap {
+  filter: drop-shadow(0 0 38px rgba(0,230,211,0.42));
+}
+.dtom-loader__logo-wrap .dtom-logo__mark,
+.dtom-loader__logo-wrap svg {
+  color: #00e6d3;
+}
+
+/* Mobile boot bar: previously gradiented teal→#9b7bff. Drop the purple stop. */
+.atom-mobile-root .m-boot-bar-fill {
+  background: linear-gradient(90deg, var(--m-teal) 0%, #00e6d3 100%) !important;
+}
+
+/* ─── 2. Forms — visible boxed surfaces with teal focus ──────────────────── */
+/* Native HTML controls (the WarRoom / Prospect / Campaign pages still use
+   plain <select> in many places). Without this, they collapse against the
+   dark page and look like text without a box.                               */
+:where(
+  select:not([data-atom-bare]),
+  input[type="text"]:not([data-atom-bare]),
+  input[type="email"]:not([data-atom-bare]),
+  input[type="search"]:not([data-atom-bare]),
+  input[type="url"]:not([data-atom-bare]),
+  input[type="tel"]:not([data-atom-bare]),
+  input[type="number"]:not([data-atom-bare]),
+  input[type="password"]:not([data-atom-bare]),
+  textarea:not([data-atom-bare])
+) {
+  background-color: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 0.5rem;
+  color: var(--color-text);
+  min-height: 38px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+:where(select):not([data-atom-bare]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='none' stroke='%239ca8ad' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M4 6l4 4 4-4'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 14px 14px;
+  padding-right: 2rem;
+}
+:where(
+  select:not([data-atom-bare]):hover,
+  input:not([data-atom-bare]):hover,
+  textarea:not([data-atom-bare]):hover
+) {
+  border-color: rgba(255,255,255,0.18);
+}
+:where(
+  select:not([data-atom-bare]):focus,
+  select:not([data-atom-bare]):focus-visible,
+  input:not([data-atom-bare]):focus,
+  input:not([data-atom-bare]):focus-visible,
+  textarea:not([data-atom-bare]):focus,
+  textarea:not([data-atom-bare]):focus-visible
+) {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0,200,200,0.18);
+  background-color: rgba(0,200,200,0.04);
+}
+
+/* Radix / shadcn Select trigger: same visible boxed surface. The component
+   only ships a thin border, so on a dark surface it disappears. Strengthen.  */
+[data-radix-collection-item],
+button[role="combobox"],
+[role="combobox"] {
+  /* light hand — let the component own height/padding. */
+}
+button[role="combobox"]:where(:not(.atom-bare)) {
+  background-color: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0.5rem;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+button[role="combobox"]:where(:not(.atom-bare)):hover {
+  border-color: rgba(255,255,255,0.22);
+}
+button[role="combobox"]:where(:not(.atom-bare)):focus-visible,
+button[role="combobox"][data-state="open"]:where(:not(.atom-bare)) {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0,200,200,0.18);
+}
+
+/* Radix Select popover content — make sure the dropdown panel itself has a
+   visible boxed surface against the dark page.                              */
+[role="listbox"],
+[data-radix-popper-content-wrapper] > * {
+  background-color: #14181c !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.4) !important;
+}
+[role="option"][data-highlighted],
+[role="option"]:focus,
+[role="option"]:hover {
+  background-color: rgba(0,200,200,0.10) !important;
+  color: var(--color-text) !important;
+}
+
+/* Pitch-Type / Tone-style "card list" rows (used on the Pitch generator and
+   Objection handler). The frames show these as borderless text rows. Add a
+   subtle boxed surface so they read as selectable cards.                    */
+.atom-form-tile,
+[data-atom-tile] {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.55rem;
+  background: rgba(255,255,255,0.025);
+  padding: 0.6rem 0.75rem;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.atom-form-tile:hover,
+[data-atom-tile]:hover {
+  border-color: rgba(0,200,200,0.32);
+  background: rgba(0,200,200,0.05);
+}
+.atom-form-tile[data-selected="true"],
+[data-atom-tile][data-selected="true"] {
+  border-color: var(--color-primary);
+  background: rgba(0,200,200,0.08);
+}
+
+/* ─── 3. Typography normalization ────────────────────────────────────────── */
+/* Module pages frequently inline-style their headings to oversized display
+   sizes. Cap them to a consistent module title scale. Module subtitle / body
+   sizes get a small floor so muted text is still legible on dark surfaces.   */
+.atom-module-title,
+[data-atom-module-title] {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+.atom-module-subtitle,
+[data-atom-module-subtitle] {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.atom-eyebrow-row,
+[data-atom-eyebrow] {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+/* Tame "display" sizes on internal app pages — landing/marketing keep the
+   cinematic 6vw scale, but inside the authenticated app we never want a
+   single tile heading larger than ~36px. This makes module pages feel like
+   instruments rather than billboards.                                       */
+.atom-app-shell h1:not(.atom-hero-title),
+.atom-app-shell h2:not(.atom-hero-title) {
+  font-size: clamp(1.25rem, 0.95rem + 0.6vw, 1.625rem);
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+}
+.atom-app-shell h3 {
+  font-size: clamp(1rem, 0.9rem + 0.3vw, 1.125rem);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.atom-app-shell h4 {
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.atom-app-shell label,
+.atom-app-shell .label,
+.atom-app-shell [data-label] {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.atom-app-shell table th {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.atom-app-shell table td {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+/* ─── 4. Module/card/shell uniformity ────────────────────────────────────── */
+/* Generic "panel" surface — many module pages compose their own card via
+   `bg-white/[0.03] border border-white/10 rounded-xl` etc. Provide a default
+   shape so anything inside .atom-app-shell that's a plain section/article
+   feels consistent, without forcing every page to adopt a named class.       */
+.atom-app-shell .atom-panel,
+.atom-app-shell [data-atom-panel] {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.85rem;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 28px rgba(0,0,0,0.32);
+}
+.atom-app-shell .atom-panel--quiet,
+.atom-app-shell [data-atom-panel="quiet"] {
+  background: rgba(255,255,255,0.015);
+  border-color: rgba(255,255,255,0.06);
+  box-shadow: none;
+}
+
+/* Module tab strips — the Campaign / Pitch / Sonar pages use a row of pill
+   tabs that vary visually page-to-page. Provide a uniform pill look that
+   pages can opt into via .atom-tab-row.                                      */
+.atom-tab-row {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  border-radius: 999px;
+}
+.atom-tab-row > * {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+.atom-tab-row > [data-active="true"],
+.atom-tab-row > .is-active {
+  background: rgba(0,200,200,0.12);
+  color: var(--color-primary);
+}
+
+/* Selection accent — keep selection visible on dark surfaces. */
+.atom-app-shell ::selection {
+  background: rgba(0,200,200,0.28);
+  color: var(--color-text);
+}
+
+/* Scoped global: ensure any explicit `bg-purple-*` / `bg-violet-*` usage on
+   *brand* surfaces (loader/header/sidebar) is neutralized to teal. We do NOT
+   purge violet from data-viz chips — Anthropic Claude chips and history
+   purple accents stay, per spec. We only neutralize when they appear on the
+   loader root or on the app shell header/sidebar to keep the brand uniform. */
+.dtom-loader [class*="bg-violet"],
+.dtom-loader [class*="bg-purple"],
+.dtom-loader [class*="text-violet"],
+.dtom-loader [class*="text-purple"] {
+  background-color: transparent !important;
+  color: #00e6d3 !important;
+}

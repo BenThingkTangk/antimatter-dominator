@@ -357,7 +357,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="atom-app-shell flex h-screen overflow-hidden bg-background">
         <aside
           className={`relative hidden md:flex flex-col border-r text-sidebar-foreground transition-all duration-300 overflow-hidden ${collapsed ? "w-16" : "w-64"}`}
           style={{ background: "#08080c", borderColor: "rgba(255,255,255,0.08)" }}
