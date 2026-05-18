@@ -122,6 +122,18 @@ function revFactor(rev: number | null | undefined, table: any[]): number {
   return 0.25;
 }
 
+// Breach signal weighting:
+// - Direct breach (account had its own incident): 0.95 × weight
+// - Peer breach only (industry peers breached): 0.60 × weight
+// - No evidence yet: 0.20 × weight (we assume some baseline risk in healthcare)
+function breachFactor(direct: any, peer: any): number {
+  const hasDirect = Array.isArray(direct) ? direct.length > 0 : (direct && typeof direct === "object" && Object.keys(direct).length > 0);
+  const hasPeer = Array.isArray(peer) ? peer.length > 0 : (peer && typeof peer === "object" && Object.keys(peer).length > 0);
+  if (hasDirect) return 0.95;
+  if (hasPeer) return 0.60;
+  return 0.20;
+}
+
 function scoreHealthcare(r: any, pack: any) {
   const W = pack.weights;
   const SUBV = pack.sub_vertical_profile || {};
@@ -152,21 +164,27 @@ function scoreHealthcare(r: any, pack: any) {
   const sFit = W.account_fit * (0.5 * aFac + 0.5 * wFac);
   const sDen = W.list_density * combined;
   const sSeg = W.segmentation * profile.seg;
-  const publicSub = r2(sReg + sFit + sDen + sSeg);
+  const bFac = breachFactor(r.direct_breach_json, r.peer_breach_json);
+  const sBreach = W.breach * bFac;
+  const publicSub = r2(sReg + sFit + sDen + sSeg + sBreach);
   const final = publicSub;
   const tier = tierFromThresholds(final, pack.tiers);
+  const tierMeta = pack.tiers?.[tier] || {};
+  const recommendedMove = tierMeta.action || null;
 
   const whyNow: string[] = [];
   if (matched.length) whyNow.push(`Lists: ${matched.slice(0, 2).join(", ")}`);
   whyNow.push(`Profile: ${profile.note}`);
   if (rev && rev >= 10_000_000_000) whyNow.push("Mega-revenue: strategic priority");
+  if (bFac >= 0.9) whyNow.push("Direct breach history on file");
+  else if (bFac >= 0.5) whyNow.push("Peer breach pressure in segment");
 
   return {
     score_regulatory: r2(sReg),
     score_account_fit: r2(sFit),
     score_list_density: r2(sDen),
     score_segmentation: r2(sSeg),
-    score_breach: 0,
+    score_breach: r2(sBreach),
     score_atom_intent: 0,
     score_atom_personas: 0,
     score_atom_freshness: 0,
@@ -174,6 +192,7 @@ function scoreHealthcare(r: any, pack: any) {
     final_score: final,
     tier,
     why_now: whyNow.join(" | "),
+    recommended_move: recommendedMove,
   };
 }
 
@@ -210,6 +229,7 @@ function scoreCloudInfra(r: any, pack: any) {
 
   const final = r2(W.latency * L + W.security * S + W.gpu_inference * G + W.egress * E + W.multicloud * M + W.trigger * T);
   const tier = tierFromThresholds(final, pack.tiers);
+  const tierMeta = pack.tiers?.[tier] || {};
 
   const why = [
     `Segment: ${segRaw} (${fallback.note})`,
@@ -230,6 +250,7 @@ function scoreCloudInfra(r: any, pack: any) {
     final_score: final,
     tier,
     why_now: why.join(" | "),
+    recommended_move: tierMeta.action || null,
   };
 }
 
@@ -266,7 +287,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let from = 0;
     const pageSize = 1000;
     while (true) {
-      const url = `atom_campaign_accounts?campaign_id=eq.${id}&select=id,sub_vertical,revenue,akafit,wallet_grade,extra_tags_json&order=id.asc&limit=${pageSize}&offset=${from}`;
+      const url = `atom_campaign_accounts?campaign_id=eq.${id}&select=id,sub_vertical,revenue,akafit,wallet_grade,extra_tags_json,direct_breach_json,peer_breach_json&order=id.asc&limit=${pageSize}&offset=${from}`;
       const rows: any[] = await sb(url);
       if (!Array.isArray(rows) || rows.length === 0) break;
 

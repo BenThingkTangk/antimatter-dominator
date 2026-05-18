@@ -546,10 +546,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pubComputed = needsPublicBackfill ? computeHealthcarePublic(r, pack) : null;
         const publicSubtotal = pubComputed ? pubComputed.public_subtotal : (r.public_subtotal || 0);
 
-        const finalScore = r2(publicSubtotal + atom.intent + atom.personas + atom.freshness);
+        // Capture breach evidence from Sonar response so the scorer can use it.
+        // Direct breach = the account's own incident history.
+        // Peer breach = breaches in the same sub-vertical / segment (we currently
+        // surface peer pressure from the same payload; future enhancement: separate Sonar query).
+        const evData = evidenceRes.ok ? evidenceRes.data : null;
+        const directBreachList: string[] = Array.isArray(evData?.breach_history)
+          ? evData.breach_history.filter((s: any) => typeof s === "string" && s.trim())
+          : [];
+        const directBreachJson = directBreachList.length > 0 ? directBreachList : null;
+
+        // Score breach in line with score-public.ts breachFactor()
+        // direct present -> 0.95, peer only -> 0.60, none -> 0.20
+        const breachW = (pack.weights && (pack.weights as any).breach) || 20;
+        const breachFac = directBreachList.length > 0 ? 0.95 : 0.20;
+        const scoreBreachVal = r2(breachW * breachFac);
+
+        const finalScore = r2(publicSubtotal + scoreBreachVal + atom.intent + atom.personas + atom.freshness);
         const tier = tierFromPack(finalScore, pack);
+        const tierMeta = (pack.tiers as any)?.[tier] || {};
+        const recommendedMove = tierMeta.action || null;
+
         const whyParts: string[] = [];
         if (pubComputed?.public_why_now) whyParts.push(pubComputed.public_why_now);
+        if (directBreachList.length > 0) whyParts.push(`Breach history: ${directBreachList[0]}`);
         if (enr.atom_rationale) whyParts.push(enr.atom_rationale);
         if (enr.atom_buying_signals?.length) whyParts.push(`Signal: ${enr.atom_buying_signals[0]}`);
         if (enr.atom_pain_points?.length) whyParts.push(`Pain: ${enr.atom_pain_points[0]}`);
@@ -562,10 +582,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             score_atom_intent: atom.intent,
             score_atom_personas: atom.personas,
             score_atom_freshness: atom.freshness,
+            score_breach: scoreBreachVal,
+            direct_breach_json: directBreachJson,
             final_score: finalScore,
             tier,
+            recommended_move: recommendedMove,
             why_now: whyParts.filter(Boolean).join(" | ").slice(0, 600),
-            evidence_json: evidenceRes.ok ? evidenceRes.data : null,
+            evidence_json: evData,
             evidence_source: evidenceRes.ok ? "sonar-pro:v1" : "none",
             rag_context_json: ragRes.matches,
             rag_sources_json: ragRes.sources,
@@ -580,8 +603,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           patchBody.score_account_fit = pubComputed.score_account_fit;
           patchBody.score_list_density = pubComputed.score_list_density;
           patchBody.score_segmentation = pubComputed.score_segmentation;
-          patchBody.score_breach = 0;
-          patchBody.public_subtotal = pubComputed.public_subtotal;
+          patchBody.public_subtotal = r2(pubComputed.public_subtotal + scoreBreachVal);
         }
 
         await sb(`atom_campaign_accounts?id=eq.${r.id}`, {
