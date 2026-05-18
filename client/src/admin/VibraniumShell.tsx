@@ -1003,7 +1003,8 @@ function TabRisks() {
 // Admin key control (preserved from old shell — minimal version)
 // ─────────────────────────────────────────────────────────────────────────────
 function AdminKeyBar() {
-  const [adminKey, setAdminKey] = useAdminKey();
+  // useAdminKey returns { key, save } — NOT a tuple. Object-destructure.
+  const { key: adminKey, save: setAdminKey } = useAdminKey();
   const [showKey, setShowKey] = useState(false);
   const [draft, setDraft] = useState(adminKey || "");
   return (
@@ -1051,12 +1052,45 @@ export default function VibraniumShell() {
   const [activeTab, setActiveTab] = useState<TabId>("path");
   const session = useSessionContext();
 
-  // Gate to super-admin only.
+  // Gate to super-admin only — but only ACT on the gate after session has
+  // finished loading. SessionContext returns { loading: true, isSuperAdmin:
+  // false } during the initial hydration; without the loading check, we'd
+  // either redirect or render null and the page would look black while auth
+  // resolves.
   useEffect(() => {
-    if (!session?.isSuperAdmin) setLocation("/");
+    if (!session) return;
+    if (session.loading) return;
+    if (!session.isSuperAdmin) setLocation("/");
   }, [session, setLocation]);
 
-  if (!session?.isSuperAdmin) return null;
+  if (!session || session.loading) {
+    return (
+      <div style={{
+        padding: 40, minHeight: "60vh",
+        display: "grid", placeItems: "center",
+        background: t.bg, color: t.muted,
+        fontFamily: FONT_MONO, fontSize: 11, letterSpacing: "0.18em",
+        textTransform: "uppercase",
+      }}>Loading Vibranium Console…</div>
+    );
+  }
+
+  if (!session.isSuperAdmin) {
+    return (
+      <div style={{ padding: 40, color: t.text, fontFamily: FONT_DISPLAY }}>
+        <div style={{ maxWidth: 480, margin: "60px auto", textAlign: "center" }}>
+          <Eyebrow color={t.danger}>Access Denied</Eyebrow>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>
+            Super-admin only
+          </div>
+          <div style={{ color: t.muted, fontSize: 13 }}>
+            The Vibranium GA Console is restricted to Nirmata Holdings super-admins.
+            You are signed in as {session.user?.email || "a tenant user"}.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderTab = () => {
     switch (activeTab) {
