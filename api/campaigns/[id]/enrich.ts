@@ -411,7 +411,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let accountIds: number[] = Array.isArray(body.accountIds)
       ? body.accountIds.map((x: any) => parseInt(x, 10)).filter((x: number) => !isNaN(x))
       : [];
-    const cap = 20;
+    // Vercel maxDuration is 60s. Each account = Sonar (~6s) + RAG (~1s) + synth (~3s) ≈ 10s.
+    // At concurrency 3 that's ~10s per row of 3 → 6 accounts = 2 rows = ~20s. Safe margin.
+    // User can click Enrich again to process the next batch.
+    const cap = 6;
 
     // Look up campaign + rule pack
     const camps = await sb(`atom_campaigns?id=eq.${id}&select=id,scoring_template_slug&limit=1`);

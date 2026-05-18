@@ -590,14 +590,30 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
       (await apiRequest("POST", `/api/campaigns/${id}/enrich`, ids.length > 0 ? { accountIds: ids } : {})).json(),
     onSuccess: (res) => {
       const n = res.enriched ?? res.queued ?? res.attempted ?? 0;
+      const pending = (accounts || []).filter((a) => a.enrichStatus !== "ok" && a.enrichStatus !== "done").length;
+      const remaining = Math.max(0, pending - n);
       toast({
         title: "Enrichment complete",
-        description: `${n} accounts enriched via ${(res.pipeline || []).join(" → ") || "ATOM pipeline"}.`,
+        description:
+          `${n} accounts enriched via ${(res.pipeline || []).join(" → ") || "ATOM pipeline"}.` +
+          (remaining > 0 ? ` ${remaining} more pending — click Enrich again.` : ""),
       });
       qc.invalidateQueries({ queryKey: [`/api/campaigns/${id}/accounts`] });
       setSelected(new Set());
     },
-    onError: (e: any) => toast({ title: "Enrichment failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      const msg = (e?.message || "").toString();
+      const isTimeout = /504|FUNCTION_INVOCATION_TIMEOUT|timed? out/i.test(msg);
+      toast({
+        title: isTimeout ? "Batch timed out (accounts still enriching in background)" : "Enrichment failed",
+        description: isTimeout
+          ? "Vercel cut the request at 60s. Wait ~30s, then click Enrich again — finished rows are already saved."
+          : msg,
+        variant: "destructive",
+      });
+      // Refetch so any rows that did complete show up as ✓
+      qc.invalidateQueries({ queryKey: [`/api/campaigns/${id}/accounts`] });
+    },
   });
 
   const pushMutation = useMutation({
