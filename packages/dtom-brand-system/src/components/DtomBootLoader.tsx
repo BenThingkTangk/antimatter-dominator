@@ -92,39 +92,41 @@ export function DtomBootLoader({
         <div className="dtom-loader__logo-wrap">
           <svg
             className="dtom-loader__wordmark"
-            viewBox="0 0 640 160"
+            viewBox="0 0 690 180"
             role="img"
             aria-label="ΔTOM"
             preserveAspectRatio="xMidYMid meet"
           >
             <title>ΔTOM</title>
-            <g className="dtom-loader__wordmark-glyphs" fill="none" strokeLinecap="square" strokeLinejoin="miter">
-              {/* Δ — Greek capital Delta as a thick stroked triangle outline */}
-              <polygon
-                points="70,130 10,130 40,30"
-                stroke="currentColor"
-                strokeWidth="14"
-                fill="none"
-              />
-              {/* T — top bar + stem */}
-              <line x1="100" y1="37" x2="220" y2="37" stroke="currentColor" strokeWidth="14" />
-              <line x1="160" y1="37" x2="160" y2="130" stroke="currentColor" strokeWidth="14" />
-              {/* O — teal ring, same cap-height as the other glyphs */}
+            {/* Canonical geometric ΔTOM wordmark.
+                Cap-height 120 with uniform 22-unit stroke for the heavy
+                outline weight seen in the brand reference. miterlimit is
+                high so the Delta apex stays a sharp point. */}
+            <g
+              className="dtom-loader__wordmark-glyphs"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="22"
+              strokeLinecap="butt"
+              strokeLinejoin="miter"
+              strokeMiterlimit="32"
+            >
+              {/* Δ — Greek capital Delta. Equilateral-ish outline triangle,
+                  sharp apex, flat base aligned with the baseline. */}
+              <polygon points="80,30 11,150 149,150" />
+              {/* T — full-width top bar and centered stem. */}
+              <line x1="180" y1="41" x2="320" y2="41" />
+              <line x1="250" y1="41" x2="250" y2="150" />
+              {/* O — teal ring, same cap-height and stroke weight. */}
               <circle
-                cx="320"
-                cy="83"
-                r="50"
+                cx="410"
+                cy="90"
+                r="49"
                 stroke="var(--dtom-color-primary, #00e6d3)"
-                strokeWidth="14"
-                fill="none"
               />
-              {/* M — two verticals joined by a centered V */}
-              <polyline
-                points="410,130 410,37 470,110 530,37 530,130"
-                stroke="currentColor"
-                strokeWidth="14"
-                fill="none"
-              />
+              {/* M — two outer verticals joined by a centered V landing on
+                  the baseline. */}
+              <polyline points="500,150 500,30 580,150 660,30 660,150" />
             </g>
           </svg>
         </div>

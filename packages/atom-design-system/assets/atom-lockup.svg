@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 160" role="img" aria-labelledby="atom-lk-title atom-lk-desc" width="800" height="160">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 180" role="img" aria-labelledby="atom-lk-title atom-lk-desc" width="860" height="180">
   <title id="atom-lk-title">ATOM lockup</title>
-  <desc id="atom-lk-desc">Horizontal ATOM lockup: orbital icon paired with the canonical ΔTOM wordmark. Δ, T, M are stroked in light cream; the O is a teal ring at the same cap height.</desc>
+  <desc id="atom-lk-desc">Horizontal ATOM lockup: orbital icon paired with the canonical ΔTOM wordmark. Δ, T, M are heavy geometric outline glyphs in light cream; the O is a teal ring at the same cap height and stroke weight.</desc>
   <defs>
     <radialGradient id="lk-nucleus" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
@@ -10,7 +10,7 @@
     </radialGradient>
   </defs>
   <!-- Orbital icon -->
-  <g transform="translate(8 32)">
+  <g transform="translate(8 42)">
     <g fill="none" stroke="#00c8c8" stroke-width="2">
       <ellipse cx="48" cy="48" rx="40" ry="15"/>
       <ellipse cx="48" cy="48" rx="40" ry="15" transform="rotate(60 48 48)"/>
@@ -19,12 +19,12 @@
     <circle cx="48" cy="48" r="9" fill="url(#lk-nucleus)"/>
     <circle cx="48" cy="48" r="3.6" fill="#ffffff"/>
   </g>
-  <!-- Wordmark — geometric strokes -->
-  <g transform="translate(140 0)" fill="none" stroke-linecap="square" stroke-linejoin="miter">
-    <polygon points="70,130 10,130 40,30" stroke="#e8e8ea" stroke-width="14"/>
-    <line x1="100" y1="37" x2="220" y2="37" stroke="#e8e8ea" stroke-width="14"/>
-    <line x1="160" y1="37" x2="160" y2="130" stroke="#e8e8ea" stroke-width="14"/>
-    <circle cx="320" cy="83" r="50" stroke="#00c8c8" stroke-width="14"/>
-    <polyline points="410,130 410,37 470,110 530,37 530,130" stroke="#e8e8ea" stroke-width="14"/>
+  <!-- Wordmark — heavy geometric outline strokes -->
+  <g transform="translate(160 0)" fill="none" stroke-width="22" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="32">
+    <polygon points="80,30 11,150 149,150" stroke="#e8e8ea"/>
+    <line x1="180" y1="41" x2="320" y2="41" stroke="#e8e8ea"/>
+    <line x1="250" y1="41" x2="250" y2="150" stroke="#e8e8ea"/>
+    <circle cx="410" cy="90" r="49" stroke="#00c8c8"/>
+    <polyline points="500,150 500,30 580,150 660,30 660,150" stroke="#e8e8ea"/>
   </g>
 </svg>

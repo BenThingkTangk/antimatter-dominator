@@ -634,7 +634,7 @@
    a teal ring at the same cap-height as the other glyphs. */
 .dtom-loader__wordmark {
   display: block;
-  width: clamp(240px, 44vw, 560px);
+  width: clamp(280px, 52vw, 620px);
   height: auto;
   color: #edf8f8;
 }
