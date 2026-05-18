@@ -2,7 +2,7 @@ import { Switch, Route, Router, Redirect, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { DtomBrandShell, DtomBootLoader } from "@nirmata/dtom-brand-system";
+import { DtomBrandShell, DtomBootLoader } from "@nirmata/atom-design-system/react";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";

@@ -76,36 +76,40 @@
 :root,
 [data-theme="dark"],
 .dark {
-  --color-bg:            #08090a;
-  --color-bg-2:          #0b0d10;
-  --color-surface:       #101215;
-  --color-surface-2:     #15191d;
-  --color-surface-3:     #1b2026;
-  --color-surface-glass: color-mix(in oklab, #11151a 72%, transparent);
-  --color-border:        rgba(255,255,255,0.08);
-  --color-border-strong: rgba(255,255,255,0.16);
+  /* Legacy aliases retained for backwards compat — they point to the new
+     canonical @nirmata/atom-design-system tokens (--atom-*). Update those
+     in css/atom-tokens.css to change brand-wide values; do NOT change
+     these aliases here. */
+  --color-bg:            var(--atom-bg,        #0b0b0c);
+  --color-bg-2:          var(--atom-surface-1, #111113);
+  --color-surface:       var(--atom-surface-1, #111113);
+  --color-surface-2:     var(--atom-surface-2, #161618);
+  --color-surface-3:     var(--atom-surface-3, #1c1c1f);
+  --color-surface-glass: color-mix(in oklab, var(--atom-surface-1, #111113) 72%, transparent);
+  --color-border:        var(--atom-border,        rgba(255,255,255,0.08));
+  --color-border-strong: var(--atom-border-strong, rgba(255,255,255,0.14));
   --color-divider:       rgba(255,255,255,0.055);
 
-  --color-text:         #edf8f8;
-  --color-text-muted:   #9ca8ad;
-  --color-text-faint:   #5e6970;
+  --color-text:         var(--atom-text,       #e8e8ea);
+  --color-text-muted:   var(--atom-text-muted, #8a8a96);
+  --color-text-faint:   var(--atom-text-faint, #4a4a55);
   --color-text-inverse: #061011;
 
-  /* ATOM teal plasma */
-  --color-primary:             #00e6d3;
-  --color-primary-2:           #00a7ff;
-  --color-primary-dim:         #00a89e;
-  --color-primary-glow:        rgba(0,230,211,0.18);
-  --color-primary-glow-strong: rgba(0,230,211,0.32);
+  /* ATOM teal plasma — derived from --atom-primary */
+  --color-primary:             var(--atom-primary,        #00c8c8);
+  --color-primary-2:           var(--atom-accent-gpt,     #74c0fc);
+  --color-primary-dim:         var(--atom-primary-dim,    #00989c);
+  --color-primary-glow:        var(--atom-primary-glow,   rgba(0,200,200,0.15));
+  --color-primary-glow-strong: var(--atom-primary-strong, rgba(0,200,200,0.25));
 
   /* Model accents (used for chips / data viz only) */
-  --color-claude:  #b987ff;
-  --color-hume:    #ff7569;
-  --color-samba:   #ffd166;
-  --color-gpt:     #74c0fc;
-  --color-success: #72f2a1;
-  --color-warning: #ffd166;
-  --color-error:   #ff6b8b;
+  --color-claude:  var(--atom-accent-claude, #c084fc);
+  --color-hume:    var(--atom-accent-hume,   #ff7b6b);
+  --color-samba:   var(--atom-accent-samba,  #f5c842);
+  --color-gpt:     var(--atom-accent-gpt,    #74c0fc);
+  --color-success: var(--atom-success, #4ade80);
+  --color-warning: var(--atom-warning, #f5c842);
+  --color-error:   var(--atom-danger,  #ff7b6b);
 
   --shadow-sm:          0 1px 2px rgba(0,0,0,0.45);
   --shadow-md:          0 8px 24px rgba(0,0,0,0.46);

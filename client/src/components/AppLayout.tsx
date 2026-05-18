@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
 import { useEffectiveSession, ViewAsToggle } from "../auth/ViewAs";
-import { DtomLogo } from "@nirmata/dtom-brand-system";
+import { DtomLogo } from "@nirmata/atom-design-system/react";
 
 interface NavItem { href: string; icon: any; label: string; }
 
@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
 
-// ΔTOM canonical logo — sourced from @nirmata/dtom-brand-system.
+// ΔTOM canonical logo — sourced from @nirmata/atom-design-system/react.
 // Counter-clockwise SVG orbital mark + ΔT[O]M wordmark, teal accent on the O.
 // The legacy local AtomLogo SVG is retained ONLY for the collapsed-sidebar
 // fallback because DtomLogo wraps in an <a>, which we don't want for the

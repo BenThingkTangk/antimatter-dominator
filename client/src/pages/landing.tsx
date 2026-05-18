@@ -2,7 +2,7 @@ import { useSessionContext } from "../auth/AuthGate";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { TrendingUp, Brain, Shield, PhoneCall } from "lucide-react";
-import { DtomLogo, DtomHero } from "@nirmata/dtom-brand-system";
+import { DtomLogo, DtomHero } from "@nirmata/atom-design-system/react";
 
 const features = [
   { icon: TrendingUp, title: "AI Pitch Generator", desc: "RAG-powered objection-proof scripts in seconds", href: "/pitch?demo=1" },
