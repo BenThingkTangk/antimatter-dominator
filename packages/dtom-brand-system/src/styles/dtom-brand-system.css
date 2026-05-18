@@ -700,6 +700,32 @@
   animation-delay: calc(420ms + var(--dtom-i, 0) * 260ms);
 }
 
+.dtom-loader__mantra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5em;
+  margin: 0;
+  max-width: min(720px, 86vw);
+  font-family: var(--dtom-font-mono);
+  font-size: clamp(var(--dtom-text-xs), 1.4vw, var(--dtom-text-sm));
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.dtom-loader__mantra-word {
+  display: inline-block;
+  opacity: 0;
+  animation: dtom-loader-status-in 520ms var(--dtom-ease-out) forwards;
+  animation-delay: calc(360ms + var(--dtom-i, 0) * 140ms);
+}
+
+.dtom-loader__mantra-word--accent { color: var(--dtom-color-primary); }
+.dtom-loader__mantra-word--muted  { color: var(--dtom-color-text-muted); }
+
 @keyframes dtom-grid-drift {
   to { background-position: 44px 44px; }
 }

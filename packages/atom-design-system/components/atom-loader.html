@@ -96,7 +96,17 @@
     color: var(--atom-text-muted, #8a8a96);
     opacity: 0;
     animation: atom-reveal-fade 600ms var(--ease-atom, cubic-bezier(0.16,1,0.3,1)) 800ms forwards;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5em;
+    max-width: min(640px, 86vw);
+    margin: 0 auto;
+    font-weight: 700;
+    line-height: 1.4;
   }
+  #atom-loader .atom-loader__mantra-word--accent { color: var(--atom-primary, #00c8c8); }
+  #atom-loader .atom-loader__mantra-word--muted  { color: var(--atom-text-muted, #8a8a96); }
 
   #atom-loader .atom-loader__bar {
     margin: var(--space-6, 1.5rem) auto 0;
@@ -145,7 +155,13 @@
     <div class="atom-loader__mark" aria-label="ΔTOM">
       <span>Δ</span><span>T</span><span>O</span><span>M</span>
     </div>
-    <div class="atom-loader__caption">ΔTOM Sales Dominator</div>
+    <div class="atom-loader__caption">
+      <span class="atom-loader__mantra-word atom-loader__mantra-word--accent">PRECISION.</span>
+      <span class="atom-loader__mantra-word atom-loader__mantra-word--muted">EMPATHY.</span>
+      <span class="atom-loader__mantra-word atom-loader__mantra-word--accent">VELOCITY.</span>
+      <span class="atom-loader__mantra-word atom-loader__mantra-word--muted">INTELLIGENCE.</span>
+      <span class="atom-loader__mantra-word atom-loader__mantra-word--accent">DISRUPTION.</span>
+    </div>
     <div class="atom-loader__bar" aria-hidden="true"></div>
   </div>
 </div>

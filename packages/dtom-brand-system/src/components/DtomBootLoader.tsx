@@ -32,11 +32,12 @@ export interface DtomBootLoaderProps {
   className?: string;
 }
 
-const STATUS_LINES = [
-  'Sales intelligence loading',
-  'Pipeline systems online',
-  'Buyer signals syncing',
-  'Ready for launch',
+const MANTRA_WORDS: Array<{ word: string; tone: 'accent' | 'muted' }> = [
+  { word: 'PRECISION', tone: 'accent' },
+  { word: 'EMPATHY', tone: 'muted' },
+  { word: 'VELOCITY', tone: 'accent' },
+  { word: 'INTELLIGENCE', tone: 'muted' },
+  { word: 'DISRUPTION', tone: 'accent' },
 ];
 
 export function DtomBootLoader({
@@ -89,10 +90,6 @@ export function DtomBootLoader({
       <div className="dtom-loader__corner dtom-loader__corner--br" aria-hidden="true" />
 
       <div className="dtom-loader__core">
-        <p className="dtom-loader__kicker" aria-hidden="true">
-          ΔTOM SALES DOMINATOR
-        </p>
-
         <div className="dtom-loader__logo-wrap">
           <AtomMarkSVG spinning={!reducedMotion} />
           <span className="dtom-loader__word" aria-hidden="true">
@@ -104,16 +101,17 @@ export function DtomBootLoader({
           <span className="dtom-loader__scanline-beam" />
         </div>
 
-        <ol className="dtom-loader__status">
-          {STATUS_LINES.map((line, i) => (
-            <li
-              key={line}
+        <p className="dtom-loader__mantra" aria-hidden="true">
+          {MANTRA_WORDS.map((entry, i) => (
+            <span
+              key={entry.word}
+              className={`dtom-loader__mantra-word dtom-loader__mantra-word--${entry.tone}`}
               style={{ '--dtom-i': i } as React.CSSProperties}
             >
-              {line}
-            </li>
+              {entry.word}.
+            </span>
           ))}
-        </ol>
+        </p>
       </div>
     </div>
   );

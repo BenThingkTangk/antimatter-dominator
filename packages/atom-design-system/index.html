@@ -161,7 +161,11 @@
     #atom-loader .mark span:nth-child(4) { animation-delay: 620ms; }
     #atom-loader .cap { font-family: var(--atom-font-mono); font-size: 0.75rem; letter-spacing: 0.18em;
       text-transform: uppercase; color: var(--atom-text-muted); opacity: 0;
-      animation: atom-reveal-fade 600ms var(--ease-atom) 800ms forwards; }
+      animation: atom-reveal-fade 600ms var(--ease-atom) 800ms forwards;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5em;
+      max-width: min(640px, 86vw); margin: 0 auto; font-weight: 700; line-height: 1.4; }
+    #atom-loader .cap .accent { color: var(--atom-primary); }
+    #atom-loader .cap .muted  { color: var(--atom-text-muted); }
     #atom-loader .bar { margin: 1.5rem auto 0; width: 240px; height: 2px;
       background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; position: relative; }
     #atom-loader .bar::after { content: ''; position: absolute; inset: 0; width: 40%;
@@ -177,7 +181,13 @@
         <div class="nuc"></div>
       </div>
       <div class="mark" aria-label="ΔTOM"><span>Δ</span><span>T</span><span>O</span><span>M</span></div>
-      <div class="cap">ΔTOM Sales Dominator</div>
+      <div class="cap">
+        <span class="accent">PRECISION.</span>
+        <span class="muted">EMPATHY.</span>
+        <span class="accent">VELOCITY.</span>
+        <span class="muted">INTELLIGENCE.</span>
+        <span class="accent">DISRUPTION.</span>
+      </div>
       <div class="bar" aria-hidden="true"></div>
     </div>
   </div>
