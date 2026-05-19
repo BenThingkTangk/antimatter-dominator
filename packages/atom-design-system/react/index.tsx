@@ -350,80 +350,79 @@ export function AtomBootLoader({
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <div style={{ position: 'relative', width: 'min(720px, 92vw)', textAlign: 'center' }}>
-        {/* Canonical full lockup — orbital icon + ΔTOM wordmark, horizontal */}
+      <div className="atom-loader__stage" style={{ width: 'min(420px, 86vw)', textAlign: 'center' }}>
+        {/* Orbital rings + nucleus */}
         <div
-          role="img"
-          aria-label="ΔTOM"
-          style={{
-            display: 'block',
-            width: 'clamp(320px, 70vw, 720px)',
-            margin: '0 auto 28px',
-            color: 'var(--atom-text, #f0f0f0)',
-            filter: 'drop-shadow(0 0 28px rgba(0,200,200,0.35))',
-          }}
+          className="atom-loader__rings"
+          aria-hidden="true"
+          style={{ position: 'relative', width: 180, height: 180, margin: '0 auto 1.5rem' }}
         >
           <svg
-            viewBox="0 0 1100 240"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ display: 'block', width: '100%', height: 'auto' }}
+            viewBox="0 0 180 180"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              animation: 'atom-orbit-spin 14s linear infinite',
+              transformOrigin: 'center',
+            }}
           >
-            <defs>
-              <radialGradient id="bootloader-core" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-                <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
-                <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
-              </radialGradient>
-              <radialGradient id="bootloader-shell" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
-                <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
-                <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
-              </radialGradient>
-            </defs>
-
-            {/* Orbital icon — spins as a group */}
-            <g transform="translate(20 20)">
-              <g
-                fill="none"
-                stroke="var(--atom-primary, #3fb5b5)"
-                strokeWidth="5"
-                strokeLinecap="round"
-                style={{
-                  transformOrigin: '100px 100px',
-                  animation: 'atom-orbit-spin 14s linear infinite reverse',
-                }}
-              >
-                <ellipse cx="100" cy="100" rx="82" ry="32" />
-                <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
-                <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
-              </g>
-              <circle cx="100" cy="100" r="26" fill="url(#bootloader-shell)" />
-              <circle
-                cx="100"
-                cy="100"
-                r="18"
-                fill="url(#bootloader-core)"
-                style={{
-                  transformOrigin: '100px 100px',
-                  animation: 'atom-pulse-dot 2.2s ease-in-out infinite',
-                }}
-              />
-              <circle cx="100" cy="100" r="5" fill="#ffffff" />
-            </g>
-
-            {/* ΔTOM wordmark — geometric strokes */}
-            <g transform="translate(290 20)" fill="none" strokeLinecap="square" strokeLinejoin="miter">
-              <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
-              <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
-              <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
-              <circle cx="430" cy="102" r="70" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="18" />
-              <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
-            </g>
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.9" />
           </svg>
+          <svg
+            viewBox="0 0 180 180"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              transform: 'rotate(60deg)',
+              animation: 'atom-orbit-counter 10s linear infinite',
+              transformOrigin: 'center',
+            }}
+          >
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.55" />
+          </svg>
+          <svg
+            viewBox="0 0 180 180"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              transform: 'rotate(120deg)',
+              animation: 'atom-orbit-spin 7s linear infinite',
+              transformOrigin: 'center',
+            }}
+          >
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.35" />
+          </svg>
+          <div
+            style={{
+              position: 'absolute', top: '50%', left: '50%',
+              width: 22, height: 22, transform: 'translate(-50%,-50%)',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #fff 0%, #fff 35%, rgba(0,200,200,0) 70%)',
+              boxShadow: '0 0 12px rgba(255,255,255,0.9), 0 0 36px rgba(0,200,200,0.6), 0 0 80px rgba(0,200,200,0.35)',
+              animation: 'atom-pulse-dot 2.2s ease-in-out infinite',
+            }}
+          />
         </div>
 
-        {/* Mantra caption */}
+        {/* ΔTOM staggered wordmark — 4 letters, O in teal, fade-in stagger */}
+        <div
+          aria-label="ΔTOM"
+          style={{
+            fontFamily: "var(--atom-font-display, 'Cabinet Grotesk', system-ui, sans-serif)",
+            fontWeight: 800,
+            fontSize: 'clamp(2rem, 6vw, 3rem)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+            color: 'var(--atom-text, #e8e8ea)',
+            display: 'inline-flex',
+            gap: '0.04em',
+            marginBottom: '1rem',
+          }}
+        >
+          <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 200ms forwards' }}>Δ</span>
+          <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 340ms forwards' }}>T</span>
+          <span style={{ opacity: 0, transform: 'translateY(0.4em)', color: 'var(--atom-primary, #00c8c8)', textShadow: '0 0 18px rgba(0,200,200,0.5)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 480ms forwards' }}>O</span>
+          <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 620ms forwards' }}>M</span>
+        </div>
+
+        {/* Caption */}
         <div
           style={{
             fontFamily: "var(--atom-font-mono, 'JetBrains Mono', ui-monospace, monospace)",
@@ -433,28 +432,16 @@ export function AtomBootLoader({
             color: 'var(--atom-text-muted, #8a8a96)',
             opacity: 0,
             animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 800ms forwards',
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '0.5em',
-            maxWidth: 'min(640px, 86vw)',
-            margin: '0 auto',
-            fontWeight: 700,
-            lineHeight: 1.4,
           }}
         >
-          <span style={{ color: 'var(--atom-primary, #00c8c8)' }}>PRECISION.</span>
-          <span>EMPATHY.</span>
-          <span style={{ color: 'var(--atom-primary, #00c8c8)' }}>VELOCITY.</span>
-          <span>INTELLIGENCE.</span>
-          <span style={{ color: 'var(--atom-primary, #00c8c8)' }}>DISRUPTION.</span>
+          Initialising voice stack · Nirmata
         </div>
 
         {/* Progress bar */}
         <div
           aria-hidden="true"
           style={{
-            margin: '24px auto 0',
+            margin: '1.5rem auto 0',
             width: 240,
             height: 2,
             background: 'rgba(255,255,255,0.08)',
@@ -468,8 +455,7 @@ export function AtomBootLoader({
               position: 'absolute',
               inset: 0,
               width: '40%',
-              background:
-                'linear-gradient(90deg, transparent, var(--atom-primary, #00c8c8), transparent)',
+              background: 'linear-gradient(90deg, transparent, var(--atom-primary, #00c8c8), transparent)',
               boxShadow: '0 0 18px rgba(0,200,200,0.55)',
               animation: 'atom-loader-sweep 1.4s ease-in-out infinite',
             }}
