@@ -70,6 +70,8 @@ export type AtomLogoSize = 'sm' | 'md' | 'lg' | 'hero';
 export interface AtomLogoProps {
   size?: AtomLogoSize;
   showWordmark?: boolean;
+  /** Show the orbital atom icon next to the wordmark. Default true. Set false for wordmark-only per brand spec. */
+  showIcon?: boolean;
   spinning?: boolean;
   href?: string;
   ariaLabel?: string;
@@ -87,6 +89,7 @@ const sizePx: Record<AtomLogoSize, { icon: number; word: number; gap: number }> 
 export function AtomLogo({
   size = 'md',
   showWordmark = true,
+  showIcon = false,
   spinning = false,
   href,
   ariaLabel = 'ΔTOM home',
@@ -101,7 +104,9 @@ export function AtomLogo({
       className={`atom-logo atom-logo--${size} ${className || ''}`.trim()}
       style={{ display: 'inline-flex', alignItems: 'center', gap: dims.gap, ...style }}
     >
-      {/* Orbital icon — canonical: 3 ellipses at 0°/60°/120° + glowing nucleus */}
+      {/* Orbital icon — canonical: 3 ellipses at 0°/60°/120° + glowing nucleus.
+          Default brand spec is wordmark-only; pass showIcon to add the orbital. */}
+      {showIcon && (
       <svg
         viewBox="0 0 200 200"
         width={dims.icon}
@@ -135,27 +140,62 @@ export function AtomLogo({
         <circle cx="100" cy="100" r="18" fill="url(#atomlogo-core)" />
         <circle cx="100" cy="100" r="5" fill="#ffffff" />
       </svg>
+      )}
 
-      {/* ΔTOM wordmark — canonical geometric SVG, no Unicode Δ font fallback */}
+      {/* ΔTOM wordmark — canonical clean strokes per brand spec (image-3 reference).
+          Δ = open triangle outline. T = vertical + horizontal. O = glowing teal ring. M = peaks.
+          All strokes 18px on a 200-tall canvas. Equal optical spacing. */}
       {showWordmark && (
         <svg
           className="atom-logo__wordmark"
           aria-hidden="true"
-          viewBox="0 0 720 200"
+          viewBox="0 0 760 200"
           preserveAspectRatio="xMidYMid meet"
           style={{
             display: 'inline-block',
             height: dims.word * 1.4,
             width: 'auto',
             color: 'var(--atom-text, #f0f0f0)',
+            overflow: 'visible',
           }}
         >
+          <defs>
+            <filter id={`atom-o-glow-${size}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-            <polygon points="100,170 10,170 55,30" stroke="currentColor" strokeWidth="18" />
-            <line x1="150" y1="35" x2="310" y2="35" stroke="currentColor" strokeWidth="18" />
-            <line x1="230" y1="35" x2="230" y2="170" stroke="currentColor" strokeWidth="18" />
-            <circle cx="430" cy="102" r="70" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="18" />
-            <polyline points="540,170 540,35 615,150 690,35 690,170" stroke="currentColor" strokeWidth="18" />
+            {/* Δ — open triangle, three strokes meeting at apex + base */}
+            <polygon
+              points="110,175 15,175 62,25"
+              stroke="currentColor"
+              strokeWidth="18"
+              strokeLinejoin="miter"
+            />
+            {/* T — horizontal crossbar + vertical stem, ample letterspacing */}
+            <line x1="175" y1="34" x2="345" y2="34" stroke="currentColor" strokeWidth="18" />
+            <line x1="260" y1="34" x2="260" y2="175" stroke="currentColor" strokeWidth="18" />
+            {/* O — glowing teal ring */}
+            <circle
+              cx="460"
+              cy="104"
+              r="70"
+              stroke="var(--atom-primary, #00c8c8)"
+              strokeWidth="18"
+              filter={`url(#atom-o-glow-${size})`}
+            />
+            {/* M — four-stroke peak letterform */}
+            <polyline
+              points="570,175 570,34 645,150 720,34 720,175"
+              stroke="currentColor"
+              strokeWidth="18"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
           </g>
         </svg>
       )}

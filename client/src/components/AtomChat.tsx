@@ -14,6 +14,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Send, X, ExternalLink, Loader2 } from "lucide-react";
+import { DtomLogo } from "@nirmata/atom-design-system/react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -188,20 +189,12 @@ export default function AtomChat() {
             boxShadow: "var(--shadow-lg)",
           }}
         >
-          {/* Header */}
+          {/* Header — canonical ΔTOM wordmark, no orbital icon per brand spec */}
           <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: "color-mix(in oklab, var(--color-primary) 18%, transparent)",
-                border: "1px solid color-mix(in oklab, var(--color-primary) 30%, transparent)",
-              }}
-            >
-              <AtomChatMark size={20} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="atom-wordmark text-base leading-tight" style={{ letterSpacing: "-0.02em", color: "var(--color-text)" }}>
-                Ask ΔTOM
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>Ask</span>
+                <DtomLogo size="sm" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
               </div>
               <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
                 {context === "general" ? "Powered by Perplexity Sonar" : `${context} mode`}

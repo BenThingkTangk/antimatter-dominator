@@ -163,12 +163,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </>
             ) : (
-              <div className="min-w-0 flex-1 flex items-center gap-2.5">
-                {/* Canonical ΔTOM lockup — SVG orbital mark + ΔT[O]M wordmark */}
-                <DtomLogo size="md" spinning showWordmark={true} ariaLabel="ΔTOM home" />
+              <div className="min-w-0 flex-1 flex flex-col gap-1">
+                {/* Canonical ΔTOM wordmark per brand spec — wordmark only, no orbital icon */}
+                <DtomLogo size="md" showIcon={false} showWordmark={true} ariaLabel="ΔTOM home" />
                 <p
-                  className="text-[10px] tracking-[0.18em] uppercase mt-0.5 ml-auto whitespace-nowrap"
-                  style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+                  className="text-[9px] tracking-[0.22em] uppercase"
+                  style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", marginLeft: 2 }}
                 >
                   Sales Dominator
                 </p>
@@ -407,7 +407,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex-1 flex items-center justify-center">
-              <DtomLogo size="sm" spinning showWordmark={true} ariaLabel="ΔTOM home" />
+              <DtomLogo size="sm" showIcon={false} showWordmark={true} ariaLabel="ΔTOM home" />
             </div>
             <div className="w-10" />
           </header>
