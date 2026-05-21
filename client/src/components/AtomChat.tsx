@@ -189,16 +189,11 @@ export default function AtomChat() {
             boxShadow: "var(--shadow-lg)",
           }}
         >
-          {/* Header — canonical ΔTOM wordmark, no orbital icon per brand spec */}
+          {/* Header — canonical ΔTOM wordmark only, no mode subtitle */}
           <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>Ask</span>
-                <DtomLogo size="sm" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
-              </div>
-              <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
-                {context === "general" ? "Powered by Perplexity Sonar" : `${context} mode`}
-              </div>
+            <div className="flex-1 min-w-0 flex items-baseline gap-2">
+              <span className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>Ask</span>
+              <DtomLogo size="sm" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -215,13 +210,10 @@ export default function AtomChat() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                  style={{
-                    background: "color-mix(in oklab, var(--color-primary) 12%, transparent)",
-                    border: "1px solid color-mix(in oklab, var(--color-primary) 25%, transparent)",
-                  }}
+                  className="flex items-center justify-center mb-5"
+                  style={{ width: "170px" }}
                 >
-                  <AtomChatMark size={36} />
+                  <DtomLogo size="md" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
                 </div>
                 <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--color-text-muted)" }}>
                   Ask anything about your prospects, products, the platform, or live market signals. Cited from primary sources.

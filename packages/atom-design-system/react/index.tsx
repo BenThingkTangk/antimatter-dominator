@@ -169,9 +169,9 @@ export function AtomLogo({
             </filter>
           </defs>
           <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-            {/* Δ — open triangle, three strokes meeting at apex + base */}
+            {/* Δ — large open triangle, apex aligned to T/O/M cap-line. Same x-height as the other letters. */}
             <polygon
-              points="110,175 15,175 62,25"
+              points="115,175 15,175 65,34"
               stroke="currentColor"
               strokeWidth="18"
               strokeLinejoin="miter"
@@ -179,7 +179,7 @@ export function AtomLogo({
             {/* T — horizontal crossbar + vertical stem, ample letterspacing */}
             <line x1="175" y1="34" x2="345" y2="34" stroke="currentColor" strokeWidth="18" />
             <line x1="260" y1="34" x2="260" y2="175" stroke="currentColor" strokeWidth="18" />
-            {/* O — glowing teal ring */}
+            {/* O — glowing teal ring, centered on the cap-line midpoint */}
             <circle
               cx="460"
               cy="104"
