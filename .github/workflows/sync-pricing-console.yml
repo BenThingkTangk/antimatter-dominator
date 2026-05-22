@@ -1,10 +1,10 @@
 # Sync Pricing Console
 #
 # Purpose:
-#   When pricing-relevant code, schemas, or platform manifests change in this
+#   When any code, schema, documentation, or platform manifest changes in this
 #   repo (ATOM Sales Dominator / antimatter-dominator), notify the separate
-#   pricing console repo so its Vercel project (atom-pricing) re-deploys
-#   against the latest seat-cost model and tenant/platinum schema.
+#   pricing console repo so its Vercel project (atom-pricing) re-deploys against
+#   the latest source state.
 #
 # Mechanism (preferred):
 #   Fire a `repository_dispatch` event at BenThingkTangk/atom-pricing-engine
@@ -44,15 +44,6 @@ on:
     branches:
       - main
       - master
-    paths:
-      - 'api/**'
-      - 'shared/seat-cost-model.ts'
-      - 'docs/TENANTS_SCHEMA.sql'
-      - 'docs/PLATINUM_SCHEMA.sql'
-      - 'docs/HOLY_BIBLE.md'
-      - 'vercel.json'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
     inputs:
       reason:
@@ -75,7 +66,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Collect changed pricing-relevant paths
+      - name: Collect changed paths
         id: changes
         shell: bash
         run: |
@@ -90,11 +81,10 @@ jobs:
               CHANGED="(initial push — full sync)"
             else
               CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null \
-                | grep -E '^(api/|shared/seat-cost-model\.ts$|docs/TENANTS_SCHEMA\.sql$|docs/PLATINUM_SCHEMA\.sql$|docs/HOLY_BIBLE\.md$|vercel\.json$|package(-lock)?\.json$)' \
                 | head -n 50 \
                 | paste -sd ',' - || true)
               if [ -z "$CHANGED" ]; then
-                CHANGED="(no matched paths in diff)"
+                CHANGED="(no changed paths found)"
               fi
             fi
           fi
