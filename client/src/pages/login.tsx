@@ -119,6 +119,11 @@ export default function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
+            <div className="text-center" style={{ marginTop: 8 }}>
+              <a href="/#/reset-password" style={{ color: 'var(--color-text-muted)', fontSize: 13, textDecoration: 'none' }}>
+                Forgot password?
+              </a>
+            </div>
           </div>
         </form>
 

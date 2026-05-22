@@ -28,6 +28,7 @@ import NotFound from "./pages/not-found";
 import LoginPage from "./pages/login";
 import SignupPage from "./pages/signup";
 import LandingPage from "./pages/landing";
+import ResetPasswordPage from "./pages/reset-password";
 import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
@@ -222,6 +223,8 @@ function AppRouter() {
         {/* Public routes — rendered outside AppLayout */}
         <Route path="/login" component={LoginPage} />
         <Route path="/signup" component={SignupPage} />
+        <Route path="/reset-password/:token" component={ResetPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/invite/:token" component={InviteAcceptPage} />
         {/* Landing page at root for unauthenticated users */}
         <Route path="/" component={LandingPage} />

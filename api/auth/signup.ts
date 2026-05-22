@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const STRIPE_SECRET_KEY = clean(process.env.STRIPE_SECRET_KEY);
 
 const RESEND_API_KEY = clean(process.env.RESEND_API_KEY);
 const RESEND_FROM = clean(process.env.RESEND_FROM) || "ATOM <hello@atomsalesdominator.com>";
@@ -195,6 +196,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
+    // ── Stripe customer creation — fire immediately so the tenant gets a
+    // stripe_customer_id before they ever hit checkout.
+    if (STRIPE_SECRET_KEY) {
+      try {
+        const Stripe = (await import("stripe")).default;
+        const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" as any });
+        const customer = await stripe.customers.create({
+          email,
+          name: companyName || fullName,
+          metadata: { tenant_id: tenant.id, plan },
+        });
+        await sb(`tenants?id=eq.${tenant.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ stripe_customer_id: customer.id }),
+        });
+      } catch (stripeErr: any) {
+        // Non-fatal: checkout.ts will create the customer lazily if this fails.
+        console.error("[auth/signup] stripe customer create failed:", stripeErr?.message);
+      }
+    }
+
     // Set cookie
     res.setHeader(
       "Set-Cookie",
@@ -203,15 +225,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Welcome email — fire-and-forget; never blocks signup.
     const origin = req.headers.origin || "https://atom-dominator-pro.vercel.app";
+    const trialEndFormatted = new Date(trialEndsAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     sendEmail({
       to: email,
-      subject: `Welcome to ΔTOM — your AI sales operating system is live`,
+      subject: `Welcome to ΔTOM, ${fullName} — your 14-day trial starts now`,
       html: brandedEmail({
-        preheader: `Your ${tenant.name} workspace is provisioned. Pick a plan and start your 14-day free trial.`,
+        preheader: `${tenant.name} is live on ΔTOM. Your 14-day trial ends ${trialEndFormatted}.`,
         heading: `Welcome aboard, ${fullName.split(" ")[0]}`,
         body: `
           <p>Your <strong style="color:#e8e8ea">${tenant.name}</strong> workspace is live on ΔTOM (ATOM Sales Dominator) — the AI sales operating system from AntimatterAI.</p>
-          <p>You're signed in as <strong style="color:#e8e8ea">admin</strong>. Next step: pick a plan, choose your seat count, and start your 14-day free trial. No charge until day 15 — cancel anytime.</p>
+          <p>Your <strong style="color:#00e6d3">14-day free trial</strong> is active and runs through <strong style="color:#e8e8ea">${trialEndFormatted}</strong>. No credit card required until then — cancel anytime.</p>
           <ul style="padding-left:18px;margin:14px 0;color:#e8e8ea;">
             <li>ΔTOM Pitch — brutal, lethal call openers in seconds</li>
             <li>ΔTOM Dial — voice agents that book meetings while you sleep</li>
@@ -219,11 +242,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             <li>ΔTOM Market Intent + War Room — industry intel that pays for itself</li>
           </ul>
         `,
-        ctaLabel: "Pick your plan & start trial",
-        ctaUrl: `${origin}/#/billing`,
-        footer: `Your trial doesn't start until you select a paid plan and confirm in Stripe — we never charge a card on signup. Reply to this email any time with questions.`,
+        ctaLabel: "Book your first call →",
+        ctaUrl: `${origin}/#/pitch`,
+        footer: `Your trial ends ${trialEndFormatted}. Reply to this email any time with questions.`,
       }),
-      text: `Welcome to ΔTOM. Pick a plan + start your 14-day free trial: ${origin}/#/billing`,
+      text: `Welcome to ΔTOM, ${fullName}. Your 14-day trial for ${tenant.name} is active until ${trialEndFormatted}. Book your first call: ${origin}/#/pitch`,
     }).catch(() => {});
 
     return res.status(201).json({
