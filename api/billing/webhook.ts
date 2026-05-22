@@ -11,14 +11,13 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { PLAN_TIERS } from "../../shared/seat-cost-model";
+import { sendEmail } from "../_lib/send-email";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const STRIPE_SECRET_KEY = clean(process.env.STRIPE_SECRET_KEY);
 const STRIPE_WEBHOOK_SECRET = clean(process.env.STRIPE_WEBHOOK_SECRET);
-const RESEND_API_KEY = clean(process.env.RESEND_API_KEY);
-const RESEND_FROM = clean(process.env.RESEND_FROM) || "ATOM <hello@atomsalesdominator.com>";
 const APP_URL = clean(process.env.NEXT_PUBLIC_APP_URL) || "https://atom-dominator-pro.vercel.app";
 
 async function sb(path: string, init: RequestInit = {}) {
@@ -94,35 +93,13 @@ async function patchTenantById(tenantId: string, patch: Record<string, any>) {
   });
 }
 
-async function getOwnerEmail(customerId: string): Promise<string | null> {
+async function getTenantByCustomer(customerId: string): Promise<{ id: string; owner_email: string; plan: string; seats: number } | null> {
   try {
     const rows = await sb(
-      `tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=owner_email`
+      `tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=id,owner_email,plan,seats`
     );
-    return Array.isArray(rows) && rows[0]?.owner_email ? rows[0].owner_email : null;
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
   } catch { return null; }
-}
-
-// ── Fire-and-forget branded email ──
-function sendEmail(to: string, subject: string, heading: string, body: string, ctaLabel?: string, ctaUrl?: string) {
-  if (!RESEND_API_KEY || !to) return;
-  const teal = "#00e6d3", bg = "#05090c", card = "#0c1014", text = "#e8e8ea", muted = "#7e8590";
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:${bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${bg};padding:32px 16px;"><tr><td align="center">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${card};border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
-<tr><td style="padding:28px 32px 8px 32px;"><div style="width:32px;height:32px;border-radius:8px;background:${teal};text-align:center;color:${bg};font-weight:800;line-height:32px;font-size:14px;font-family:monospace;">Δ</div></td></tr>
-<tr><td style="padding:18px 32px 8px 32px;"><h1 style="margin:0 0 12px 0;font-size:22px;color:${text};font-weight:700;">${heading}</h1>
-<div style="font-size:14px;line-height:1.6;color:${muted};">${body}</div></td></tr>
-${ctaLabel && ctaUrl ? `<tr><td align="center" style="padding:16px 32px 28px 32px;">
-<a href="${ctaUrl}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:${teal};color:${bg};text-decoration:none;font-weight:700;font-size:14px;">${ctaLabel}</a></td></tr>` : ""}
-</table></td></tr></table></body></html>`;
-
-  fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
-  }).catch(() => {});
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -267,33 +244,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await patchTenantByCustomer(customerId, patch);
 
-      // Trial converted → send email
+      // Trial converted → send subscription-created email
       if (prevStatus === "trialing" && status === "active") {
-        const email = await getOwnerEmail(customerId);
-        if (email) {
-          sendEmail(email,
-            "Your ΔTOM trial has converted — welcome to the team",
-            "Trial converted!",
-            `<p>Your subscription is now <strong style="color:#e8e8ea">active</strong>. You have full access to all ${plan || "your"} plan features.</p>
-             <p>Thank you for choosing ΔTOM — we're excited to help you dominate.</p>`,
-            "Go to ΔTOM →",
-            `${APP_URL}/#/pitch`,
-          );
+        const tenant = await getTenantByCustomer(customerId);
+        if (tenant?.owner_email) {
+          sendEmail("subscription-created", tenant.owner_email, {
+            planName: plan || tenant.plan || "Pro",
+            seats: seats || tenant.seats || 1,
+            nextBillingDate: "see billing portal",
+            amount: "—",
+            currency: "usd",
+          }, { tenantId: tenant.id, subject: "Your ΔTOM trial has converted — welcome aboard" }).catch(() => {});
         }
       }
 
       // Active → past_due → send payment failed email
       if (prevStatus === "active" && status === "past_due") {
-        const email = await getOwnerEmail(customerId);
-        if (email) {
-          sendEmail(email,
-            "Action required: ΔTOM payment failed",
-            "Payment failed",
-            `<p>We were unable to process your latest payment. Please update your card to avoid service interruption.</p>
-             <p>Your access will be restricted in 7 days if the payment issue isn't resolved.</p>`,
-            "Update payment method →",
-            `${APP_URL}/#/billing`,
-          );
+        const tenant = await getTenantByCustomer(customerId);
+        if (tenant?.owner_email) {
+          const retryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+          sendEmail("payment-failed", tenant.owner_email, {
+            amount: "—",
+            retryDate,
+            updateCardUrl: `${APP_URL}/#/billing`,
+            currency: "usd",
+          }, { tenantId: tenant.id }).catch(() => {});
         }
       }
     }
@@ -312,15 +287,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const customerId = obj.customer as string;
       await patchTenantByCustomer(customerId, { subscription_status: "past_due" });
 
-      const email = await getOwnerEmail(customerId);
-      if (email) {
-        sendEmail(email,
-          "Failed payment — please update your card",
-          "Payment failed",
-          `<p>Your latest ΔTOM invoice could not be processed. Please update your payment method to keep your subscription active.</p>`,
-          "Update card →",
-          `${APP_URL}/#/billing`,
-        );
+      const tenant = await getTenantByCustomer(customerId);
+      if (tenant?.owner_email) {
+        const amount = obj.amount_due ? (obj.amount_due / 100).toFixed(2) : "—";
+        const retryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+        sendEmail("payment-failed", tenant.owner_email, {
+          amount,
+          retryDate,
+          updateCardUrl: `${APP_URL}/#/billing`,
+          currency: (obj.currency as string) || "usd",
+        }, { tenantId: tenant.id }).catch(() => {});
       }
     }
 
@@ -329,7 +305,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const customerId = obj.customer as string;
       // Check if tenant was past_due before this payment
       const tenantRows = await sb(
-        `tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=subscription_status,owner_email`
+        `tenants?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=id,subscription_status,owner_email,plan,seats`
       );
       const tenant = Array.isArray(tenantRows) ? tenantRows[0] : null;
       const wasPastDue = tenant?.subscription_status === "past_due";
@@ -340,13 +316,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       if (wasPastDue && tenant?.owner_email) {
-        sendEmail(tenant.owner_email,
-          "Payment recovered — ΔTOM is back to full access",
-          "Payment recovered!",
-          `<p>Your payment has been processed successfully. Your ΔTOM subscription is active again with full access to all features.</p>`,
-          "Back to ΔTOM →",
-          `${APP_URL}/#/pitch`,
-        );
+        sendEmail("subscription-changed", tenant.owner_email, {
+          oldPlan: "past_due",
+          newPlan: tenant.plan || "active",
+          seats: tenant.seats || 1,
+          effectiveDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+          amount: obj.amount_paid ? (obj.amount_paid / 100).toFixed(2) : "—",
+          currency: (obj.currency as string) || "usd",
+        }, { tenantId: tenant.id, subject: "Payment recovered — ΔTOM is back to full access" }).catch(() => {});
       }
     }
 
