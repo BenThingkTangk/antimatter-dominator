@@ -18,3 +18,6 @@ export type { SubscriptionChangedArgs } from "./subscription-changed";
 
 export { default as PaymentFailedEmail, subject as paymentFailedSubject } from "./payment-failed";
 export type { PaymentFailedArgs } from "./payment-failed";
+
+export { default as ConsentExpiringEmail, subject as consentExpiringSubject } from "./consent-expiring";
+export type { ConsentExpiringArgs } from "./consent-expiring";

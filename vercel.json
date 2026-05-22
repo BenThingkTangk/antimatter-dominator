@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/trial-expiring",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/dnc-scrub",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/consent-renewals",
+      "schedule": "0 14 * * 0"
     }
   ]
 }

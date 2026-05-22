@@ -227,6 +227,28 @@ Return ONLY this JSON structure (no markdown):
     // Record usage (fire-and-forget)
     recordUsage(session.tenantId, "pitch");
 
+    // ── Compliance guardrails — block/sanitize unsafe LLM output ──
+    const GUARDRAIL_PATTERNS = [
+      { id: "no_fake_urgency", r: /\b(today only|last chance|going up|act now|limited time|expires tonight|price increases)\b/i },
+      { id: "no_fearmongering", r: /\b(you'll lose|disaster|catastroph|breach is coming|terminally ill)\b/i },
+      { id: "no_closing_by_ai", r: /\b(sign here|wire the funds|swipe your card|charging your card now|send payment)\b/i },
+      { id: "no_ai_pretending_human", r: /\b(I'm just like you|I'm human|I have feelings|I am a person)\b/i },
+      { id: "no_medical_claim", r: /\b(cure[sd]?|treats|prevents disease|FDA[- ]approved|clinically proven to)\b/i },
+    ];
+    let guardrailFlag: string | null = null;
+    const pitchText = parsed.mainPitch || raw || "";
+    for (const g of GUARDRAIL_PATTERNS) {
+      if (g.r.test(pitchText)) { guardrailFlag = g.id; break; }
+    }
+    if (guardrailFlag) {
+      console.warn(`[pitch/generate] guardrail triggered: ${guardrailFlag}`);
+      // Sanitize: remove offending phrases
+      let sanitized = pitchText;
+      for (const g of GUARDRAIL_PATTERNS) { sanitized = sanitized.replace(g.r, "[adjusted for compliance]"); }
+      parsed.mainPitch = sanitized;
+      parsed.guardrailApplied = guardrailFlag;
+    }
+
     // M4: Pitch responses are user-specific (no shared cache) — client cache only.
     res.setHeader("X-ATOM-Version", "gold-v2");
     res.setHeader("Cache-Control", "private, no-store");
@@ -234,6 +256,7 @@ Return ONLY this JSON structure (no markdown):
       ...parsed,
       content: parsed.mainPitch || raw,
       hasRagContext: ragContext.length > 50,
+      guardrailApplied: guardrailFlag || undefined,
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

@@ -20,6 +20,7 @@ import {
   SubscriptionCreatedEmail, subscriptionCreatedSubject,
   SubscriptionChangedEmail, subscriptionChangedSubject,
   PaymentFailedEmail, paymentFailedSubject,
+  ConsentExpiringEmail, consentExpiringSubject,
 } from "./email-templates";
 import type { WelcomeArgs } from "./email-templates";
 import type { InviteArgs } from "./email-templates";
@@ -28,6 +29,7 @@ import type { TrialExpiringArgs } from "./email-templates";
 import type { SubscriptionCreatedArgs } from "./email-templates";
 import type { SubscriptionChangedArgs } from "./email-templates";
 import type { PaymentFailedArgs } from "./email-templates";
+import type { ConsentExpiringArgs } from "./email-templates";
 
 // ─── Template registry ──────────────────────────────────────────────────────
 
@@ -44,6 +46,7 @@ type TemplateMap = {
   "subscription-created": SubscriptionCreatedArgs;
   "subscription-changed": SubscriptionChangedArgs;
   "payment-failed": PaymentFailedArgs;
+  "consent-expiring": ConsentExpiringArgs;
 };
 
 const TEMPLATES: { [K in keyof TemplateMap]: TemplateEntry<TemplateMap[K]> } = {
@@ -54,6 +57,7 @@ const TEMPLATES: { [K in keyof TemplateMap]: TemplateEntry<TemplateMap[K]> } = {
   "subscription-created": { component: SubscriptionCreatedEmail as any, subject: subscriptionCreatedSubject },
   "subscription-changed": { component: SubscriptionChangedEmail as any, subject: subscriptionChangedSubject },
   "payment-failed": { component: PaymentFailedEmail as any, subject: paymentFailedSubject },
+  "consent-expiring": { component: ConsentExpiringEmail as any, subject: consentExpiringSubject },
 };
 
 // ─── Env ────────────────────────────────────────────────────────────────────

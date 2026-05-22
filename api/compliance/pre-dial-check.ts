@@ -67,11 +67,34 @@ function stateOfPhone(e164: string): string | null {
   for (const [st, s] of Object.entries(STATE_AC)) if (s.has(ac)) return st;
   return null;
 }
-const TZ_OFFSET: Record<string, number> = { OR: -8, CA: -8, NY: -5, FL: -5, TX: -6 };
+// Full US state → IANA timezone mapping (covers all 50 states + DC)
+const STATE_TZ: Record<string, string> = {
+  AL: 'America/Chicago', AK: 'America/Anchorage', AZ: 'America/Phoenix', AR: 'America/Chicago',
+  CA: 'America/Los_Angeles', CO: 'America/Denver', CT: 'America/New_York', DE: 'America/New_York',
+  FL: 'America/New_York', GA: 'America/New_York', HI: 'Pacific/Honolulu', ID: 'America/Boise',
+  IL: 'America/Chicago', IN: 'America/Indiana/Indianapolis', IA: 'America/Chicago', KS: 'America/Chicago',
+  KY: 'America/New_York', LA: 'America/Chicago', ME: 'America/New_York', MD: 'America/New_York',
+  MA: 'America/New_York', MI: 'America/Detroit', MN: 'America/Chicago', MS: 'America/Chicago',
+  MO: 'America/Chicago', MT: 'America/Denver', NE: 'America/Chicago', NV: 'America/Los_Angeles',
+  NH: 'America/New_York', NJ: 'America/New_York', NM: 'America/Denver', NY: 'America/New_York',
+  NC: 'America/New_York', ND: 'America/Chicago', OH: 'America/New_York', OK: 'America/Chicago',
+  OR: 'America/Los_Angeles', PA: 'America/New_York', RI: 'America/New_York', SC: 'America/New_York',
+  SD: 'America/Chicago', TN: 'America/Chicago', TX: 'America/Chicago', UT: 'America/Denver',
+  VT: 'America/New_York', VA: 'America/New_York', WA: 'America/Los_Angeles', WV: 'America/New_York',
+  WI: 'America/Chicago', WY: 'America/Denver', DC: 'America/New_York',
+};
 function localHour(state: string | null): number {
-  const off = state ? TZ_OFFSET[state] ?? -6 : -6;
-  const utcH = new Date().getUTCHours() + new Date().getUTCMinutes() / 60;
-  return ((utcH + off) + 24) % 24;
+  const tz = state ? STATE_TZ[state] ?? 'America/Chicago' : 'America/Chicago';
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
+    const h = Number(parts.find(p => p.type === 'hour')?.value || 12);
+    const m = Number(parts.find(p => p.type === 'minute')?.value || 0);
+    return h + m / 60;
+  } catch {
+    // Fallback to UTC-6 (Central) if Intl fails
+    const utcH = new Date().getUTCHours() + new Date().getUTCMinutes() / 60;
+    return ((utcH - 6) + 24) % 24;
+  }
 }
 
 async function tenantBySlug(slug: string) {
@@ -169,6 +192,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 10 — wireless safe-harbour (best-effort placeholder; flag for review)
     checks.wireless_safe_harbour = { passed: true, detail: "no reassigned-number signal in cache" };
+
+    // 11 — consent expired (PEWC older than 18 months)
+    const EIGHTEEN_MONTHS_MS = 18 * 30.44 * 24 * 3600 * 1000; // ~548 days
+    const consentAge = latest?.captured_at ? Date.now() - new Date(latest.captured_at).getTime() : Infinity;
+    const consentExpired = checks.consent_present.passed && checks.consent_not_revoked.passed && consentAge > EIGHTEEN_MONTHS_MS;
+    checks.consent_expired = {
+      passed: !consentExpired,
+      detail: consentExpired ? `PEWC from ${latest.captured_at} is ${Math.round(consentAge / 86400000)}d old (>548d)` : "ok",
+    };
+    if (consentExpired) blockReasons.push("consent_expired");
+
+    // 12 — tenant suspended (subscription past_due >7d or cancelled)
+    let tenantSuspended = false;
+    try {
+      const tenantRows = await sb(`tenants?id=eq.${tenant.id}&select=subscription_status,subscription_ends_at`);
+      const t = Array.isArray(tenantRows) ? tenantRows[0] : null;
+      if (t) {
+        if (t.subscription_status === "cancelled") tenantSuspended = true;
+        if (t.subscription_status === "past_due" && t.subscription_ends_at) {
+          const pastDueDays = (Date.now() - new Date(t.subscription_ends_at).getTime()) / 86400000;
+          if (pastDueDays > 7) tenantSuspended = true;
+        }
+      }
+    } catch { /* best-effort — don't block dial if tenant lookup fails */ }
+    checks.tenant_suspended = { passed: !tenantSuspended, detail: tenantSuspended ? "tenant subscription suspended" : "ok" };
+    if (tenantSuspended) blockReasons.push("tenant_suspended");
+
+    // 13 — daily dial cap (tenant plan cap vs. today's atom_calls count)
+    let dailyCapExceeded = false;
+    try {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const todayCalls: any[] = await sb(
+        `atom_calls?tenant_slug=eq.${encodeURIComponent(tenant.slug)}&started_at=gte.${todayStart.toISOString()}&select=call_sid`
+      ).catch(() => []);
+      // Plan caps: read from tenants.daily_dial_cap or use generous defaults
+      const tenantCap = await sb(`tenants?id=eq.${tenant.id}&select=daily_dial_cap`).catch(() => []);
+      const cap = Array.isArray(tenantCap) && tenantCap[0]?.daily_dial_cap ? Number(tenantCap[0].daily_dial_cap) : 500;
+      if (todayCalls.length >= cap) {
+        dailyCapExceeded = true;
+      }
+      checks.daily_cap = { passed: !dailyCapExceeded, detail: `${todayCalls.length}/${cap} dials today` };
+    } catch {
+      checks.daily_cap = { passed: true, detail: "cap check skipped (query failed)" };
+    }
+    if (dailyCapExceeded) blockReasons.push("over_daily_cap");
 
     const allowed = blockReasons.length === 0;
 

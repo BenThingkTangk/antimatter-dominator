@@ -477,6 +477,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const productLabel = ((productName || product || productSlug || "").toString().trim())
     || "our platform";
 
+  // ── TCPA compliance pre-dial check ──
+  // Server-to-server call to /api/compliance/pre-dial-check (same Vercel deployment).
+  // If the pre-dial check endpoint is unreachable, we fail-open with a warning
+  // (never silently block production dials due to infra issues).
+  const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY);
+  if (ADMIN_API_KEY && reqTenantSlug) {
+    try {
+      const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+      const host  = (req.headers["x-forwarded-host"] as string)
+        || (req.headers.host as string) || "atom-dominator-pro.vercel.app";
+      const pdcRes = await fetch(`${proto}://${host}/api/compliance/pre-dial-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": ADMIN_API_KEY },
+        body: JSON.stringify({ phone: cleanNumber, tenantSlug: reqTenantSlug }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (pdcRes.ok) {
+        const pdc = await pdcRes.json();
+        if (!pdc.allowed) {
+          // Log the compliance block to Supabase (best-effort)
+          if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+            fetch(`${SUPABASE_URL}/rest/v1/compliance_blocks`, {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_SERVICE_ROLE_KEY,
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal",
+              },
+              body: JSON.stringify({
+                tenant_id: session.tenantId,
+                phone_e164: cleanNumber,
+                reason: pdc.blockReasons?.[0] || "compliance_block",
+                details: { blockReasons: pdc.blockReasons, checks: pdc.checks },
+              }),
+            }).catch(() => {});
+          }
+          return res.status(451).json({
+            error: "compliance_block",
+            reason: pdc.blockReasons?.[0] || "compliance_block",
+            blockReasons: pdc.blockReasons,
+            details: pdc.checks,
+          });
+        }
+      }
+    } catch (pdcErr: any) {
+      // Fail-open: log warning but don't block the dial
+      console.warn("[pre-dial-check] check failed, proceeding:", pdcErr?.message);
+    }
+  }
+
   if (!HUME_API_KEY) return res.status(500).json({ error: "HUME_API_KEY not configured" });
   if (!TWILIO_ACCOUNT_SID || !TWILIO_PHONE_NUMBER) {
     return res.status(500).json({ error: "Twilio credentials not configured" });
@@ -526,6 +577,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     //      Enterprise tier + deal_value over threshold + GPT-5.5 config
     //      configured → route to GPT-5.5 path. Else default Claude Sonnet.
     let tenantPlan: string | null = null;
+    let tenantName: string = productLabel || "AntimatterAI";
     if (reqTenantSlug) {
       try {
         const proto = (req.headers["x-forwarded-proto"] as string) || "https";
@@ -541,6 +593,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (tRes.ok) {
           const t: any = await tRes.json();
           tenantPlan = t?.plan || null;
+          tenantName = t?.name || tenantName;
         }
       } catch {
         // Tenant lookup is non-blocking — standard config is the safe default.
@@ -603,18 +656,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const recordingStatusCallback = `${proto}://${host}/api/atom-leadgen/recording-callback`;
     const statusCallback          = `${proto}://${host}/api/atom-leadgen/call-status`;
 
-    // If a pre-rendered cold-open audio exists, use inline TwiML that plays
-    // the opener first, then redirects to Hume's TwiML endpoint for the live
-    // AI conversation. Otherwise use the Hume URL directly.
+    // ── FCC AI Disclosure + optional cold-open pre-render ──
+    // The AI disclosure MUST play in the first 5 seconds of every call.
+    // If ElevenLabs is configured, we generate a tenant-specific clip and cache it.
+    // If not, we fall back to Hume's session prompt (on_new_chat includes disclosure).
+    const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    let disclosureUrl = "";
+    try {
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        const discPath = `compliance-disclosure/${session.tenantId}.mp3`;
+        const discPublicUrl = `${SUPABASE_URL}/storage/v1/object/public/${discPath}`;
+        // Check cache first
+        const headRes = await fetch(discPublicUrl, { method: "HEAD", signal: AbortSignal.timeout(2000) }).catch(() => null);
+        if (headRes?.ok) {
+          disclosureUrl = discPublicUrl;
+        } else {
+          // Try to generate via ElevenLabs (fire inline, ~1.5s for short clip)
+          const elKey = clean(process.env.ELEVENLABS_API_KEY);
+          if (elKey) {
+            const safeName = tenantName.replace(/[<>&"']/g, "").slice(0, 80);
+            const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${clean(process.env.ELEVENLABS_VOICE_ID) || "pNInz6obpgDQGcFmaJgB"}`, {
+              method: "POST",
+              headers: { "xi-api-key": elKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
+              body: JSON.stringify({
+                text: `This call is from an AI assistant on behalf of ${safeName}.`,
+                model_id: process.env.ELEVENLABS_MODEL || "eleven_flash_v2_5",
+                voice_settings: { stability: 0.75, similarity_boost: 0.80, style: 0.2, use_speaker_boost: false },
+              }),
+              signal: AbortSignal.timeout(8000),
+            });
+            if (ttsRes.ok) {
+              const audioBytes = new Uint8Array(await ttsRes.arrayBuffer());
+              const upRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${discPath}`, {
+                method: "POST",
+                headers: {
+                  apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  "Content-Type": "audio/mpeg", "x-upsert": "true",
+                },
+                body: audioBytes,
+              });
+              if (upRes.ok) disclosureUrl = discPublicUrl;
+            }
+          }
+        }
+      }
+    } catch { /* disclosure generation is best-effort */ }
+
+    // Build the TwiML or URL for the call. When we have audio clips to play
+    // (disclosure and/or cold-open), we MUST use inline TwiML with <Play> tags
+    // before redirecting to Hume. Otherwise use the Hume URL directly.
     const callOpts: Parameters<typeof twilioCreateCall>[2] = {
       record: wantRecord,
       recordingStatusCallback: wantRecord ? recordingStatusCallback : undefined,
       statusCallback,
     };
-    if (coldOpen) {
-      // Escape XML special chars in URLs
-      const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-      callOpts.twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Play>${escXml(coldOpen)}</Play><Redirect>${escXml(humeTwimlUrl.toString())}</Redirect></Response>`;
+    const hasAudioPreamble = disclosureUrl || coldOpen;
+    if (hasAudioPreamble) {
+      let plays = "";
+      if (disclosureUrl) plays += `<Play>${escXml(disclosureUrl)}</Play>`;
+      if (coldOpen) plays += `<Play>${escXml(coldOpen)}</Play>`;
+      callOpts.twiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${plays}<Redirect>${escXml(humeTwimlUrl.toString())}</Redirect></Response>`;
     } else {
       callOpts.url = humeTwimlUrl.toString();
     }
@@ -661,8 +762,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: call.status || "queued",
       to: cleanNumber,
       from: TWILIO_PHONE_NUMBER,
-      architecture: coldOpen ? "twilio-coldopen-hume-rag-v12" : "twilio-hume-direct-rag-cached-v11-record",
+      architecture: hasAudioPreamble ? "twilio-disclosure-hume-rag-v13" : "twilio-hume-direct-rag-cached-v11-record",
       coldOpenPlayed: !!coldOpen,
+      disclosurePlayed: !!disclosureUrl,
       recordEnabled: wantRecord,
       humeConfigId: routedConfig.configId,
       humeVoiceId: HUME_VOICE_ID,
