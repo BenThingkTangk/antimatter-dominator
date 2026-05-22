@@ -11,7 +11,6 @@ import ObjectionHandler from "./pages/objection-handler";
 import MarketIntent from "./pages/market-intent";
 import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
-import AtomCampaign from "./pages/atom-campaign";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
 import Campaigns from "./pages/campaigns";
@@ -82,7 +81,7 @@ const MOBILE_ROUTE_MAP: Record<string, string> = {
   "/company-intelligence": "/m/warbook",
   "/war-room":             "/m/war-room",
   "/atom-leadgen":         "/m/dial",
-  "/atom-campaign":        "/m/chat",
+  "/campaigns":            "/m/chat",
   "/admin/tenants":        "/m/admin",
 };
 
@@ -178,7 +177,7 @@ function AuthenticatedRoutesInner() {
         <Route path="/market" component={MarketIntent} />
         <Route path="/prospects" component={ProspectEngine} />
         <Route path="/atom-leadgen" component={AtomLeadGen} />
-        <Route path="/atom-campaign" component={AtomCampaign} />
+        <Route path="/atom-campaign">{() => <Redirect to="/campaigns" />}</Route>
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
         <Route path="/campaigns" component={Campaigns} />

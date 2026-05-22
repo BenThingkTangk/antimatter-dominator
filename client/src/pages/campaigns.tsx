@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus, Upload, FileSpreadsheet, Zap, ListChecks, ArrowRight,
-  Trash2, Sparkles, Send, Loader2, CheckCircle2, Target,
+  Trash2, Sparkles, Send, Loader2, CheckCircle2, Target, PhoneCall,
 } from "lucide-react";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -630,6 +630,16 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
     onError: (e: any) => toast({ title: "Push failed", description: e.message, variant: "destructive" }),
   });
 
+  const launchDialsMutation = useMutation({
+    mutationFn: async () =>
+      (await apiRequest("POST", `/api/campaigns/${id}/launch-dials`, {})).json(),
+    onSuccess: (res) => {
+      toast({ title: "Dials launched", description: `${res.queued ?? 0} dials queued for campaign.` });
+      qc.invalidateQueries({ queryKey: [`/api/campaigns/${id}`] });
+    },
+    onError: (e: any) => toast({ title: "Launch failed", description: e.message, variant: "destructive" }),
+  });
+
   const tierCounts = useMemo(() => {
     const c = { T1: 0, T2: 0, T3: 0, T4: 0 };
     (accounts || []).forEach((a) => { if (a.tier && c[a.tier as keyof typeof c] != null) c[a.tier as keyof typeof c]++; });
@@ -679,6 +689,18 @@ function CampaignDetail({ id, onBack }: { id: number; onBack: () => void }) {
             {pushMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
             Push to Prospects {selected.size > 0 ? `(${selected.size})` : ""}
           </Button>
+          {campaign?.status === "ready" && (
+            <Button
+              disabled={launchDialsMutation.isPending}
+              onClick={() => launchDialsMutation.mutate()}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid="button-launch-dials"
+              title="Launch ATOM Voice dials for all ready accounts"
+            >
+              {launchDialsMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PhoneCall className="w-4 h-4 mr-2" />}
+              Launch Dials
+            </Button>
+          )}
         </div>
       </div>
 
