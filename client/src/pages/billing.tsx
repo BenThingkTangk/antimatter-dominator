@@ -20,10 +20,18 @@ interface CatalogItem {
   plan: string;
   label: string;
   perSeatCents: number;
-  includedSeats: number;
-  dialsPerMonth: string;
-  features: string[];
+  annualPerSeatCents: number;
+  minSeats: number;
+  freeTrialDays: number;
+  positioning: string;
+  includes: string[];
+  excludes: string[];
+  highlight: boolean;
+  priceId: string;
+  caps: Record<string, number>;
 }
+
+interface UsageEntry { used: number; cap: number; }
 
 interface BillingMe {
   authenticated: boolean;
@@ -33,6 +41,7 @@ interface BillingMe {
     name: string;
     owner_email: string | null;
     plan: string | null;
+    seats: number;
     subscription_status: string | null;
     trial_ends_at: string | null;
     stripe_customer_id: string | null;
@@ -50,6 +59,7 @@ interface BillingMe {
     cancelAtPeriodEnd: boolean;
   } | null;
   catalog: CatalogItem[];
+  usage: Record<string, UsageEntry>;
   stripeConfigured: boolean;
 }
 
@@ -131,7 +141,7 @@ export default function BillingPage() {
 
   const catalog = data?.catalog || [];
   const current = useMemo(() => catalog.find((c) => c.plan === selectedPlan) || catalog[1] || null, [catalog, selectedPlan]);
-  const minSeats = current?.includedSeats || 1;
+  const minSeats = current?.minSeats || 1;
 
   useEffect(() => {
     if (current && seats < minSeats) setSeats(minSeats);
@@ -284,6 +294,63 @@ export default function BillingPage() {
         </div>
       )}
 
+      {/* Entitlement usage — progress bars */}
+      {data?.authenticated && data.usage && Object.keys(data.usage).length > 0 && (
+        <div
+          className="mb-6 px-5 py-4 rounded-2xl"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <div className="text-[10px] uppercase tracking-[0.16em] text-white/40 font-mono mb-3">Usage this period</div>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+            {Object.entries(data.usage).map(([key, val]) => {
+              const pct = val.cap > 0 ? Math.min(100, Math.round((val.used / val.cap) * 100)) : 0;
+              const isUnlimited = val.cap < 0;
+              const barColor = isUnlimited
+                ? "var(--color-primary)"
+                : pct >= 90
+                  ? "#ff6b8b"
+                  : pct >= 70
+                    ? "var(--color-warning)"
+                    : "var(--color-primary)";
+              const LABELS: Record<string, string> = {
+                voice: "Dial Minutes",
+                campaign_voice: "Campaign Minutes",
+                sms: "SMS",
+                email: "Emails",
+                pitch: "Pitches",
+                objection: "Objections",
+                warbook: "WarBook Queries",
+                warroom: "War Room Analyses",
+                leadgen: "Prospect Enrichments",
+                signal: "Signal Queries",
+              };
+              return (
+                <div key={key}>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-[11px] text-white/60 font-medium">{LABELS[key] || key}</span>
+                    <span className="text-[10px] font-mono text-white/40">
+                      {isUnlimited ? `${val.used} / unlimited` : `${val.used} / ${val.cap}`}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: isUnlimited ? "5%" : `${pct}%`,
+                        background: barColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pricing cards */}
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         {catalog.map((c) => {
@@ -328,11 +395,14 @@ export default function BillingPage() {
                 </span>
                 <span className="text-xs text-white/45 ml-1.5">/ seat / month</span>
               </div>
-              <div className="text-[11px] text-white/45 font-mono mb-3 leading-relaxed">
-                {c.includedSeats > 0 ? `Min ${c.includedSeats} seats` : "Custom seat count"} · {c.dialsPerMonth} dials/mo
+              <div className="text-[11px] text-white/45 font-mono mb-1 leading-relaxed">
+                {c.minSeats > 0 ? `Min ${c.minSeats} seats` : "Custom seat count"}
               </div>
+              {c.positioning && (
+                <p className="text-[11px] text-white/50 mb-3 leading-relaxed">{c.positioning}</p>
+              )}
               <ul className="space-y-1.5">
-                {c.features.map((f) => (
+                {c.includes.map((f) => (
                   <li key={f} className="flex items-start gap-1.5 text-xs text-white/65">
                     <Check className="w-3 h-3 shrink-0 mt-0.5" style={{ color: "var(--color-primary)" }} />
                     <span>{f}</span>
@@ -395,7 +465,7 @@ export default function BillingPage() {
                   style={{ accentColor: "var(--color-primary)" }}
                 />
                 <Sparkles className="w-3.5 h-3.5" style={{ color: "var(--color-primary)" }} />
-                Start with a 14-day free trial (no charge until day 15)
+                Start with a {current?.freeTrialDays || 14}-day free trial (no charge until day {(current?.freeTrialDays || 14) + 1})
               </label>
             </div>
 

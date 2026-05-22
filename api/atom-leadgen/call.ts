@@ -34,6 +34,7 @@
  *      name and has the full research brief already in context.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements";
 
 // ─── Env ──────────────────────────────────────────────────────────────────────
 const clean = (v: string | undefined) =>
@@ -53,6 +54,31 @@ const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // ATOM RAG microservice (Pinecone-backed, always-warm cache)
 const RAG_URL = clean(process.env.RAG_URL) || "https://atom-rag.45-79-202-76.sslip.io";
+
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const pair of header.split(";")) {
+    const [k, ...v] = pair.split("=");
+    if (k) out[k.trim()] = v.join("=").trim();
+  }
+  return out;
+}
+
+async function resolveSession(req: VercelRequest): Promise<{ userId: string; tenantId: string } | null> {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies["atom_session"];
+  if (!token || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_sessions?token=eq.${encodeURIComponent(token)}&revoked_at=is.null&select=user_id,tenant_id`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const s = Array.isArray(rows) ? rows[0] : null;
+    return s ? { userId: s.user_id, tenantId: s.tenant_id } : null;
+  } catch { return null; }
+}
 
 // ─── Pre-warmed Hume assets (production, reused across all calls) ─────────────
 const HUME_CONFIG_ID = clean(process.env.HUME_CONFIG_ID) ||
@@ -405,6 +431,14 @@ async function createPerCallConfig(args: {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  // ── Entitlement gate ──
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  const ent = await checkEntitlement(session.tenantId, "voice");
+  if (!ent.allowed) {
+    return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });
+  }
+
   const {
     phoneNumber,
     to,
@@ -602,6 +636,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }).catch(() => { /* best-effort */ });
       }
     } catch { /* never block dial on Supabase */ }
+
+    // Record usage: 1 dial minute (actual duration tracked by call-status callback)
+    recordUsage(session.tenantId, "voice", 1, { callSid: call.sid });
 
     return res.status(200).json({
       success: true,

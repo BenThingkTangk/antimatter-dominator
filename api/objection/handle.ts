@@ -2,10 +2,39 @@
 // the OpenAI gpt-4 call routinely runs 15-45s and exceeds Edge's 25-30s
 // ceiling. Reverted to Node serverless with maxDuration: 60.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements";
 
 export const config = { maxDuration: 60 } as const;
 
+const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
+const SUPABASE_URL = clean(process.env.SUPABASE_URL);
+const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const pair of header.split(";")) {
+    const [k, ...v] = pair.split("=");
+    if (k) out[k.trim()] = v.join("=").trim();
+  }
+  return out;
+}
+
+async function resolveSession(req: VercelRequest): Promise<{ userId: string; tenantId: string } | null> {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies["atom_session"];
+  if (!token || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_sessions?token=eq.${encodeURIComponent(token)}&revoked_at=is.null&select=user_id,tenant_id`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const s = Array.isArray(rows) ? rows[0] : null;
+    return s ? { userId: s.user_id, tenantId: s.tenant_id } : null;
+  } catch { return null; }
+}
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
 
 // ─── Apollo enrichment (inlined per Vercel nft requirement) ─────────────────
@@ -75,6 +104,14 @@ async function getRAGContext(company: string, module: string): Promise<string> {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+
+  // ── Entitlement gate ──
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  const ent = await checkEntitlement(session.tenantId, "objection");
+  if (!ent.allowed) {
+    return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });
+  }
 
   const {
     productSlug,
@@ -193,6 +230,9 @@ Analyze the objection and return ONLY this JSON structure (no markdown):
         keyInsight: "Review the objection context for deeper insights.",
       };
     }
+
+    // Record usage (fire-and-forget)
+    recordUsage(session.tenantId, "objection");
 
     res.setHeader("X-ATOM-Version", "gold-v2");
     res.setHeader("Cache-Control", "private, no-store");

@@ -1,9 +1,46 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements";
 
+const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
+const SUPABASE_URL = clean(process.env.SUPABASE_URL);
+const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const pair of header.split(";")) {
+    const [k, ...v] = pair.split("=");
+    if (k) out[k.trim()] = v.join("=").trim();
+  }
+  return out;
+}
+
+async function resolveSession(req: VercelRequest): Promise<{ userId: string; tenantId: string } | null> {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies["atom_session"];
+  if (!token || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_sessions?token=eq.${encodeURIComponent(token)}&revoked_at=is.null&select=user_id,tenant_id`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const s = Array.isArray(rows) ? rows[0] : null;
+    return s ? { userId: s.user_id, tenantId: s.tenant_id } : null;
+  } catch { return null; }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // ── Entitlement gate ──
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  const ent = await checkEntitlement(session.tenantId, "leadgen");
+  if (!ent.allowed) {
+    return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });
+  }
 
   const { product } = req.body;
   if (!product || typeof product !== "string" || product.trim().length < 2) {
@@ -145,6 +182,9 @@ Build a detailed product intelligence profile. Return ONLY valid JSON (no markdo
     // Add metadata
     intel.lastUpdated = Date.now();
     intel.source = websiteContent ? "website + ai" : "ai_only";
+
+    // Record usage (fire-and-forget)
+    recordUsage(session.tenantId, "leadgen");
 
     return res.json(intel);
   } catch (err: any) {

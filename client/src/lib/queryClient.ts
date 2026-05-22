@@ -5,6 +5,18 @@ const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    // Surface entitlement 402 errors with upgrade link
+    if (res.status === 402) {
+      try {
+        const body = JSON.parse(text);
+        const detail = body.reason || body.error || "Plan limit reached";
+        const msg = body.cap
+          ? `${detail} — ${body.used ?? "?"}/${body.cap} used this period`
+          : detail;
+        // Dispatch a custom event that the toast system can pick up
+        window.dispatchEvent(new CustomEvent("atom:entitlement-blocked", { detail: { message: msg, upgradeUrl: body.upgradeUrl || "/#/billing" } }));
+      } catch {}
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }

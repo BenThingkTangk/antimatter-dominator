@@ -3,14 +3,15 @@ import { useTenant } from "@/lib/useTenant";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Brain,
-  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks, AlertCircle
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
 import { useEffectiveSession, ViewAsToggle } from "../auth/ViewAs";
 import { DtomLogo } from "@nirmata/atom-design-system/react";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavItem { href: string; icon: any; label: string; }
 
@@ -60,6 +61,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Theme is locked dark-first per brand bible — no toggle, no state.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Global 402 entitlement-blocked toast
+  const handleBlocked = useCallback((e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    toast({
+      title: "Plan limit reached",
+      description: detail?.message || "Upgrade your plan to continue.",
+      variant: "destructive",
+    });
+  }, [toast]);
+  useEffect(() => {
+    window.addEventListener("atom:entitlement-blocked", handleBlocked);
+    return () => window.removeEventListener("atom:entitlement-blocked", handleBlocked);
+  }, [handleBlocked]);
   // Use the EFFECTIVE session everywhere the sidebar / RBAC decisions are
   // made. When the real super-admin flips the View-As toggle, `session`
   // here returns `isSuperAdmin: false` and the Nirmata HQ / Seat Costs /

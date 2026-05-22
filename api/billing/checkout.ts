@@ -13,6 +13,7 @@
  * Returns: { checkoutUrl } or { checkoutUrl: null, message } if Stripe not configured.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { PLAN_TIERS } from "../../shared/seat-cost-model";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -45,24 +46,26 @@ function parseCookies(header: string | undefined): Record<string, string> {
   return out;
 }
 
-// Per-seat monthly pricing (cents) — falls back to these when no Stripe Price ID env var is set.
-const PER_SEAT_PRICES: Record<string, number> = {
-  starter: 9900,    // $99 / seat / mo  · base 5 seats included in plan caps
-  growth: 19900,    // $199 / seat / mo · base 15 seats
-  advisory: 49900,  // $499 / seat / mo · base 50 seats
-  enterprise: 99900,// $999 / seat / mo · custom
-};
+// Build per-seat prices + labels from PLAN_TIERS (single source of truth)
+const PURCHASABLE_TIERS = PLAN_TIERS.filter((t) => !t.contactSales && t.monthlyPerSeat > 0);
+const PER_SEAT_PRICES: Record<string, number> = {};
+const PLAN_LABELS: Record<string, string> = {};
+for (const t of PURCHASABLE_TIERS) {
+  PER_SEAT_PRICES[t.id] = t.monthlyPerSeat * 100; // dollars → cents
+  PLAN_LABELS[t.id] = `ATOM ${t.label}`;
+}
 
-const PLAN_LABELS: Record<string, string> = {
-  starter: "ATOM Starter",
-  growth: "ATOM Growth",
-  advisory: "ATOM Advisory",
-  enterprise: "ATOM Enterprise",
+// Env-var Stripe Price IDs (preferred in production)
+const PRICE_ENV_MAP: Record<string, string> = {
+  striker: "STRIPE_PRICE_STARTER_MONTHLY",
+  growth: "STRIPE_PRICE_GROWTH_MONTHLY",
+  advisory: "STRIPE_PRICE_ADVISORY_MONTHLY",
+  enterprise: "STRIPE_PRICE_ENTERPRISE_MONTHLY",
 };
 
 function priceIdForPlan(plan: string): string {
-  const k = `STRIPE_PRICE_${plan.toUpperCase()}`;
-  return clean(process.env[k]);
+  const envKey = PRICE_ENV_MAP[plan];
+  return envKey ? clean(process.env[envKey]) : "";
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -85,6 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const plan = String(body.plan || "").toLowerCase();
     const seats = Math.max(1, Math.min(500, Number(body.seats) || 1));
     const withTrial = body.withTrial !== false; // default true
+    const tierDef = PLAN_TIERS.find((t) => t.id === plan);
     if (!PER_SEAT_PRICES[plan]) {
       return res.status(400).json({ error: `Invalid plan. Choose one of: ${Object.keys(PER_SEAT_PRICES).join(", ")}` });
     }
@@ -148,7 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer_update: { address: "auto", name: "auto" },
       billing_address_collection: "auto",
       subscription_data: {
-        ...(withTrial ? { trial_period_days: 14 } : {}),
+        ...(withTrial && tierDef?.freeTrialDays ? { trial_period_days: tierDef.freeTrialDays } : {}),
         metadata: { tenant_id: tenant.id, tenant_slug: tenant.slug, plan, seats: String(seats) },
       },
       success_url: `${origin}/#/billing?checkout=success`,
