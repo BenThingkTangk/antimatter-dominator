@@ -89,7 +89,7 @@ function generateVoiceBrief(data: ResearchResult, contactTitle: string, _product
   const openerPain = painPoints.length > 0 ? ` I noticed you may be dealing with ${painPoints[0].toLowerCase()}.` : "";
 
   return {
-    opener: `Hey ${contactTitle.split("/")[0].trim()} — this is ADAM from Antimatter AI. I was doing some research on ${company} and saw you're leading the push${keyInitiative ? ` to ${keyInitiative.toLowerCase()}` : " in your space"}.${openerPain} How's that effort going with your current infrastructure?`,
+    opener: `Hey ${contactTitle.split("/")[0].trim()} — this is ADAM from ΔTOM. I was doing some research on ${company} and saw you're leading the push${keyInitiative ? ` to ${keyInitiative.toLowerCase()}` : " in your space"}.${openerPain} How's that effort going with your current infrastructure?`,
     objections: wb?.battlePlan?.objectionPredictions?.slice(0, 3) || [
       "We already have a solution in place.",
       "Our budget is locked for this quarter.",

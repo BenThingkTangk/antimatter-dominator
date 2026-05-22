@@ -53,7 +53,7 @@ export default function Compliance() {
             outline: "none", cursor: "pointer",
           }}
         >
-          {(tenants?.tenants ?? [{ slug: "antimatter", name: "AntimatterAI" }]).map((t: any) => (
+          {(tenants?.tenants ?? [{ slug: "antimatter", name: "ΔTOM" }]).map((t: any) => (
             <option key={t.slug} value={t.slug}>{t.name} · {t.slug}</option>
           ))}
         </select>

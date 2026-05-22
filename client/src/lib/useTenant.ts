@@ -9,7 +9,7 @@
  *
  * Defaults (used when fetch fails OR domain doesn't match a tenant):
  *   slug: "antimatter"
- *   name: "AntimatterAI"
+ *   name: "ΔTOM"
  *   primary_hex: "#696aac"  (ATOM teal)
  *   accent_hex: "#06b6d4"
  */
@@ -29,7 +29,7 @@ export interface Tenant {
 
 const DEFAULT_TENANT: Tenant = {
   slug: "antimatter",
-  name: "AntimatterAI",
+  name: "ΔTOM",
   logo_url: "/logo-atom.svg",
   primary_hex: "#696aac",
   accent_hex: "#8587e3",

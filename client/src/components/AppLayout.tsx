@@ -12,6 +12,7 @@ import { useSessionContext } from "../auth/AuthGate";
 import { useEffectiveSession, ViewAsToggle } from "../auth/ViewAs";
 import { DtomLogo } from "@nirmata/atom-design-system/react";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem { href: string; icon: any; label: string; }
 
@@ -83,7 +84,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // sidebar exactly like a manager / rep would experience.
   const session = useEffectiveSession();
   const { tenant } = useTenant();
-  const isCustomBrand = !!tenant?.slug && tenant.slug !== "antimatter" && tenant.name !== "AntimatterAI";
+  const isCustomBrand = !!tenant?.slug && tenant.slug !== "antimatter" && tenant.name !== "ΔTOM";
   const tenantLogo = isCustomBrand && tenant.logo_url ? tenant.logo_url : null;
 
   // Detect preview mode — super admin viewing a tenant via ?tenant=<slug>
@@ -207,6 +208,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
               className={`relative flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : ""}`}
               style={isActive ? {
                 background: "color-mix(in oklab, var(--color-primary) 8%, transparent)",
@@ -256,6 +258,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-label={item.label}
                   className={`relative flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-all rounded-lg ${collapsed && !isMobile ? "justify-center" : ""}`}
                   style={isActive ? {
                     background: "color-mix(in oklab, var(--color-primary) 8%, transparent)",
@@ -427,7 +430,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-10" />
           </header>
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-6 md:max-w-[1400px] md:mx-auto">{children}</div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="p-4 md:p-6 md:max-w-[1400px] md:mx-auto"
+                style={{ willChange: "opacity, transform" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>

@@ -3,6 +3,7 @@
  * localStorage and normalises error handling.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const ADMIN_KEY_LS = "atom_admin_key";
 
@@ -38,8 +39,15 @@ export function useAdminQuery<T = any>(key: any[], path: string, opts: { refetch
 
 export function useAdminMutation<TIn = any, TOut = any>(path: string, method: "POST" | "PATCH" | "DELETE" = "POST", invalidate: any[][] = []) {
   const qc = useQueryClient();
+  const { toast } = useToast();
   return useMutation<TOut, Error, TIn>({
     mutationFn: (body) => adminFetch(path, { method, body: body ? JSON.stringify(body) : undefined }),
-    onSuccess: () => invalidate.forEach((k) => qc.invalidateQueries({ queryKey: k })),
+    onSuccess: () => {
+      invalidate.forEach((k) => qc.invalidateQueries({ queryKey: k }));
+      toast({ title: "Done", description: "Operation completed successfully." });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message || "Operation failed.", variant: "destructive" });
+    },
   });
 }

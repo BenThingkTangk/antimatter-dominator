@@ -59,7 +59,7 @@ export default function MobileSettings() {
               <Building2 size={20} />
             </span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{tenant?.name ?? "AntimatterAI"}</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{tenant?.name ?? "ΔTOM"}</div>
               <div className="m-text-muted" style={{ fontSize: 13 }}>
                 {(tenant?.plan ?? "standard").toUpperCase()} · slug: <span className="m-mono">{tenant?.slug ?? "antimatter"}</span>
               </div>

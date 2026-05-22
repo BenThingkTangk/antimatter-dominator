@@ -4,7 +4,7 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ATOM Brand & Design System v2.0 — Cinematic Systems Edition
-   Owner: Nirmata Holdings / AntimatterAI / ATOM
+   Owner: Nirmata Holdings / ΔTOM
    Reference: ATOM Brand and Design System Configuration Standards v2.0
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -1436,4 +1436,54 @@ button[role="combobox"][data-state="open"]:where(:not(.atom-bare)) {
 .dtom-loader [class*="text-purple"] {
   background-color: transparent !important;
   color: #00e6d3 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATOM Skeleton — sliding gradient shimmer
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes atom-skeleton {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.atom-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: atom-skeleton 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Hover elevation for primary buttons
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hover-elevate {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hover-elevate:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+.hover-elevate:active,
+.active-elevate-2:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Toast slide-in from right
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes atom-toast-in {
+  0%   { opacity: 0; transform: translateX(100%); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+[data-state="open"][data-swipe-direction] {
+  animation: atom-toast-in 0.3s ease-out;
 }

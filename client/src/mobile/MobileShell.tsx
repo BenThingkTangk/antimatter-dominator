@@ -30,7 +30,7 @@ export function MobileShell({ children, title, right }: { children: React.ReactN
           {title ? <span>{title}</span> : <span>ΔT<span className="m-o">O</span>M</span>}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {tenant?.name && tenant.name !== "AntimatterAI" ? (
+          {tenant?.name && tenant.name !== "ΔTOM" ? (
             <span className="m-pill" style={{ textTransform: "none", letterSpacing: "0.04em" }}>
               {tenant.name}
             </span>

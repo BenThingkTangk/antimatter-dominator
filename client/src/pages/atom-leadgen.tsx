@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useProductIntel } from "@/hooks/use-product-intel";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/EmptyState";
 import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair } from "lucide-react";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
@@ -1227,30 +1228,17 @@ export default function ATOMLeadGen() {
 
             {/* List */}
             {callHistory.length === 0 ? (
-              <div
-                className="rounded-2xl p-12 text-center"
-                style={{
-                  background: "rgba(246,246,253,0.02)",
-                  border: "1px solid rgba(246,246,253,0.06)",
-                }}
-              >
-                <Clock size={32} className="mx-auto mb-3" style={{ color: "rgba(246,246,253,0.15)" }} />
-                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
-                  No calls yet. Make your first call to start building history.
-                </p>
-              </div>
+              <EmptyState
+                icon={Clock}
+                title="No calls yet"
+                description="Make your first call to start building history."
+              />
             ) : filteredHistory.length === 0 ? (
-              <div
-                className="rounded-2xl p-10 text-center"
-                style={{
-                  background: "rgba(246,246,253,0.02)",
-                  border: "1px solid rgba(246,246,253,0.06)",
-                }}
-              >
-                <p className="text-sm" style={{ color: "rgba(246,246,253,0.35)" }}>
-                  No calls match your search.
-                </p>
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No matching calls"
+                description="No calls match your search. Try a different query."
+              />
             ) : (
               <div className="space-y-3">
                 {filteredHistory.map((entry) => (
@@ -1416,6 +1404,8 @@ export default function ATOMLeadGen() {
                   <button
                     onClick={handleDial}
                     disabled={callStatus === "dialing"}
+                    aria-busy={callStatus === "dialing" || callStatus === "active"}
+                    aria-live="polite"
                     className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm transition-all"
                     style={{
                       background: "linear-gradient(96deg, var(--color-primary), var(--color-primary-2))",

@@ -53,7 +53,7 @@ export default function Team() {
           Tenant
         </span>
         <select value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} style={selectStyle}>
-          {(tenants?.tenants ?? [{ slug: "antimatter", name: "AntimatterAI" }]).map((t: any) => (
+          {(tenants?.tenants ?? [{ slug: "antimatter", name: "ΔTOM" }]).map((t: any) => (
             <option key={t.slug} value={t.slug}>{t.name}</option>
           ))}
         </select>

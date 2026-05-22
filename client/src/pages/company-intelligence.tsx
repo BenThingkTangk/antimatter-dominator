@@ -260,7 +260,7 @@ function generateVoiceBrief(result: WarBookResult): VoiceBrief {
   const init = wb?.buyingSignals?.[0]?.signal || "digital transformation";
   const painRef = pp.length > 0 ? ` I noticed you may be dealing with ${pp[0].toLowerCase()}.` : "";
   return {
-    opener: `Hey there — this is ADAM from Antimatter AI. I was doing some research on ${result.company} and saw you're leading the push${init ? ` around ${init.toLowerCase()}` : " in your space"}.${painRef} How's that effort going with your current setup?`,
+    opener: `Hey there — this is ADAM from ΔTOM. I was doing some research on ${result.company} and saw you're leading the push${init ? ` around ${init.toLowerCase()}` : " in your space"}.${painRef} How's that effort going with your current setup?`,
     objections: (wb?.battlePlan?.objectionPredictions || wb?.objectionPredictions || []).slice(0, 5).map(o => typeof o === "string" ? o : o.objection),
     discoveryQs: wb?.battlePlan?.callStrategy?.keyQuestions?.slice(0, 6) || [
       `What does your current stack look like for ${result.company}'s core workflows?`,

@@ -3,6 +3,7 @@ import { Markdown } from "@/mobile/Markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/EmptyState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Eye,
@@ -358,7 +359,7 @@ function MiniBar({ label, value, color }: { label: string; value: number; color:
         <span className="text-[10px] text-white/40 font-mono truncate pr-2">{label}</span>
         <span className="text-[10px] font-mono tabular-nums shrink-0" style={{ color }}>{value}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, background: color }} />
       </div>
     </div>
@@ -369,7 +370,7 @@ function EngagementBar({ value }: { value: number }) {
   const color = value >= 70 ? "#1dd1a1" : value >= 40 ? "#fbbf24" : "var(--color-error)";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100} aria-label="Engagement score">
         <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, background: color }} />
       </div>
       <span className="text-[10px] font-mono tabular-nums" style={{ color }}>{value}%</span>
@@ -427,22 +428,11 @@ function CommandCenterTab({ deals, onTabChange }: { deals: Deal[]; onTabChange: 
 
   if (deals.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "color-mix(in oklab, var(--color-primary) 12%, transparent)", border: "1.5px solid color-mix(in oklab, var(--color-primary) 12%, transparent)" }}>
-          <Swords size={28} className="text-red-500/60" />
-        </div>
-        <div className="space-y-2 max-w-sm">
-          <p className="text-[15px] font-semibold text-[#f6f6fd]">No active deals.</p>
-          <p className="text-[13px] text-white/40 leading-relaxed">Flag an account as HVT from ATOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine.</p>
-        </div>
-        <button
-          onClick={() => onTabChange("pipeline")}
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-[12px] font-medium transition-all hover:scale-[1.02]"
-          style={CRIMSON_BTN_STYLE}
-        >
-          <Plus size={13} /> Add First Deal
-        </button>
-      </div>
+      <EmptyState
+        icon={Swords}
+        title="No active deals."
+        description="Flag an account as HVT from ATOM Prospect, Lead Gen, or Market Intent to deploy the Von Clausewitz Engine."
+      />
     );
   }
 

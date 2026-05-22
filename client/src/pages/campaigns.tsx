@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import {
   Plus, Upload, FileSpreadsheet, Zap, ListChecks, ArrowRight,
   Trash2, Sparkles, Send, Loader2, CheckCircle2, Target, PhoneCall,
@@ -159,7 +161,7 @@ export default function Campaigns() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  const { data: campaigns, isLoading } = useQuery<Campaign[]>({
+  const { data: campaigns, isLoading, isError, refetch } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
     queryFn: async () => (await apiRequest("GET", "/api/campaigns")).json(),
   });
@@ -192,6 +194,8 @@ export default function Campaigns() {
           <CampaignList
             campaigns={campaigns}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
             onOpen={(id) => { setActiveId(id); setView("detail"); }}
           />
         )}
@@ -213,24 +217,23 @@ export default function Campaigns() {
 // List view
 // ────────────────────────────────────────────────────────────────────────────
 function CampaignList({
-  campaigns, isLoading, onOpen,
-}: { campaigns?: Campaign[]; isLoading: boolean; onOpen: (id: number) => void }) {
+  campaigns, isLoading, isError, onRetry, onOpen,
+}: { campaigns?: Campaign[]; isLoading: boolean; isError: boolean; onRetry: () => void; onOpen: (id: number) => void }) {
   if (isLoading) {
     return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40 bg-white/5" />)}
+      {[1, 2, 3].map((i) => <Skeleton key={i} shimmer className="h-40" />)}
     </div>;
+  }
+  if (isError) {
+    return <ErrorState message="Failed to load campaigns." onRetry={onRetry} />;
   }
   if (!campaigns?.length) {
     return (
-      <Card className="bg-[#0a0a1a]/50 border-[#3e3f7e]/30">
-        <CardContent className="py-16 text-center">
-          <Target className="w-12 h-12 mx-auto text-[#696aac] mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No campaigns yet</h3>
-          <p className="text-[#a2a3e9]/60 mb-6 max-w-md mx-auto">
-            Drop a target list, pick a scoring template, and ΔTOM turns hundreds of accounts into a tiered battle plan.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Target}
+        title="No campaigns yet"
+        description="Drop a target list, pick a scoring template, and ΔTOM turns hundreds of accounts into a tiered battle plan."
+      />
     );
   }
   return (
@@ -250,7 +253,7 @@ function CampaignList({
                   {c.productLabel}
                 </CardDescription>
               </div>
-              <Badge className={
+              <Badge aria-live="polite" className={
                 c.status === "ready" ? "bg-[#3e3f7e] text-white"
                 : c.status === "enriching" ? "bg-[#4c4dac] text-white"
                 : c.status === "scoring" ? "bg-[#696aac] text-white"

@@ -1,11 +1,13 @@
 import { Switch, Route, Router, Redirect, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DtomBrandShell, DtomBootLoader } from "@nirmata/atom-design-system/react";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
+import { CommandPalette } from "./components/CommandPalette";
+import { registerShortcuts } from "./lib/keyboard-shortcuts";
 import PitchGenerator from "./pages/pitch-generator";
 import ObjectionHandler from "./pages/objection-handler";
 import MarketIntent from "./pages/market-intent";
@@ -165,9 +167,17 @@ function MobileGate() {
  *  gated surface inside the layout. */
 function AuthenticatedRoutesInner() {
   const { user } = useSessionContext();
+  const [, navigate] = useLocation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const togglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
+
+  useEffect(() => {
+    return registerShortcuts(navigate, togglePalette);
+  }, [navigate, togglePalette]);
 
   return (
     <AppLayout>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navigate={navigate} />
       <Switch>
         {/* Authenticated root → redirect to pitch */}
         <Route path="/">

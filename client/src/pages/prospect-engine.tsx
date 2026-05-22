@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import { useToast } from "@/hooks/use-toast";
 import {
   Radar,
@@ -1169,6 +1171,14 @@ export default function ProspectEngine() {
         </div>
       )}
 
+      {/* SCAN ERROR */}
+      {scanMutation.isError && !scanMutation.isPending && view === "form" && (
+        <ErrorState
+          message="Scan failed. Check your filters and try again."
+          onRetry={() => scanMutation.mutate(filters)}
+        />
+      )}
+
       {/* RESULTS VIEW */}
       {(view === "results" || view === "history-view") && !scanMutation.isPending && (
         <div className="space-y-4">
@@ -1209,16 +1219,11 @@ export default function ProspectEngine() {
 
           {/* Prospect Cards */}
           {paginated.length === 0 ? (
-            <Card className="bg-[#111113] border-white/[0.08]">
-              <CardContent className="py-16 flex flex-col items-center gap-3">
-                <Radar className="w-12 h-12 text-white/10" />
-                <p className="text-sm text-white/30">No prospects found for these filters</p>
-                <Button variant="outline" size="sm" onClick={handleNewSearch}
-                  className="mt-2 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 bg-transparent">
-                  Adjust Filters
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Radar}
+              title="No prospects found"
+              description="No prospects match these filters. Adjust your criteria or run a new scan."
+            />
           ) : (
             <div className="space-y-3">
               {paginated.map((p) => (

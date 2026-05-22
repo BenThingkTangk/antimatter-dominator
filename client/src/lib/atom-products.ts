@@ -9,7 +9,7 @@
  *
  * Retired sub-brands removed: ClinixAI, rrg.bio, thingk tangk-humanos. Active
  * sub-brand registry per the ΔTOM Brand Design System v2: Nirmata Holdings,
- * ΔTOM, AntimatterAI only.
+ * ΔTOM only.
  *
  * "Custom Product" toggles a free-text input where the user types whatever
  * (PhysioPS, Akamai, Five9, Segway, anything). The free-text value is what
