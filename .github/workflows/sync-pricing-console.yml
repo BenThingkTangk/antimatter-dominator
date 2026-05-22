@@ -1,0 +1,228 @@
+# Sync Pricing Console
+#
+# Purpose:
+#   When pricing-relevant code, schemas, or platform manifests change in this
+#   repo (ATOM Sales Dominator / antimatter-dominator), notify the separate
+#   pricing console repo so its Vercel project (atom-pricing) re-deploys
+#   against the latest seat-cost model and tenant/platinum schema.
+#
+# Mechanism (preferred):
+#   Fire a `repository_dispatch` event at BenThingkTangk/atom-pricing-engine
+#   with event type `atom-dominator-updated`. The pricing console repo is
+#   expected to have a workflow listening on:
+#       on:
+#         repository_dispatch:
+#           types: [atom-dominator-updated]
+#   which re-runs its build / triggers a Vercel deployment.
+#
+# Mechanism (fallback):
+#   If no cross-repo dispatch token is configured, but a Vercel Deploy Hook
+#   URL for the `atom-pricing` project is provided, POST to that hook to
+#   force a redeploy directly.
+#
+# Required (one of) secrets — configure in the antimatter-dominator repo
+# (Settings → Secrets and variables → Actions):
+#
+#   PRICING_CONSOLE_DISPATCH_TOKEN
+#     A fine-grained or classic GitHub PAT (or GitHub App installation
+#     token) with `repo` / `contents:write` + `actions:write` (or at minimum
+#     the `repository_dispatch` permission) on
+#     BenThingkTangk/atom-pricing-engine. Preferred path.
+#
+#   PRICING_CONSOLE_VERCEL_DEPLOY_HOOK
+#     A Vercel Deploy Hook URL for the `atom-pricing` project
+#     (Vercel → Project Settings → Git → Deploy Hooks). Used only as a
+#     fallback if the dispatch token is not present.
+#
+# If neither secret is configured, the job fails with clear instructions so
+# the gap is visible in the Actions tab.
+
+name: Sync Pricing Console
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'api/**'
+      - 'shared/seat-cost-model.ts'
+      - 'docs/TENANTS_SCHEMA.sql'
+      - 'docs/PLATINUM_SCHEMA.sql'
+      - 'docs/HOLY_BIBLE.md'
+      - 'vercel.json'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason (optional)'
+        required: false
+        default: 'manual sync'
+
+permissions:
+  contents: read
+
+jobs:
+  notify-pricing-console:
+    name: Notify atom-pricing-engine
+    runs-on: ubuntu-latest
+    # Keep the workflow visible in the Actions tab even when secrets are
+    # missing — we want a loud failure with instructions, not a silent skip.
+    steps:
+      - name: Check out repository (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Collect changed pricing-relevant paths
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CHANGED="(manual dispatch)"
+          else
+            # github.event.before is the previous SHA on the branch.
+            BEFORE='${{ github.event.before }}'
+            AFTER='${{ github.sha }}'
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              CHANGED="(initial push — full sync)"
+            else
+              CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null \
+                | grep -E '^(api/|shared/seat-cost-model\.ts$|docs/TENANTS_SCHEMA\.sql$|docs/PLATINUM_SCHEMA\.sql$|docs/HOLY_BIBLE\.md$|vercel\.json$|package(-lock)?\.json$)' \
+                | head -n 50 \
+                | paste -sd ',' - || true)
+              if [ -z "$CHANGED" ]; then
+                CHANGED="(no matched paths in diff)"
+              fi
+            fi
+          fi
+          echo "paths=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Changed paths: $CHANGED"
+
+      - name: Check secret availability
+        id: secrets
+        shell: bash
+        env:
+          HAS_DISPATCH: ${{ secrets.PRICING_CONSOLE_DISPATCH_TOKEN != '' }}
+          HAS_HOOK: ${{ secrets.PRICING_CONSOLE_VERCEL_DEPLOY_HOOK != '' }}
+        run: |
+          echo "has_dispatch=$HAS_DISPATCH" >> "$GITHUB_OUTPUT"
+          echo "has_hook=$HAS_HOOK" >> "$GITHUB_OUTPUT"
+          echo "dispatch token configured: $HAS_DISPATCH"
+          echo "vercel deploy hook configured: $HAS_HOOK"
+
+      - name: Trigger repository_dispatch on atom-pricing-engine
+        id: dispatch
+        if: steps.secrets.outputs.has_dispatch == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.PRICING_CONSOLE_DISPATCH_TOKEN }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+          SOURCE_ACTOR: ${{ github.actor }}
+          CHANGED_PATHS: ${{ steps.changes.outputs.paths }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg source_repo "$SOURCE_REPO" \
+            --arg sha "$SOURCE_SHA" \
+            --arg ref "$SOURCE_REF" \
+            --arg actor "$SOURCE_ACTOR" \
+            --arg changed_paths "$CHANGED_PATHS" \
+            --arg run_url "$RUN_URL" \
+            '{event_type:"atom-dominator-updated",
+              client_payload:{
+                source_repo:$source_repo,
+                sha:$sha,
+                ref:$ref,
+                actor:$actor,
+                changed_paths:$changed_paths,
+                run_url:$run_url
+              }}')
+
+          echo "Dispatching to BenThingkTangk/atom-pricing-engine..."
+          http_code=$(curl -sS -o /tmp/dispatch.out -w '%{http_code}' \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/BenThingkTangk/atom-pricing-engine/dispatches \
+            -d "$payload")
+
+          echo "HTTP $http_code"
+          cat /tmp/dispatch.out || true
+          # GitHub returns 204 No Content on success.
+          if [ "$http_code" = "204" ]; then
+            echo "dispatched=true" >> "$GITHUB_OUTPUT"
+            echo "repository_dispatch succeeded."
+          else
+            echo "dispatched=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::repository_dispatch failed (HTTP $http_code). Will try Vercel deploy hook fallback if configured."
+          fi
+
+      - name: Trigger Vercel deploy hook (fallback)
+        id: hook
+        if: |
+          steps.secrets.outputs.has_hook == 'true' &&
+          (steps.secrets.outputs.has_dispatch != 'true' || steps.dispatch.outputs.dispatched != 'true')
+        shell: bash
+        env:
+          DEPLOY_HOOK: ${{ secrets.PRICING_CONSOLE_VERCEL_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          echo "POSTing to Vercel deploy hook for atom-pricing..."
+          http_code=$(curl -sS -o /tmp/hook.out -w '%{http_code}' -X POST "$DEPLOY_HOOK")
+          echo "HTTP $http_code"
+          cat /tmp/hook.out || true
+          # Vercel deploy hooks typically return 201 with a job descriptor.
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "triggered=true" >> "$GITHUB_OUTPUT"
+            echo "Vercel deploy hook triggered."
+          else
+            echo "triggered=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Vercel deploy hook returned HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Fail with instructions if no mechanism is configured
+        if: |
+          steps.secrets.outputs.has_dispatch != 'true' &&
+          steps.secrets.outputs.has_hook != 'true'
+        shell: bash
+        run: |
+          cat <<'EOF'
+          ::error::No pricing-console sync mechanism is configured.
+
+          Configure ONE of the following repository secrets on
+          BenThingkTangk/antimatter-dominator
+          (Settings → Secrets and variables → Actions → New repository secret):
+
+            PRICING_CONSOLE_DISPATCH_TOKEN   (preferred)
+              GitHub token with permission to send repository_dispatch
+              events to BenThingkTangk/atom-pricing-engine.
+
+            PRICING_CONSOLE_VERCEL_DEPLOY_HOOK   (fallback)
+              Vercel Deploy Hook URL for the `atom-pricing` project
+              (Vercel → Project Settings → Git → Deploy Hooks).
+
+          Once one is set, re-run this workflow from the Actions tab.
+          EOF
+          exit 1
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Sync Pricing Console"
+            echo ""
+            echo "- Source SHA: \`${{ github.sha }}\`"
+            echo "- Ref: \`${{ github.ref }}\`"
+            echo "- Changed paths: \`${{ steps.changes.outputs.paths }}\`"
+            echo "- repository_dispatch attempted: \`${{ steps.secrets.outputs.has_dispatch }}\` / succeeded: \`${{ steps.dispatch.outputs.dispatched || 'n/a' }}\`"
+            echo "- Vercel deploy hook attempted: \`${{ steps.hook.outcome || 'skipped' }}\` / triggered: \`${{ steps.hook.outputs.triggered || 'n/a' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
