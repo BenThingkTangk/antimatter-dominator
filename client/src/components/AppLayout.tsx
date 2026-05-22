@@ -3,9 +3,11 @@ import { useTenant } from "@/lib/useTenant";
 import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Brain,
-  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks, AlertCircle
+  Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks, AlertCircle,
+  LayoutDashboard, ArrowUpRight,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionContext } from "../auth/AuthGate";
@@ -18,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface NavItem { href: string; icon: any; label: string; }
 
 const navItems: NavItem[] = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/war-room", icon: Swords, label: "ΔTOM War Room" },
   { href: "/pitch", icon: TrendingUp, label: "ΔTOM Pitch" },
   { href: "/objections", icon: MessageSquareWarning, label: "ΔTOM Objection Handler" },
@@ -54,6 +57,33 @@ function CollapsedAtomMark({ size = 26 }: { size?: number }) {
       <circle className="atom-electron atom-electron-b" cx="61" cy="32" r="2.4" />
       <circle className="atom-electron atom-electron-c" cx="15.5" cy="48.5" r="2.2" />
     </svg>
+  );
+}
+
+/** Live dial counter — polls /api/dashboard/stats every 15s for today's count. */
+function DialCounter() {
+  const { data } = useQuery<{ volume: { today: number } }>({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: async () => {
+      const r = await fetch("/api/dashboard/stats", { credentials: "include" });
+      if (!r.ok) return { volume: { today: 0 } };
+      return r.json();
+    },
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const count = data?.volume?.today ?? 0;
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg mb-1"
+      style={{ background: "color-mix(in oklab, var(--color-primary) 6%, transparent)" }}
+    >
+      <PhoneCall size={12} className="text-[var(--color-primary)] opacity-60" />
+      <span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--color-primary)" }}>
+        {count} dial{count !== 1 ? "s" : ""} today
+      </span>
+      <ArrowUpRight size={10} className="text-[var(--color-primary)] opacity-40" />
+    </div>
   );
 }
 
@@ -291,6 +321,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <div className="relative border-t p-2 space-y-1 shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        {/* Live dials counter */}
+        {(!collapsed || isMobile) && <DialCounter />}
         {/* User info / auth actions */}
         {session.user ? (
           <div className="relative">

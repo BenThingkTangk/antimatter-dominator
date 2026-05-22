@@ -10,6 +10,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { registerShortcuts } from "./lib/keyboard-shortcuts";
 import DemoDial from "./pages/demo-dial";
+import Dashboard from "./pages/dashboard";
 import PitchGenerator from "./pages/pitch-generator";
 import ObjectionHandler from "./pages/objection-handler";
 import MarketIntent from "./pages/market-intent";
@@ -189,13 +190,14 @@ function AuthenticatedRoutesInner() {
     <AppLayout>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navigate={navigate} />
       <Switch>
-        {/* Authenticated root → redirect to pitch */}
+        {/* Authenticated root → redirect to dashboard for returning users */}
         <Route path="/">
-          {user ? <Redirect to="/pitch" /> : <LandingPage />}
+          {user ? <Redirect to="/dashboard" /> : <LandingPage />}
         </Route>
         {/* Demo dial — cinematic activation moment (no layout chrome needed but
             rendered inside AppLayout for trial banner + nav escape hatch) */}
         <Route path="/demo-dial" component={DemoDial} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/pitch" component={PitchGenerator} />
         <Route path="/objections" component={ObjectionHandler} />
         <Route path="/market" component={MarketIntent} />
