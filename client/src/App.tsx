@@ -37,6 +37,7 @@ import ResetPasswordPage from "./pages/reset-password";
 import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
+import { initPush, subscribePush } from "./lib/push-notifications";
 
 // Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
@@ -177,6 +178,13 @@ function AuthenticatedRoutesInner() {
   useEffect(() => {
     return registerShortcuts(navigate, togglePalette);
   }, [navigate, togglePalette]);
+
+  // Initialize push notifications after auth
+  useEffect(() => {
+    if (user?.id) {
+      initPush().then(() => subscribePush(user.id)).catch(() => {});
+    }
+  }, [user?.id]);
 
   // Onboarding gate: fresh signups see the wizard before anything else.
   // The demo-dial page is allowed through so the post-wizard redirect works.

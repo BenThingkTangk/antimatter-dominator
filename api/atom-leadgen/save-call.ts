@@ -8,10 +8,52 @@
  *     warroom, finalSentiment, finalIntent, finalStage, duration }
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { sendPush } from "../_lib/push";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL              = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+async function sb(path: string, init: RequestInit = {}) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...(init.headers || {}),
+    },
+  });
+  const t = await r.text();
+  if (!r.ok) throw new Error(`Supabase ${r.status}: ${t.slice(0, 260)}`);
+  return t ? JSON.parse(t) : null;
+}
+
+/** Fire push to all admins for a tenant when a meeting is booked. Non-blocking. */
+async function notifyMeetingBooked(callRow: any) {
+  try {
+    const tenantSlug = callRow?.tenant_slug;
+    if (!tenantSlug) return;
+    // Resolve tenant → admin users
+    const tenants = await sb(`tenants?slug=eq.${encodeURIComponent(tenantSlug)}&select=id`);
+    const tenantId = tenants?.[0]?.id;
+    if (!tenantId) return;
+    const admins = await sb(`tenant_users?tenant_id=eq.${tenantId}&role=eq.admin&deleted_at=is.null&select=id,full_name`);
+    if (!Array.isArray(admins) || admins.length === 0) return;
+    const contactName = callRow.contact_name || "Unknown";
+    const companyName = callRow.company_name || "";
+    for (const admin of admins) {
+      sendPush(admin.id, {
+        title: "Meeting booked",
+        body: `${contactName}${companyName ? ` (${companyName})` : ""} — via ΔTOM dial`,
+        url: `/#/m/home`,
+      }).catch(() => {});
+    }
+  } catch (err: any) {
+    console.warn("[save-call] push notify failed:", err?.message);
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -94,9 +136,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: `supabase insert ${insert.status}: ${t.slice(0, 200)}` });
       }
       const inserted: any[] = await insert.json();
-      return res.status(200).json({ ok: true, row: inserted?.[0] || null, mode: "insert" });
+      const insertedRow = inserted?.[0] || null;
+      if (patch.final_stage === "meeting_booked" && insertedRow) {
+        notifyMeetingBooked(insertedRow).catch(() => {});
+      }
+      return res.status(200).json({ ok: true, row: insertedRow, mode: "insert" });
     }
-    return res.status(200).json({ ok: true, row: rows[0], mode: "update" });
+    const savedRow = rows[0];
+    // Fire push notification if meeting was booked (non-blocking)
+    if (patch.final_stage === "meeting_booked" && savedRow) {
+      notifyMeetingBooked(savedRow).catch(() => {});
+    }
+    return res.status(200).json({ ok: true, row: savedRow, mode: "update" });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || "failed" });
   }

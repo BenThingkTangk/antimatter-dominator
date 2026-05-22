@@ -34,14 +34,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Register the PWA service worker (production only — Vite dev mode
-      // serves through its own origin and we don't want stale caches).
-      if ("serviceWorker" in navigator && location.hostname !== "localhost") {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {});
-        });
-      }
-    </script>
+    <!-- Service worker registration handled by vite-plugin-pwa (auto-update mode) -->
   </body>
 </html>

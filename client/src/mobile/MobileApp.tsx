@@ -10,6 +10,7 @@
 import { useState, useEffect } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { BootScreen } from "./BootScreen";
+import { OfflineBanner } from "../components/OfflineBanner";
 import { useTenant } from "../lib/useTenant";
 import MobileHome from "./pages/MobileHome";
 import MobileDial from "./pages/MobileDial";
@@ -49,6 +50,7 @@ export default function MobileApp() {
   return (
     <div className="atom-mobile-root">
       {!booted && <BootScreen onDone={() => setBooted(true)} />}
+      <OfflineBanner />
 
       <Switch>
         <Route path="/m"><Redirect to="/m/home" /></Route>

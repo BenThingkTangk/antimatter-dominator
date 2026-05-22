@@ -10,7 +10,8 @@
  * desktop call screen, just rendered for a phone.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, MicOff, Volume2, VolumeX, PhoneCall, PhoneOff, User, TrendingUp, Heart } from "lucide-react";
+import { useLocation } from "wouter";
+import { Mic, MicOff, Volume2, VolumeX, PhoneCall, PhoneOff, User, TrendingUp, Heart, Activity } from "lucide-react";
 import { MobileShell } from "../MobileShell";
 import { ATOM_PRODUCTS, resolveProductLabel, isCustom } from "../../lib/atom-products";
 import { useTenant } from "../../lib/useTenant";
@@ -104,15 +105,70 @@ function Gauge({ value, color, label, sub }: { value: number; color: string; lab
   );
 }
 
+/** Truth-score bar — large, teal gradient fill, "Signal strength" label. */
+function TruthScoreBar({ value }: { value: number }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div className="m-row-btw" style={{ marginBottom: 6 }}>
+        <span className="m-eyebrow">Signal strength</span>
+        <span className="m-mono" style={{ fontSize: 16, fontWeight: 800, color: "#00e6d3" }}>
+          {Math.round(pct)}%
+        </span>
+      </div>
+      <div style={{ height: 10, borderRadius: 5, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            borderRadius: 5,
+            background: "linear-gradient(90deg, #00a99d, #00e6d3)",
+            boxShadow: "0 0 12px rgba(0,230,211,0.3)",
+            transition: "width 600ms cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Micro bar — arousal / valence. */
+function MicroBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div style={{ flex: 1 }}>
+      <div className="m-row-btw" style={{ marginBottom: 4 }}>
+        <span style={{ fontSize: 10, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--m-text-muted)" }}>
+          {label}
+        </span>
+        <span style={{ fontSize: 10, fontFamily: "monospace", color }}>{Math.round(pct)}%</span>
+      </div>
+      <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          borderRadius: 2,
+          background: color,
+          transition: "width 600ms ease",
+        }} />
+      </div>
+    </div>
+  );
+}
+
 interface LiveMetrics {
   sentiment: number;
   buyerIntent: number;
   stage: number;
   signals: string[];
+  truthScore: number;
+  arousal: number;
+  valence: number;
 }
 
 export default function MobileDial() {
   const { tenant } = useTenant();
+  const [, navigate] = useLocation();
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [muted, setMuted] = useState(false);
   const [speakerMuted, setSpeakerMuted] = useState(false);
@@ -122,7 +178,7 @@ export default function MobileDial() {
   const [leadLastName, setLeadLastName] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
-  const [metrics, setMetrics] = useState<LiveMetrics>({ sentiment: 50, buyerIntent: 30, stage: 1, signals: [] });
+  const [metrics, setMetrics] = useState<LiveMetrics>({ sentiment: 50, buyerIntent: 30, stage: 1, signals: [], truthScore: 0, arousal: 50, valence: 50 });
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const bars = usePulseBars(phase === "live");
@@ -169,6 +225,9 @@ export default function MobileDial() {
             buyerIntent:  d.metrics.buyerIntent  ?? 0,
             stage:        d.metrics.stage        ?? 1,
             signals:      Array.isArray(d.buyingSignals) ? d.buyingSignals : [],
+            truthScore:   d.warroom?.truthScore  ?? d.metrics.truthScore ?? 0,
+            arousal:      d.metrics.emotions?.Excitement ?? d.metrics.arousal ?? 50,
+            valence:      d.metrics.emotions?.Joy ?? d.metrics.valence ?? 50,
           });
         }
         if (Array.isArray(d?.transcript)) {
@@ -197,7 +256,7 @@ export default function MobileDial() {
     setPhase("dialing");
     setTranscript([]);
     seenTranscriptRef.current = new Set();
-    setMetrics({ sentiment: 50, buyerIntent: 30, stage: 1, signals: [] });
+    setMetrics({ sentiment: 50, buyerIntent: 30, stage: 1, signals: [], truthScore: 0, arousal: 50, valence: 50 });
     try {
       const fullName = [leadFirstName, leadLastName].filter(Boolean).join(" ").trim() || "friend";
       const payload = {
@@ -226,7 +285,27 @@ export default function MobileDial() {
 
   function handleHangup() {
     setPhase("ended");
-    setTimeout(() => { setPhase("idle"); setSessionId(null); }, 900);
+    // POST call-end if we have a session
+    if (sessionId) {
+      fetch("/api/atom-leadgen/save-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callSid: sessionId,
+          finalSentiment: metrics.sentiment,
+          finalIntent: metrics.buyerIntent,
+          finalStage: STAGE_NAMES[(metrics.stage || 1) - 1]?.toLowerCase().replace(/ /g, "_") || "discovery",
+          duration: elapsedS,
+          contactName: [leadFirstName, leadLastName].filter(Boolean).join(" "),
+          transcript: transcript.slice(-100).map((t) => ({ role: t.role === "atom" ? "agent" : "user", text: t.text, timestamp: Date.now() })),
+        }),
+      }).catch(() => {});
+    }
+    setTimeout(() => {
+      setPhase("idle");
+      setSessionId(null);
+      navigate("/m/home");
+    }, 900);
   }
 
   const stagePill =
@@ -282,6 +361,30 @@ export default function MobileDial() {
         {/* Active call */}
         {(phase === "live" || phase === "dialing" || phase === "ended") && (
           <>
+            {/* Prospect card */}
+            <div className="m-card" style={{ textAlign: "center", padding: "20px 16px 16px" }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 24, margin: "0 auto 10px",
+                background: "color-mix(in oklab, var(--m-teal, #00e6d3) 15%, transparent)",
+                display: "grid", placeItems: "center",
+              }}>
+                <User size={22} style={{ color: "var(--m-teal, #00e6d3)" }} />
+              </div>
+              <div style={{
+                fontFamily: "'Cabinet Grotesk', var(--font-display, sans-serif)",
+                fontWeight: 800,
+                fontSize: 28,
+                color: "#fff",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}>
+                {[leadFirstName, leadLastName].filter(Boolean).join(" ") || "Unknown"}
+              </div>
+              <div className="m-mono" style={{ fontSize: 12, color: "var(--m-text-muted)", marginTop: 4 }}>
+                {productLabel} · {leadPhone || "No number"}
+              </div>
+            </div>
+
             {/* Live analytics card — sentiment + buyer intent gauges + stage */}
             <div className="m-card m-card-glow">
               <div className="m-row-btw" style={{ marginBottom: 10 }}>
@@ -330,6 +433,15 @@ export default function MobileDial() {
                   </div>
                 </>
               )}
+
+              {/* Truth-score bar */}
+              <TruthScoreBar value={metrics.truthScore * 100} />
+
+              {/* Arousal + Valence micro bars */}
+              <div className="m-row" style={{ gap: 12, marginTop: 10 }}>
+                <MicroBar label="Arousal" value={metrics.arousal} color="#ffd166" />
+                <MicroBar label="Valence" value={metrics.valence} color="#00e6d3" />
+              </div>
             </div>
 
             {/* Transcript + waveform card */}
@@ -358,10 +470,30 @@ export default function MobileDial() {
               </div>
 
               <div className="m-stack" style={{ marginTop: 16 }}>
-                <button className="m-btn m-btn-primary" onClick={phase === "live" ? handleHangup : undefined} disabled={phase === "dialing"}>
-                  {phase === "live"    ? <><PhoneOff size={18} /> End call</> :
-                   phase === "dialing" ? <><PhoneCall size={18} /> Dialing…</> :
-                                         <><PhoneCall size={18} /> Ended</>}
+                <button
+                  className="m-btn"
+                  onClick={phase === "live" ? handleHangup : undefined}
+                  disabled={phase === "dialing"}
+                  style={{
+                    width: "100%",
+                    height: 56,
+                    borderRadius: 28,
+                    background: phase === "live" ? "#ff7b6b" : phase === "dialing" ? "rgba(255,255,255,0.06)" : "rgba(255,123,107,0.3)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 16,
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    boxShadow: phase === "live" ? "0 0 24px rgba(255,123,107,0.3)" : "none",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {phase === "live"    ? <><PhoneOff size={20} /> End Call</> :
+                   phase === "dialing" ? <><PhoneCall size={20} /> Dialing…</> :
+                                         <><PhoneCall size={20} /> Ended</>}
                 </button>
                 <button className="m-btn m-btn-ghost" onClick={() => setMuted((v) => !v)}>
                   {muted ? <><MicOff size={18} /> Unmute mic</> : <><Mic size={18} /> Mute mic</>}
