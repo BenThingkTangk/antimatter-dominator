@@ -153,7 +153,7 @@ function probeDefinitions(): ProbeDef[] {
     },
     {
       component: "rag-service",
-      endpoint: "https://atom-rag.45-79-202-76.sslip.io/",
+      endpoint: (process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io") + "/",
       method: "GET",
       maxMs: 3000,
     },

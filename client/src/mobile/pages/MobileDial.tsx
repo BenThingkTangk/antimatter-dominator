@@ -180,6 +180,7 @@ export default function MobileDial() {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [metrics, setMetrics] = useState<LiveMetrics>({ sentiment: 50, buyerIntent: 30, stage: 1, signals: [], truthScore: 0, arousal: 50, valence: 50 });
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [coldOpenPlayed, setColdOpenPlayed] = useState(false);
 
   const bars = usePulseBars(phase === "live");
   const startedAtRef = useRef<number | null>(null);
@@ -276,6 +277,7 @@ export default function MobileDial() {
       const json: any = await res.json();
       const sid: string = json.sessionId || json.humeCustomSessionId || json.callSid;
       if (sid) setSessionId(sid);
+      if (json.coldOpenPlayed) setColdOpenPlayed(true);
       setPhase("live");
     } catch (e) {
       console.error("[MobileDial] call failed:", e);
@@ -383,6 +385,22 @@ export default function MobileDial() {
               <div className="m-mono" style={{ fontSize: 12, color: "var(--m-text-muted)", marginTop: 4 }}>
                 {productLabel} · {leadPhone || "No number"}
               </div>
+              {coldOpenPlayed && (
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  marginTop: 8, padding: "3px 10px",
+                  borderRadius: 20,
+                  background: "color-mix(in oklab, #a78bfa 15%, transparent)",
+                  color: "#a78bfa",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}>
+                  <Volume2 size={12} /> Pre-rendered opener
+                </div>
+              )}
             </div>
 
             {/* Live analytics card — sentiment + buyer intent gauges + stage */}

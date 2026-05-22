@@ -126,6 +126,7 @@ export const campaignAccounts = sqliteTable("campaign_accounts", {
   directBreachJson: text("direct_breach_json"),
   peerBreachJson: text("peer_breach_json"),
   // Operational
+  coldOpenAudioUrl: text("cold_open_audio_url"), // ElevenLabs pre-rendered opener mp3
   enrichStatus: text("enrich_status").notNull().default("pending"), // pending|running|done|failed
   enrichError: text("enrich_error"),
   pushedTo: text("pushed_to"), // 'warroom'|'campaign'|'prospects'|null

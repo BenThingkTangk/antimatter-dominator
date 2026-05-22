@@ -215,7 +215,7 @@ interface VoiceBrief {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BRIDGE_URL = "https://45-79-202-76.sslip.io/research";
+const BRIDGE_URL = (() => { try { return (import.meta as any).env?.VITE_BRIDGE_URL || "https://45-79-202-76.sslip.io"; } catch { return "https://45-79-202-76.sslip.io"; } })() + "/research";
 const STORAGE_KEY = "atom_warbook_history";
 
 type Section = "sonar" | "synthesis" | "voicebrief" | "battlecard" | "people";

@@ -475,7 +475,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cap = 6;
 
     // Look up campaign + rule pack
-    const camps = await sb(`atom_campaigns?id=eq.${id}&select=id,scoring_template_slug&limit=1`);
+    const camps = await sb(`atom_campaigns?id=eq.${id}&select=id,scoring_template_slug,product_label&limit=1`);
     const camp = Array.isArray(camps) ? camps[0] : null;
     if (!camp) return res.status(404).json({ error: "campaign not found" });
     const templateSlug = (camp.scoring_template_slug || "healthcare-segmentation-hipaa").toString();
@@ -612,6 +612,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           headers: { Prefer: "return=minimal" },
         });
         okCount++;
+
+        // Fire-and-forget: pre-render cold-open audio via ElevenLabs
+        const contactName = Array.isArray(enr.atom_decision_makers) && enr.atom_decision_makers.length > 0
+          ? (typeof enr.atom_decision_makers[0] === "string" ? enr.atom_decision_makers[0] : enr.atom_decision_makers[0]?.name || "")
+          : "";
+        if (contactName) {
+          const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+          const host  = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string) || "atom-dominator-pro.vercel.app";
+          fetch(`${proto}://${host}/api/atom-leadgen/pre-render-opener`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accountId: r.id,
+              campaignId: id,
+              contactName,
+              companyName: r.account_name || "",
+              productLabel: camp.product_label || "AntimatterAI",
+            }),
+          }).catch(() => {}); // fire-and-forget
+        }
       }));
     }
 

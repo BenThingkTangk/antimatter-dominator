@@ -60,7 +60,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BRIDGE_URL = "https://45-79-202-76.sslip.io";
+const BRIDGE_URL = (() => { try { return (import.meta as any).env?.VITE_BRIDGE_URL || "https://45-79-202-76.sslip.io"; } catch { return "https://45-79-202-76.sslip.io"; } })();
 
 const GEO_OPTIONS = [
   "All US", "US South (TX, FL, GA, NC, TN...)", "US Northeast (NY, NJ, MA, CT...)",
@@ -1120,7 +1120,7 @@ export default function AtomCampaign() {
   const connectWs = useCallback((callSid: string, targetId: string) => {
     if (wsRefs.current.has(callSid)) return;
     try {
-      const ws = new WebSocket(`wss://45-79-202-76.sslip.io/events/${callSid}`);
+      const ws = new WebSocket(`${BRIDGE_URL.replace(/^https?/, "wss")}/events/${callSid}`);
       wsRefs.current.set(callSid, ws);
 
       ws.onmessage = (evt) => {

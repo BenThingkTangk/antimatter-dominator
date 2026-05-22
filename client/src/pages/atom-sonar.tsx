@@ -362,7 +362,8 @@ export default function AtomSonar() {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 120000); // 2 min max
-      const res = await fetch("https://45-79-202-76.sslip.io/research", {
+      const _bridgeUrl = (() => { try { return (import.meta as any).env?.VITE_BRIDGE_URL || "https://45-79-202-76.sslip.io"; } catch { return "https://45-79-202-76.sslip.io"; } })();
+      const res = await fetch(`${_bridgeUrl}/research`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company: company.trim(), website: "", depth: "standard" }),

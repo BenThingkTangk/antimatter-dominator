@@ -58,7 +58,7 @@ function HVTFlagButton({ companyName, contactName, phone }: { companyName: strin
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Direct Hume EVI — calls go through Vercel API, no bridge
-const BRIDGE_URL = "https://45-79-202-76.sslip.io"; // kept for WebSocket events only
+const BRIDGE_URL = (() => { try { return (import.meta as any).env?.VITE_BRIDGE_URL || "https://45-79-202-76.sslip.io"; } catch { return "https://45-79-202-76.sslip.io"; } })(); // kept for WebSocket events only
 const ARC_LENGTH = Math.PI * 80; // radius=80, semicircle
 
 // ─── Phone number formatter ───────────────────────────────────────────────────
@@ -671,6 +671,7 @@ export default function ATOMLeadGen() {
   // Tier badge shown after dial — set from /api/atom-leadgen/call response.
   const [callTier, setCallTier] = useState<"standard" | "enterprise" | null>(null);
   const [reasoningModel, setReasoningModel] = useState<string | null>(null);
+  const [coldOpenPlayed, setColdOpenPlayed] = useState(false);
 
   // Call state
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
@@ -886,7 +887,7 @@ export default function ATOMLeadGen() {
   }, [stopPolling]);
 
   const connectWebSocket = useCallback((sid: string) => {
-    const wsUrl = `wss://45-79-202-76.sslip.io/events/${sid}`;
+    const wsUrl = `${BRIDGE_URL.replace(/^https?/, "wss")}/events/${sid}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -1066,6 +1067,7 @@ export default function ATOMLeadGen() {
       // Surface backend's tier routing decision
       setCallTier(json.tier || "standard");
       setReasoningModel(json.reasoningModel || null);
+      setColdOpenPlayed(!!json.coldOpenPlayed);
       // Start polling Hume chat-events for live transcript + emotions
       startPolling(sessionId);
       setCallStatus("active");
@@ -1463,6 +1465,20 @@ export default function ATOMLeadGen() {
                         }}
                       >
                         {reasoningModel}
+                      </span>
+                    )}
+                    {coldOpenPlayed && (
+                      <span
+                        className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                        style={{
+                          background: "color-mix(in oklab, #a78bfa 14%, transparent)",
+                          color: "#a78bfa",
+                          border: "1px solid color-mix(in oklab, #a78bfa 35%, transparent)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Pre-rendered opener
                       </span>
                     )}
                   </div>

@@ -409,9 +409,69 @@ const LATENCY_TARGETS = [
   { stage: "End-to-end (P95)",       currentMs: 890, targetMs: 1100, status: "on_track" as const },
 ];
 
+function BridgeHealthCard() {
+  const { data, isLoading } = useAdminQuery<{
+    bridge: { url: string; status: string; latencyMs: number; error?: string };
+    rag: { url: string; status: string; latencyMs: number; error?: string };
+    ts: string;
+  }>(["bridge-health"], "/api/admin/bridge-health", { refetchInterval: 30_000 });
+
+  const statusColor = (s?: string) =>
+    s === "ok" ? t.success : s === "degraded" ? t.warning : s === "down" ? t.danger : t.muted;
+  const statusLabel = (s?: string) =>
+    s === "ok" ? "HEALTHY" : s === "degraded" ? "DEGRADED" : s === "down" ? "DOWN" : "…";
+
+  return (
+    <Panel>
+      <Eyebrow color={t.primary}>Bridge Health</Eyebrow>
+      <SectionTitle>Voice bridge + RAG service status</SectionTitle>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+        {[
+          { label: "Voice Bridge", d: data?.bridge },
+          { label: "RAG Service", d: data?.rag },
+        ].map(({ label, d }) => (
+          <div key={label} style={{
+            padding: "14px 16px",
+            background: t.surface2,
+            border: `1px solid ${t.border}`,
+            borderLeft: `3px solid ${statusColor(d?.status)}`,
+            borderRadius: 10,
+          }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.16em", color: t.muted, textTransform: "uppercase", marginBottom: 6 }}>
+              {label}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <Circle size={8} fill={statusColor(d?.status)} stroke="none" />
+              <span style={{ fontWeight: 700, fontSize: 13.5, color: t.text }}>
+                {isLoading ? "Pinging…" : statusLabel(d?.status)}
+              </span>
+            </div>
+            {d && (
+              <>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.muted }}>
+                  {d.latencyMs}ms latency
+                </div>
+                {d.error && (
+                  <div style={{ fontSize: 11, color: t.danger, marginTop: 4 }}>{d.error}</div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      {data?.ts && (
+        <div style={{ fontSize: 10, color: t.faint, marginTop: 8, fontFamily: FONT_MONO }}>
+          Last checked: {new Date(data.ts).toLocaleTimeString()}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function TabInfra() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <BridgeHealthCard />
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12,
       }}>

@@ -225,7 +225,8 @@ export default function CallPerformance() {
   } = useQuery<PerfMetrics>({
     queryKey: ["/perf/metrics"],
     queryFn: async () => {
-      const res = await fetch("https://45-79-202-76.sslip.io/perf/metrics");
+      const _bridgeUrl = (() => { try { return (import.meta as any).env?.VITE_BRIDGE_URL || "https://45-79-202-76.sslip.io"; } catch { return "https://45-79-202-76.sslip.io"; } })();
+      const res = await fetch(`${_bridgeUrl}/perf/metrics`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
@@ -309,7 +310,7 @@ export default function CallPerformance() {
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
             <div>
               <p className="text-sm font-medium text-rose-400">Failed to reach bridge</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Check that the bridge at 45-79-202-76.sslip.io is reachable</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Check that the voice bridge is reachable</p>
             </div>
           </div>
         </Card>

@@ -455,8 +455,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     tenantSlug,
     record,             // user-toggled “Record this call” checkbox
     recordCall,
+    coldOpenAudioUrl,   // pre-rendered ElevenLabs opener mp3 URL (optional)
   } = req.body || {};
   const wantRecord = Boolean(record ?? recordCall ?? false);
+  const coldOpen = (typeof coldOpenAudioUrl === “string” && coldOpenAudioUrl.startsWith(“http”))
+    ? coldOpenAudioUrl : null;
 
   // Normalize: accept both snake_case and camelCase from the frontend.
   const dealValueNum = Number(deal_value ?? dealValue ?? 0) || 0;
@@ -600,12 +603,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const recordingStatusCallback = `${proto}://${host}/api/atom-leadgen/recording-callback`;
     const statusCallback          = `${proto}://${host}/api/atom-leadgen/call-status`;
 
-    const call = await twilioCreateCall(cleanNumber, TWILIO_PHONE_NUMBER, {
-      url: humeTwimlUrl.toString(),
+    // If a pre-rendered cold-open audio exists, use inline TwiML that plays
+    // the opener first, then redirects to Hume's TwiML endpoint for the live
+    // AI conversation. Otherwise use the Hume URL directly.
+    const callOpts: Parameters<typeof twilioCreateCall>[2] = {
       record: wantRecord,
       recordingStatusCallback: wantRecord ? recordingStatusCallback : undefined,
       statusCallback,
-    });
+    };
+    if (coldOpen) {
+      // Escape XML special chars in URLs
+      const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      callOpts.twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Play>${escXml(coldOpen)}</Play><Redirect>${escXml(humeTwimlUrl.toString())}</Redirect></Response>`;
+    } else {
+      callOpts.url = humeTwimlUrl.toString();
+    }
+    const call = await twilioCreateCall(cleanNumber, TWILIO_PHONE_NUMBER, callOpts);
 
     // ── Seed an atom_calls row so /recording-callback + /history have something to update.
     //    Best-effort — never block the dial.
@@ -648,7 +661,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: call.status || "queued",
       to: cleanNumber,
       from: TWILIO_PHONE_NUMBER,
-      architecture: "twilio-hume-direct-rag-cached-v11-record",
+      architecture: coldOpen ? "twilio-coldopen-hume-rag-v12" : "twilio-hume-direct-rag-cached-v11-record",
+      coldOpenPlayed: !!coldOpen,
       recordEnabled: wantRecord,
       humeConfigId: routedConfig.configId,
       humeVoiceId: HUME_VOICE_ID,
