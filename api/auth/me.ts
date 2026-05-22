@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Look up user
     const users = await sb(
-      `tenant_users?id=eq.${session.user_id}&deleted_at=is.null&select=id,email,full_name,role,tenant_id`
+      `tenant_users?id=eq.${session.user_id}&deleted_at=is.null&select=id,email,full_name,role,tenant_id,onboarding_complete,icp_seed,product_seed`
     );
     const user = Array.isArray(users) ? users[0] : null;
     if (!user) {
@@ -107,6 +107,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email: user.email,
         fullName: user.full_name,
         role: user.role,
+        onboardingComplete: user.onboarding_complete ?? false,
+        icpSeed: user.icp_seed ?? null,
+        productSeed: user.product_seed ?? null,
       },
       role: user.role,
       isSuperAdmin,

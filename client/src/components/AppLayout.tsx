@@ -12,6 +12,7 @@ import { useSessionContext } from "../auth/AuthGate";
 import { useEffectiveSession, ViewAsToggle } from "../auth/ViewAs";
 import { DtomLogo } from "@nirmata/atom-design-system/react";
 import { useToast } from "@/hooks/use-toast";
+import { TrialBanner } from "@/components/TrialBanner";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem { href: string; icon: any; label: string; }
@@ -429,6 +430,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="w-10" />
           </header>
+          <TrialBanner />
           <main className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div

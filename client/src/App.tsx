@@ -7,7 +7,9 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
 import { CommandPalette } from "./components/CommandPalette";
+import { OnboardingWizard } from "./components/OnboardingWizard";
 import { registerShortcuts } from "./lib/keyboard-shortcuts";
+import DemoDial from "./pages/demo-dial";
 import PitchGenerator from "./pages/pitch-generator";
 import ObjectionHandler from "./pages/objection-handler";
 import MarketIntent from "./pages/market-intent";
@@ -167,13 +169,21 @@ function MobileGate() {
  *  gated surface inside the layout. */
 function AuthenticatedRoutesInner() {
   const { user } = useSessionContext();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const togglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
 
   useEffect(() => {
     return registerShortcuts(navigate, togglePalette);
   }, [navigate, togglePalette]);
+
+  // Onboarding gate: fresh signups see the wizard before anything else.
+  // The demo-dial page is allowed through so the post-wizard redirect works.
+  const showOnboarding = user && !user.onboardingComplete && location !== "/demo-dial";
+
+  if (showOnboarding) {
+    return <OnboardingWizard onComplete={() => navigate("/demo-dial")} />;
+  }
 
   return (
     <AppLayout>
@@ -183,6 +193,9 @@ function AuthenticatedRoutesInner() {
         <Route path="/">
           {user ? <Redirect to="/pitch" /> : <LandingPage />}
         </Route>
+        {/* Demo dial — cinematic activation moment (no layout chrome needed but
+            rendered inside AppLayout for trial banner + nav escape hatch) */}
+        <Route path="/demo-dial" component={DemoDial} />
         <Route path="/pitch" component={PitchGenerator} />
         <Route path="/objections" component={ObjectionHandler} />
         <Route path="/market" component={MarketIntent} />

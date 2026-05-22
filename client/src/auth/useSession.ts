@@ -6,6 +6,9 @@ export interface SessionUser {
   email: string;
   fullName: string;
   role: string;
+  onboardingComplete: boolean;
+  icpSeed: string | null;
+  productSeed: string | null;
 }
 
 export interface SessionTenant {
