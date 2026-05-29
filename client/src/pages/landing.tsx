@@ -38,11 +38,11 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Black-site aerospace hero — sourced from the canonical brand system */}
+      {/* ATOM cinematic hero */}
       <DtomHero
-        eyebrow="v3.0 · Black-Site Aerospace Brand System"
+        eyebrow="ATOM Sales Dominator · GA"
         headline="ΔTOM routes live intent into action."
-        body="Autonomous AI voice agents, real-time market intelligence, and objection-proof pitches — engineered like a classified weapons system, deployed like an Apple keynote."
+        body="Autonomous AI voice agents, real-time market intelligence, and objection-proof pitches — built for revenue teams who refuse to lose a deal."
         primaryCta={{ label: "Start 14-Day Free Trial", href: "/#/signup" }}
         secondaryCta={{ label: "Run Live Demo", href: "/#/pitch?demo=1" }}
       />
@@ -52,7 +52,7 @@ export default function LandingPage() {
           @nirmata/atom-design-system so the teal O is rendered by the
           design system itself, not hard-coded in this file. */}
       <section className="px-6 md:px-10 pt-4 pb-10 max-w-5xl mx-auto text-center">
-        <span className="eyebrow" style={{ justifyContent: "center" }}>ATOM Design System · v1</span>
+        <span className="eyebrow" style={{ justifyContent: "center" }}>ATOM Sales Dominator</span>
         <div style={{ marginTop: "var(--space-4)" }}>
           <span className="atom-wordmark" style={{ fontSize: "var(--text-2xl)" }}>
             <span>Δ</span>
@@ -62,7 +62,7 @@ export default function LandingPage() {
           </span>
         </div>
         <p className="muted" style={{ marginTop: "var(--space-3)", fontSize: "var(--text-sm)" }}>
-          Cinematic dark-first tokens, motion primitives, and component primitives shared across the ΔTOM suite.
+          Cinematic, dark-first revenue platform built for high-velocity sales teams.
         </p>
         <div className="row" style={{ justifyContent: "center", marginTop: "var(--space-4)" }}>
           <span className="tag tag--teal">Tokens</span>

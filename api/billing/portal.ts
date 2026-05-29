@@ -45,9 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (!STRIPE_SECRET_KEY) {
-      return res.status(200).json({
+      return res.status(503).json({
         portalUrl: null,
-        message: "Stripe not configured — running in dev mode",
+        message: "Billing temporarily unavailable.",
       });
     }
 

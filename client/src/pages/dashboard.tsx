@@ -244,7 +244,7 @@ export default function Dashboard() {
           {user?.fullName ? `Welcome back, ${user.fullName.split(" ")[0]}` : "Dashboard"}
         </h1>
         <p className="text-[12px] text-white/35 font-mono uppercase tracking-widest mt-1">
-          Tenant KPI Dashboard · Live
+          Command Center · Live
         </p>
       </div>
 

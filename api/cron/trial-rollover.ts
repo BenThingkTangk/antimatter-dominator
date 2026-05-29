@@ -10,6 +10,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const CRON_SECRET = clean(process.env.CRON_SECRET);
 
 async function sb(path: string, init: RequestInit = {}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -28,6 +29,21 @@ async function sb(path: string, init: RequestInit = {}) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Fail-closed CRON auth. Accepts Vercel cron's bearer header AND the
+  // x-vercel-cron internal hint, but only when CRON_SECRET is configured.
+  if (!CRON_SECRET) {
+    return res.status(503).json({ error: "cron receiver not configured" });
+  }
+  const auth = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  const vercelCron = String(req.headers["x-vercel-cron"] || "");
+  if (auth !== CRON_SECRET && vercelCron !== "1") {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "supabase not configured" });
+  }
+
   try {
     const now = new Date().toISOString();
 

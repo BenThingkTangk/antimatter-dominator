@@ -14,7 +14,7 @@ export default function LoginPage() {
   // If already logged in, redirect
   if (user) {
     const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-    const next = params.get("next") || "/pitch";
+    const next = params.get("next") || "/dashboard";
     navigate(next);
     return null;
   }
@@ -37,7 +37,7 @@ export default function LoginPage() {
       }
       // Redirect
       const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-      const next = params.get("next") || "/pitch";
+      const next = params.get("next") || "/dashboard";
       window.location.hash = `#${next}`;
       window.location.reload();
     } catch {

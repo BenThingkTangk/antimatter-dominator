@@ -117,18 +117,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rawBody = await getRawBody(req);
     let event: any;
 
-    if (STRIPE_WEBHOOK_SECRET) {
-      const sig = req.headers["stripe-signature"] as string;
-      if (!sig) return res.status(400).json({ error: "Missing stripe-signature header" });
-      try {
-        event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
-      } catch (err: any) {
-        console.error("[webhook] signature verification failed:", err?.message);
-        return res.status(400).json({ error: "Webhook signature verification failed" });
-      }
-    } else {
-      console.warn("[webhook] STRIPE_WEBHOOK_SECRET not set — skipping signature verification");
-      event = JSON.parse(rawBody.toString());
+    // Fail closed if webhook signing secret is not configured — never trust
+    // an unsigned payload in production, even briefly. Signature mismatch
+    // also fails closed with a 400.
+    if (!STRIPE_WEBHOOK_SECRET) {
+      console.error("[webhook] STRIPE_WEBHOOK_SECRET not configured — refusing unsigned webhook");
+      return res.status(503).json({ error: "Webhook receiver not configured" });
+    }
+    const sig = req.headers["stripe-signature"] as string;
+    if (!sig) return res.status(400).json({ error: "Missing stripe-signature header" });
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error("[webhook] signature verification failed:", err?.message);
+      return res.status(400).json({ error: "Webhook signature verification failed" });
     }
 
     const type = event.type as string;

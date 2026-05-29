@@ -78,9 +78,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (!STRIPE_SECRET_KEY) {
-      return res.status(200).json({
+      // Public-safe message — never leak which env var is missing.
+      return res.status(503).json({
         checkoutUrl: null,
-        message: "Stripe not configured — set STRIPE_SECRET_KEY in Vercel env to enable checkout.",
+        message: "Billing temporarily unavailable.",
       });
     }
 

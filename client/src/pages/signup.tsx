@@ -7,7 +7,7 @@ const PLANS = [
   { key: "starter",    name: "Starter",    price: "$99",  period: "/seat/mo", desc: "Min 5 seats · 500 dials/mo · 14-day free trial" },
   { key: "growth",     name: "Growth",     price: "$199", period: "/seat/mo", desc: "Min 15 seats · 2,000 dials/mo · 14-day free trial" },
   { key: "advisory",   name: "Advisory",   price: "$499", period: "/seat/mo", desc: "Min 50 seats · 10,000 dials/mo · 14-day free trial" },
-  { key: "enterprise", name: "Enterprise", price: "$999", period: "/seat/mo", desc: "Custom seats · Unlimited dials · Hume + Twilio sub-account" },
+  { key: "enterprise", name: "Enterprise", price: "$999", period: "/seat/mo", desc: "Custom seats · Unlimited dials · Dedicated voice + telephony" },
 ];
 
 function PasswordStrength({ password }: { password: string }) {

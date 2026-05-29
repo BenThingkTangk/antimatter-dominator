@@ -170,8 +170,8 @@ export default function BillingPage() {
         return;
       }
       toast({
-        title: "Stripe not configured yet",
-        description: j.message || "Add STRIPE_SECRET_KEY to enable checkout.",
+        title: "Billing temporarily unavailable",
+        description: j.message || "Billing temporarily unavailable.",
         variant: "destructive",
       });
     } catch (e: any) {
@@ -195,7 +195,7 @@ export default function BillingPage() {
         window.location.href = j.portalUrl;
         return;
       }
-      toast({ title: "Billing portal unavailable", description: j.message || "Stripe not configured.", variant: "destructive" });
+      toast({ title: "Billing temporarily unavailable", description: j.message || "Billing temporarily unavailable.", variant: "destructive" });
     } catch (e: any) {
       toast({ title: "Portal error", description: e?.message || String(e), variant: "destructive" });
     } finally {
@@ -233,7 +233,7 @@ export default function BillingPage() {
         >
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <div className="text-xs leading-relaxed">
-            Stripe secret key is not configured yet. Pricing displays correctly, but checkout will return an error until <code className="font-mono">STRIPE_SECRET_KEY</code> is set in Vercel.
+            Billing temporarily unavailable. Pricing is shown for reference; checkout will resume once billing is back online.
           </div>
         </div>
       )}
