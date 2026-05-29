@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PhoneCall, PhoneOff, Loader2, Clock, ChevronDown, ChevronUp, Search, Crosshair } from "lucide-react";
 import { flagAsHVT, findDealByCompany } from "@/lib/warroom-store";
 import { useLocation } from "wouter";
+import TcpaDisclosure, { hasAckedTcpa } from "@/components/TcpaDisclosure";
 
 // ─── HVT Flag Button (reusable) ───────────────────────────────────
 function HVTFlagButton({ companyName, contactName, phone }: { companyName: string; contactName: string; phone: string }) {
@@ -672,6 +673,9 @@ export default function ATOMLeadGen() {
   const [callTier, setCallTier] = useState<"standard" | "enterprise" | null>(null);
   const [reasoningModel, setReasoningModel] = useState<string | null>(null);
   const [coldOpenPlayed, setColdOpenPlayed] = useState(false);
+  // TCPA pre-dial disclosure — shown once per browser session before the
+  // very first outbound call. Server-side compliance still authoritative.
+  const [tcpaOpen, setTcpaOpen] = useState(false);
 
   // Call state
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
@@ -996,7 +1000,16 @@ export default function ATOMLeadGen() {
       toast({ title: "Phone number required", variant: "destructive" });
       return;
     }
+    // First-ever dial in this browser must clear the TCPA / DNC / recording
+    // disclosure. Subsequent dials skip the modal (already acked).
+    if (!hasAckedTcpa()) {
+      setTcpaOpen(true);
+      return;
+    }
+    await _runDial();
+  };
 
+  const _runDial = async () => {
     // Format phone number — ensure +1 prefix for US numbers
     const formattedPhone = formatPhoneNumber(phone.trim());
     console.log("[handleDial] Formatted phone:", formattedPhone);
@@ -1159,6 +1172,15 @@ export default function ATOMLeadGen() {
       className="min-h-screen px-4 py-8 md:px-8"
       style={{ background: "#020202", color: "rgba(246,246,253,0.9)", fontFamily: "inherit" }}
     >
+      <TcpaDisclosure
+        open={tcpaOpen}
+        onCancel={() => setTcpaOpen(false)}
+        onAccept={() => {
+          setTcpaOpen(false);
+          // Proceed with the dial that was queued behind the disclosure.
+          void _runDial();
+        }}
+      />
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* ─── Header ─────────────────────────────────────────────────────── */}

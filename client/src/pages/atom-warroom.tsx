@@ -205,7 +205,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "pipeline", label: "Deal Pipeline", icon: BarChart3 },
   { id: "playbook", label: "Playbook Engine", icon: BookOpen },
   { id: "history", label: "War History", icon: History },
-  { id: "ghostops", label: "Ghost Ops", icon: Ghost },
+  { id: "ghostops", label: "Covert Ops", icon: Ghost },
 ];
 
 const SAMPLE_EMAIL = `Hi,\n\nThank you for the proposal. The team believes there is a strong fit. However, due to some internal reprioritization we need to pause the evaluation for now. We would love to revisit in a few months when things settle down. Definitely keeping you top of mind.\n\nBest,\nJames`;
@@ -2016,7 +2016,7 @@ function GhostOpsTab({ deals }: { deals: Deal[] }) {
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <Ghost size={32} className="text-white/20" />
         <p className="text-[14px] font-medium text-[#f6f6fd]">No ghost deals.</p>
-        <p className="text-[12px] text-white/40">Your pipeline is alive. Ghost Ops monitors for deals dark for 14+ days.</p>
+        <p className="text-[12px] text-white/40">Your pipeline is alive. Covert Ops monitors for deals dark for 14+ days.</p>
       </div>
     );
   }
@@ -2025,7 +2025,7 @@ function GhostOpsTab({ deals }: { deals: Deal[] }) {
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
         <Ghost size={14} className="text-rose-400" />
-        <span className="text-[13px] font-semibold text-[#f6f6fd]">Ghost Ops</span>
+        <span className="text-[13px] font-semibold text-[#f6f6fd]">Covert Ops</span>
         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25">{ghosts.length} cold cases</span>
       </div>
 

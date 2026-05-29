@@ -87,7 +87,7 @@ const PERSONAS = [
 const TONES = [
   { value: "Professional", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   { value: "Casual", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  { value: "Aggressive", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
+  { value: "Direct", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
   { value: "Consultative", color: "bg-violet-500/20 text-violet-300 border-violet-500/30" },
 ];
 

@@ -22,6 +22,11 @@ import Campaigns from "./pages/campaigns";
 import AdminTenants from "./pages/admin-tenants";
 import BillingPage from "./pages/billing";
 import InviteAcceptPage from "./pages/invite";
+import AtomSonar from "./pages/atom-sonar";
+import AtomAletheia from "./pages/atom-aletheia";
+import CallPerformance from "./pages/call-performance";
+import SettingsPage from "./pages/settings";
+import TeamPage from "./pages/team";
 import AdminShell from "./admin/AdminShell";
 import HqShell from "./admin/HqShell";
 import SeatCostsShell from "./admin/SeatCostsShell";
@@ -215,6 +220,12 @@ function AuthenticatedRoutesInner() {
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
         <Route path="/campaigns" component={Campaigns} />
+        <Route path="/atom-sonar" component={AtomSonar} />
+        <Route path="/atom-aletheia" component={AtomAletheia} />
+        <Route path="/call-performance" component={CallPerformance} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route path="/team" component={TeamPage} />
+        <Route path="/admin-tenants">{() => <Redirect to="/admin/tenants" />}</Route>
         <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
         <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>
         <Route path="/admin/hq">{() => <SuperAdminOnly><HqShell /></SuperAdminOnly>}</Route>

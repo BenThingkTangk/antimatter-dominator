@@ -42,11 +42,11 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">LLM&nbsp;&nbsp;&nbsp;</span>
-          <span className="m-boot-val">Claude · GPT · Ensemble ready</span>
+          <span className="m-boot-val">ATOM AI · Ensemble ready</span>
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">VOICE&nbsp;</span>
-          <span className="m-boot-val">Hume · EVI engaged</span>
+          <span className="m-boot-val">ATOM AI · Voice engaged</span>
         </div>
       </div>
     </div>

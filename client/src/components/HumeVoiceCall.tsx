@@ -362,7 +362,7 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
-        <span className="text-sm">Initializing ΔTOM voice engine...</span>
+        <span className="text-sm">Initializing ATOM AI voice engine...</span>
       </div>
     );
   }
@@ -371,8 +371,8 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <AlertTriangle className="w-8 h-8 text-amber-500 mb-3" />
-        <p className="text-sm font-medium">Voice engine unavailable</p>
-        <p className="text-xs mt-1">{error || "Could not connect to Hume"}</p>
+        <p className="text-sm font-medium">ATOM AI voice on standby</p>
+        <p className="text-xs mt-1">Voice agent will be back shortly — try again in a moment.</p>
       </div>
     );
   }
