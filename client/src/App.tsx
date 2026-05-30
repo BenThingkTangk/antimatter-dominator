@@ -52,6 +52,10 @@ import SalesOsOnboarding from "./pages/sales-os/onboarding";
 import SalesOsSettings from "./pages/sales-os/settings";
 // War Room (WebXR) — lazy so three.js stays out of the main bundle
 const WarRoomXR = lazy(() => import("./pages/sales-os/xr"));
+// Immersive A-Frame War Room scene (SUBAGENT C) at /xr/warroom. Lazy so the
+// A-Frame engine bundle stays out of the main chunk; the scene itself also
+// dynamically imports A-Frame internally.
+const WarRoomXRScene = lazy(() => import("./pages/xr-warroom"));
 
 // Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
@@ -213,7 +217,7 @@ function AuthenticatedRoutesInner() {
   // its own full-screen canvas inside the shell.
   const SALES_OS_PATHS = [
     "/pipeline", "/calls", "/intel", "/revenue", "/compliance",
-    "/partners", "/agents", "/xr", "/onboarding", "/settings",
+    "/partners", "/agents", "/xr", "/xr/warroom", "/onboarding", "/settings",
   ];
   if (location === "/" || SALES_OS_PATHS.includes(location) || location === "/campaigns") {
     return (
@@ -234,6 +238,13 @@ function AuthenticatedRoutesInner() {
             {() => (
               <Suspense fallback={<div className="text-cyan-400 p-8 font-mono text-sm">Loading War Room…</div>}>
                 <WarRoomXR />
+              </Suspense>
+            )}
+          </Route>
+          <Route path="/xr/warroom">
+            {() => (
+              <Suspense fallback={<div className="text-cyan-400 p-8 font-mono text-sm">Loading War Room…</div>}>
+                <WarRoomXRScene />
               </Suspense>
             )}
           </Route>
