@@ -59,7 +59,7 @@ export default function LoginPage() {
             <DtomLogo size="lg" showWordmark={true} showIcon={false} ariaLabel="ΔTOM" />
           </div>
           <p style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-            Sign in to Sales Dominator
+            Sign in to ATOM Sales OS
           </p>
         </div>
 

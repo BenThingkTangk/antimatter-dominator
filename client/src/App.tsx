@@ -6,6 +6,7 @@ import { DtomBrandShell, DtomBootLoader } from "@nirmata/atom-design-system/reac
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
+import { SalesOsLayout } from "./components/sales-os/SalesOsLayout";
 import { CommandPalette } from "./components/CommandPalette";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { registerShortcuts } from "./lib/keyboard-shortcuts";
@@ -18,7 +19,6 @@ import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
-import Campaigns from "./pages/campaigns";
 import AdminTenants from "./pages/admin-tenants";
 import BillingPage from "./pages/billing";
 import InviteAcceptPage from "./pages/invite";
@@ -38,6 +38,20 @@ import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
 import { initPush, subscribePush } from "./lib/push-notifications";
+import { lazy, Suspense } from "react";
+// ATOM Sales OS zones
+import PipelineCommand from "./pages/sales-os/pipeline";
+import SalesOsCalls from "./pages/sales-os/calls";
+import SalesOsCampaigns from "./pages/sales-os/campaigns";
+import BuyerIntel from "./pages/sales-os/intel";
+import SalesOsRevenue from "./pages/sales-os/revenue";
+import ComplianceVault from "./pages/sales-os/compliance";
+import SalesOsPartners from "./pages/sales-os/partners";
+import SalesOsAgents from "./pages/sales-os/agents";
+import SalesOsOnboarding from "./pages/sales-os/onboarding";
+import SalesOsSettings from "./pages/sales-os/settings";
+// War Room (WebXR) — lazy so three.js stays out of the main bundle
+const WarRoomXR = lazy(() => import("./pages/sales-os/xr"));
 
 // Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
@@ -194,14 +208,44 @@ function AuthenticatedRoutesInner() {
     return <OnboardingWizard onComplete={() => navigate("/demo-dial")} />;
   }
 
+  // ATOM Sales OS zone routes — new left-nav shell + persistent Agent dock.
+  // Root redirects to /pipeline (Pipeline Command). The XR War Room renders
+  // its own full-screen canvas inside the shell.
+  const SALES_OS_PATHS = [
+    "/pipeline", "/calls", "/intel", "/revenue", "/compliance",
+    "/partners", "/agents", "/xr", "/onboarding", "/settings",
+  ];
+  if (location === "/" || SALES_OS_PATHS.includes(location) || location === "/campaigns") {
+    return (
+      <SalesOsLayout>
+        <Switch>
+          <Route path="/">{() => <Redirect to="/pipeline" />}</Route>
+          <Route path="/pipeline" component={PipelineCommand} />
+          <Route path="/calls" component={SalesOsCalls} />
+          <Route path="/campaigns" component={SalesOsCampaigns} />
+          <Route path="/intel" component={BuyerIntel} />
+          <Route path="/revenue" component={SalesOsRevenue} />
+          <Route path="/compliance" component={ComplianceVault} />
+          <Route path="/partners" component={SalesOsPartners} />
+          <Route path="/agents" component={SalesOsAgents} />
+          <Route path="/onboarding" component={SalesOsOnboarding} />
+          <Route path="/settings" component={SalesOsSettings} />
+          <Route path="/xr">
+            {() => (
+              <Suspense fallback={<div className="text-cyan-400 p-8 font-mono text-sm">Loading War Room…</div>}>
+                <WarRoomXR />
+              </Suspense>
+            )}
+          </Route>
+        </Switch>
+      </SalesOsLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navigate={navigate} />
       <Switch>
-        {/* Authenticated root → redirect to dashboard for returning users */}
-        <Route path="/">
-          {user ? <Redirect to="/dashboard" /> : <LandingPage />}
-        </Route>
         {/* Demo dial — cinematic activation moment (no layout chrome needed but
             rendered inside AppLayout for trial banner + nav escape hatch) */}
         <Route path="/demo-dial" component={DemoDial} />
@@ -214,7 +258,6 @@ function AuthenticatedRoutesInner() {
         <Route path="/atom-campaign">{() => <Redirect to="/campaigns" />}</Route>
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
-        <Route path="/campaigns" component={Campaigns} />
         <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
         <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>
         <Route path="/admin/hq">{() => <SuperAdminOnly><HqShell /></SuperAdminOnly>}</Route>
@@ -238,6 +281,14 @@ function AuthenticatedRoutes() {
   );
 }
 
+/** Root path resolver: logged-in users go to the Sales OS shell (which
+ *  redirects to /pipeline); anonymous visitors get the landing page. */
+function RootRoute() {
+  const { user, loading } = useSessionContext();
+  if (loading) return null;
+  return user ? <AuthenticatedRoutes /> : <LandingPage />;
+}
+
 function AppRouter() {
   // Resolve tenant on first paint (shared between mobile + desktop).
   useTenant();
@@ -259,8 +310,9 @@ function AppRouter() {
         <Route path="/reset-password/:token" component={ResetPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/invite/:token" component={InviteAcceptPage} />
-        {/* Landing page at root for unauthenticated users */}
-        <Route path="/" component={LandingPage} />
+        {/* Root: authenticated users enter the Sales OS shell (→ /pipeline);
+            anonymous visitors see the public landing page. */}
+        <Route path="/">{() => <RootRoute />}</Route>
         {/* Everything else goes through authenticated layout */}
         <Route>{() => <AuthenticatedRoutes />}</Route>
       </Switch>
