@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icon-192.png", "icon-512.png", "icon.svg"],
       manifest: {
-        name: "ΔTOM Sales Dominator",
-        short_name: "ΔTOM",
-        description: "Autonomous outbound voice on Akamai · NVIDIA Blackwell",
+        name: "ATOM Sales OS",
+        short_name: "ATOM Sales OS",
+        description: "ATOM Sales OS — autonomous outbound voice on Akamai · NVIDIA Blackwell",
         start_url: "/#/m/home",
         display: "standalone",
         background_color: "#08080c",

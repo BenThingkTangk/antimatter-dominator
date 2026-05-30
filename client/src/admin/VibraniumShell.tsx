@@ -224,7 +224,7 @@ const GA_QUARTERS = [
       { title: "Apollo replacement evaluation (PDL primary + ZoomInfo enterprise fallback)", status: "in_progress" as const, effort: "M" as const },
       { title: "Multi-tenant Hume sub-config provisioning at scale", status: "in_progress" as const, effort: "M" as const },
       { title: "Self-serve onboarding + Stripe checkout for Starter/Growth tiers", status: "pending" as const, effort: "L" as const },
-      { title: "Public ATOM Sales Dominator launch (PH, X, LinkedIn)", status: "pending" as const, effort: "M" as const },
+      { title: "Public ATOM Sales OS launch (PH, X, LinkedIn)", status: "pending" as const, effort: "M" as const },
       { title: "First 50 paying tenants milestone", status: "pending" as const, effort: "XL" as const },
     ],
   },
@@ -1178,7 +1178,7 @@ export default function VibraniumShell() {
             Path to General Availability
           </div>
           <div style={{ fontSize: 13, color: t.muted, marginTop: 4 }}>
-            Single command center for ATOM Sales Dominator's road to GA · refreshed live from Perplexity Sonar Pro
+            Single command center for ATOM Sales OS's road to GA · refreshed live from Perplexity Sonar Pro
           </div>
         </div>
         <div style={{ maxWidth: 360, width: "100%" }}>

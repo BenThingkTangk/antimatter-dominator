@@ -363,7 +363,7 @@ export default function PitchGenerator() {
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-white">ΔTOM Pitch</h1>
-          <p className="text-sm text-white/40">AI-powered precision pitching for the ΔTOM Sales Dominator ecosystem</p>
+          <p className="text-sm text-white/40">AI-powered precision pitching for the ATOM Sales OS ecosystem</p>
         </div>
         <div className="flex items-center gap-2">
           {showHistory && (
