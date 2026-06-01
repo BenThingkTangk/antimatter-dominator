@@ -6,6 +6,7 @@ import { DtomBrandShell, DtomBootLoader } from "@nirmata/atom-design-system/reac
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
+import { SalesOsLayout } from "./components/sales-os/SalesOsLayout";
 import { CommandPalette } from "./components/CommandPalette";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { registerShortcuts } from "./lib/keyboard-shortcuts";
@@ -18,7 +19,6 @@ import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
-import Campaigns from "./pages/campaigns";
 import AdminTenants from "./pages/admin-tenants";
 import BillingPage from "./pages/billing";
 import InviteAcceptPage from "./pages/invite";
@@ -38,6 +38,24 @@ import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
 import { initPush, subscribePush } from "./lib/push-notifications";
+import { lazy, Suspense } from "react";
+// ATOM Sales OS zones
+import PipelineCommand from "./pages/sales-os/pipeline";
+import SalesOsCalls from "./pages/sales-os/calls";
+import SalesOsCampaigns from "./pages/sales-os/campaigns";
+import BuyerIntel from "./pages/sales-os/intel";
+import SalesOsRevenue from "./pages/sales-os/revenue";
+import ComplianceVault from "./pages/sales-os/compliance";
+import SalesOsPartners from "./pages/sales-os/partners";
+import SalesOsAgents from "./pages/sales-os/agents";
+import SalesOsOnboarding from "./pages/sales-os/onboarding";
+import SalesOsSettings from "./pages/sales-os/settings";
+// War Room (WebXR) — lazy so three.js stays out of the main bundle
+const WarRoomXR = lazy(() => import("./pages/sales-os/xr"));
+// Immersive A-Frame War Room scene (SUBAGENT C) at /xr/warroom. Lazy so the
+// A-Frame engine bundle stays out of the main chunk; the scene itself also
+// dynamically imports A-Frame internally.
+const WarRoomXRScene = lazy(() => import("./pages/xr-warroom"));
 
 // Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
@@ -50,7 +68,7 @@ function SuperAdminOnly({ children }: { children: React.ReactNode }) {
   const session = useEffectiveSession();
   if (!session.isSuperAdmin) {
     if (typeof window !== "undefined") {
-      window.location.hash = "#/pitch";
+      window.location.hash = "#/pipeline";
     }
     return null;
   }
@@ -194,18 +212,58 @@ function AuthenticatedRoutesInner() {
     return <OnboardingWizard onComplete={() => navigate("/demo-dial")} />;
   }
 
+  // ATOM Sales OS zone routes — new left-nav shell + persistent Agent dock.
+  // Root and /dashboard both resolve inside this shell. The XR War Room renders
+  // its own full-screen canvas inside the shell.
+  const SALES_OS_PATHS = [
+    "/dashboard", "/pipeline", "/calls", "/intel", "/revenue", "/compliance",
+    "/partners", "/agents", "/xr", "/xr/warroom", "/onboarding", "/settings",
+  ];
+  if (location === "/" || SALES_OS_PATHS.includes(location) || location === "/campaigns") {
+    return (
+      <SalesOsLayout>
+        <Switch>
+          <Route path="/">{() => <Redirect to="/pipeline" />}</Route>
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/pipeline" component={PipelineCommand} />
+          <Route path="/calls" component={SalesOsCalls} />
+          <Route path="/campaigns" component={SalesOsCampaigns} />
+          <Route path="/intel" component={BuyerIntel} />
+          <Route path="/revenue" component={SalesOsRevenue} />
+          <Route path="/compliance" component={ComplianceVault} />
+          <Route path="/partners" component={SalesOsPartners} />
+          <Route path="/agents" component={SalesOsAgents} />
+          <Route path="/onboarding" component={SalesOsOnboarding} />
+          <Route path="/settings" component={SalesOsSettings} />
+          <Route path="/xr">
+            {() => (
+              <Suspense fallback={<div className="text-cyan-400 p-8 font-mono text-sm">Loading War Room…</div>}>
+                <WarRoomXR />
+              </Suspense>
+            )}
+          </Route>
+          <Route path="/xr/warroom">
+            {() => (
+              <Suspense fallback={<div className="text-cyan-400 p-8 font-mono text-sm">Loading War Room…</div>}>
+                <WarRoomXRScene />
+              </Suspense>
+            )}
+          </Route>
+        </Switch>
+      </SalesOsLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navigate={navigate} />
       <Switch>
-        {/* Authenticated root → redirect to dashboard for returning users */}
-        <Route path="/">
-          {user ? <Redirect to="/dashboard" /> : <LandingPage />}
-        </Route>
         {/* Demo dial — cinematic activation moment (no layout chrome needed but
             rendered inside AppLayout for trial banner + nav escape hatch) */}
         <Route path="/demo-dial" component={DemoDial} />
-        <Route path="/dashboard" component={Dashboard} />
+        {/* /dashboard now resolves inside the Sales OS shell (see above).
+            Legacy product modules below remain as compatibility routes,
+            reachable from the Sales OS shell, but never the default landing. */}
         <Route path="/pitch" component={PitchGenerator} />
         <Route path="/objections" component={ObjectionHandler} />
         <Route path="/market" component={MarketIntent} />
@@ -214,7 +272,6 @@ function AuthenticatedRoutesInner() {
         <Route path="/atom-campaign">{() => <Redirect to="/campaigns" />}</Route>
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
-        <Route path="/campaigns" component={Campaigns} />
         <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
         <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>
         <Route path="/admin/hq">{() => <SuperAdminOnly><HqShell /></SuperAdminOnly>}</Route>
@@ -238,6 +295,14 @@ function AuthenticatedRoutes() {
   );
 }
 
+/** Root path resolver: logged-in users go to the Sales OS shell (which
+ *  redirects to /pipeline); anonymous visitors get the landing page. */
+function RootRoute() {
+  const { user, loading } = useSessionContext();
+  if (loading) return null;
+  return user ? <AuthenticatedRoutes /> : <LandingPage />;
+}
+
 function AppRouter() {
   // Resolve tenant on first paint (shared between mobile + desktop).
   useTenant();
@@ -259,8 +324,9 @@ function AppRouter() {
         <Route path="/reset-password/:token" component={ResetPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/invite/:token" component={InviteAcceptPage} />
-        {/* Landing page at root for unauthenticated users */}
-        <Route path="/" component={LandingPage} />
+        {/* Root: authenticated users enter the Sales OS shell (→ /pipeline);
+            anonymous visitors see the public landing page. */}
+        <Route path="/">{() => <RootRoute />}</Route>
         {/* Everything else goes through authenticated layout */}
         <Route>{() => <AuthenticatedRoutes />}</Route>
       </Switch>
@@ -268,10 +334,27 @@ function AppRouter() {
   );
 }
 
+/**
+ * Direct entry into a shell/deep-link surface (e.g. /#/pipeline, /#/dashboard)
+ * should NOT sit behind the cinematic ignition — users typing or bookmarking a
+ * module URL expect the interface immediately. The cold-open boot loader is
+ * reserved for a true root landing. Read synchronously from the hash so the
+ * decision is made before first paint.
+ */
+function isDeepLinkEntry(): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.hash.replace(/^#/, "").split("?")[0] || "/";
+  // Only the bare root ("/" or "") gets the cinematic cold-open. Any concrete
+  // module path skips straight to the shell.
+  return path !== "/" && path !== "";
+}
+
 function App() {
   // One-shot cinematic boot loader on first paint of the app session. We
-  // suppress it on `?noboot=1` and after sessionStorage flag so navigation
-  // inside the app doesn't re-trigger the cinematic ignition.
+  // suppress it on `?noboot=1`, after the sessionStorage flag, and on any
+  // direct deep-link entry so navigation/bookmarks land on the shell fast.
+  // When it does run (root cold-open only) it is brief and renders as a
+  // non-blocking overlay above the already-mounted shell.
   const [bootDone, setBootDone] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -279,6 +362,7 @@ function App() {
       if (url.searchParams.get("noboot") === "1") return true;
       if (sessionStorage.getItem("dtom_boot_done") === "1") return true;
     } catch {}
+    if (isDeepLinkEntry()) return true;
     return false;
   });
 
@@ -288,7 +372,7 @@ function App() {
         {!bootDone && (
           <DtomBootLoader
             active={!bootDone}
-            minimumDrama={2200}
+            minimumDrama={900}
             onComplete={() => {
               try { sessionStorage.setItem("dtom_boot_done", "1"); } catch {}
               setBootDone(true);

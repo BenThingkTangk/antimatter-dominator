@@ -246,7 +246,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               letterSpacing: "0.16em", textTransform: "uppercase",
               color: "rgba(255,255,255,0.40)",
             }}
-          >ΔTOM Sales Dominator</span>
+          >ATOM Sales OS</span>
         </div>
         {children}
       </div>

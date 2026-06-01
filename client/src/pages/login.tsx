@@ -14,7 +14,7 @@ export default function LoginPage() {
   // If already logged in, redirect
   if (user) {
     const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-    const next = params.get("next") || "/pitch";
+    const next = params.get("next") || "/pipeline";
     navigate(next);
     return null;
   }
@@ -37,7 +37,7 @@ export default function LoginPage() {
       }
       // Redirect
       const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-      const next = params.get("next") || "/pitch";
+      const next = params.get("next") || "/pipeline";
       window.location.hash = `#${next}`;
       window.location.reload();
     } catch {
@@ -59,7 +59,7 @@ export default function LoginPage() {
             <DtomLogo size="lg" showWordmark={true} showIcon={false} ariaLabel="ΔTOM" />
           </div>
           <p style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-            Sign in to Sales Dominator
+            Sign in to ATOM Sales OS
           </p>
         </div>
 

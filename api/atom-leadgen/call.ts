@@ -458,7 +458,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     coldOpenAudioUrl,   // pre-rendered ElevenLabs opener mp3 URL (optional)
   } = req.body || {};
   const wantRecord = Boolean(record ?? recordCall ?? false);
-  const coldOpen = (typeof coldOpenAudioUrl === “string” && coldOpenAudioUrl.startsWith(“http”))
+  const coldOpen = (typeof coldOpenAudioUrl === "string" && coldOpenAudioUrl.startsWith("http"))
     ? coldOpenAudioUrl : null;
 
   // Normalize: accept both snake_case and camelCase from the frontend.

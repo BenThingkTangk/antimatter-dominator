@@ -69,7 +69,7 @@ function applyTheme(t: Tenant) {
   root.style.setProperty("--color-primary-glow", hexWithAlpha(t.primary_hex, 0.32));
   // Document title reflects tenant name
   if (t.name) {
-    document.title = `${t.name} — ΔTOM Sales Dominator`;
+    document.title = `${t.name} — ATOM Sales OS`;
   }
 }
 
