@@ -204,6 +204,17 @@ function AuthenticatedRoutesInner() {
         </Route>
         {/* Demo dial — cinematic activation moment (no layout chrome needed but
             rendered inside AppLayout for trial banner + nav escape hatch) */}
+        {/* Public/product-language route aliases → canonical product routes.
+            Keep these above the canonical routes so a typed variant resolves
+            without falling through to NotFound. */}
+        <Route path="/objection">{() => <Redirect to="/objections" />}</Route>
+        <Route path="/prospect">{() => <Redirect to="/prospects" />}</Route>
+        <Route path="/market-intent">{() => <Redirect to="/market" />}</Route>
+        <Route path="/lead-gen">{() => <Redirect to="/atom-leadgen" />}</Route>
+        {/* No standalone /compliance surface exists yet; the compliance vault
+            lives under the admin shell's TCPA Compliance tab. */}
+        <Route path="/compliance-vault">{() => <Redirect to="/admin?tab=compliance" />}</Route>
+        <Route path="/compliance">{() => <Redirect to="/admin?tab=compliance" />}</Route>
         <Route path="/demo-dial" component={DemoDial} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/pitch" component={PitchGenerator} />

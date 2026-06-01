@@ -37,6 +37,33 @@ async function sbCount(path: string): Promise<number> {
   return isNaN(total) ? 0 : total;
 }
 
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const pair of header.split(";")) {
+    const [k, ...v] = pair.split("=");
+    if (k) out[k.trim()] = v.join("=").trim();
+  }
+  return out;
+}
+
+async function resolveSession(req: VercelRequest): Promise<{ userId: string; tenantId: string } | null> {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies["atom_session"];
+  if (!token || !SUPABASE_URL || !KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_sessions?token=eq.${encodeURIComponent(token)}&revoked_at=is.null&select=user_id,tenant_id,expires_at`, {
+      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const s = Array.isArray(rows) ? rows[0] : null;
+    if (!s) return null;
+    if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+    return { userId: s.user_id, tenantId: s.tenant_id };
+  } catch { return null; }
+}
+
 function mapCampaign(row: any, counts?: { total: number; scored: number; enriched: number }) {
   if (!row) return row;
   return {
@@ -62,11 +89,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+
   const id = parseInt((req.query.id || "").toString(), 10);
   if (!id || isNaN(id)) return res.status(400).json({ error: "invalid id" });
 
   try {
-    const rows = await sb(`atom_campaigns?id=eq.${id}&limit=1`);
+    const rows = await sb(`atom_campaigns?id=eq.${id}&tenant_id=eq.${encodeURIComponent(session.tenantId)}&limit=1`);
     const row = Array.isArray(rows) ? rows[0] : null;
     if (!row) return res.status(404).json({ error: "not found" });
 

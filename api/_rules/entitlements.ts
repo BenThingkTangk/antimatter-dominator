@@ -75,7 +75,7 @@ async function loadTenant(tenantId: string): Promise<any> {
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.data;
 
   const rows = await sb(
-    `tenants?id=eq.${encodeURIComponent(tenantId)}&select=id,plan,seats,subscription_status,trial_ends_at,stripe_subscription_id`
+    `tenants?id=eq.${encodeURIComponent(tenantId)}&select=id,plan,seats,subscription_status,trial_ends_at,stripe_subscription_id,kill_switch`
   );
   const tenant = Array.isArray(rows) ? rows[0] : null;
   if (tenant) {
@@ -86,7 +86,7 @@ async function loadTenant(tenantId: string): Promise<any> {
 
 export interface EntitlementResult {
   allowed: boolean;
-  reason?: "plan_cap_exceeded" | "plan_does_not_include" | "subscription_inactive" | "trial_expired";
+  reason?: "plan_cap_exceeded" | "plan_does_not_include" | "subscription_inactive" | "trial_expired" | "suspended";
   used?: number;
   cap?: number;
   plan?: string;
@@ -101,13 +101,24 @@ export async function checkEntitlement(
 
   const status = tenant.subscription_status;
 
-  // Cancelled or past_due >7 days → blocked
+  // Hard cutoff: kill_switch is set by the billing webhook (past_due / canceled /
+  // unpaid) and by the trial-rollover cron (expired trial with no Stripe sub).
+  // A suspended tenant loses all paid/metered access immediately. This only gates
+  // metered product endpoints — public auth flows never call checkEntitlement.
+  if (tenant.kill_switch === true) {
+    return { allowed: false, reason: "suspended", plan: tenant.plan };
+  }
+
+  // Cancelled → blocked
   if (status === "canceled" || status === "cancelled") {
     return { allowed: false, reason: "subscription_inactive", plan: tenant.plan };
   }
-  if (status === "past_due") {
-    // TODO: ideally check how long it's been past_due; for now allow a grace period
-    // by not blocking immediately. The kill_switch check below handles hard cutoff.
+
+  // Past due → blocked. Billing state sets kill_switch alongside past_due, but we
+  // also block on the status directly so a suspended/past_due tenant loses paid
+  // access even if kill_switch was not yet propagated.
+  if (status === "past_due" || status === "unpaid") {
+    return { allowed: false, reason: "suspended", plan: tenant.plan };
   }
 
   // Trial expired check

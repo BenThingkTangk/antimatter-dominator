@@ -17,11 +17,19 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Verify cron auth header (Vercel sets this automatically for cron invocations)
+  // Verify cron auth header (Vercel sets this automatically for cron invocations).
+  // Mandatory in production — a missing secret fails closed.
   const authHeader = req.headers.authorization;
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: "Unauthorized" });
+  const cronSecret = (process.env.CRON_SECRET || "").replace(/\\n/g, "").trim();
+  const isProduction =
+    (process.env.VERCEL_ENV || "").trim() === "production" ||
+    (!process.env.VERCEL_ENV && (process.env.NODE_ENV || "").trim() === "production");
+  if (cronSecret) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  } else if (isProduction) {
+    return res.status(500).json({ error: "CRON_SECRET not configured" });
   }
 
   return res.json({

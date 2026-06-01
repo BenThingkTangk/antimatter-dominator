@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Type check is reported but non-blocking: the repo currently has a
+      # backlog of pre-existing tsc errors (surfaced once the call.ts syntax
+      # break was fixed) that are out of scope for this hardening sprint. The
+      # build below is the hard gate. Flip continue-on-error to false once the
+      # tsc backlog is cleared.
+      - name: Type check
+        run: npm run check
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
