@@ -334,10 +334,27 @@ function AppRouter() {
   );
 }
 
+/**
+ * Direct entry into a shell/deep-link surface (e.g. /#/pipeline, /#/dashboard)
+ * should NOT sit behind the cinematic ignition — users typing or bookmarking a
+ * module URL expect the interface immediately. The cold-open boot loader is
+ * reserved for a true root landing. Read synchronously from the hash so the
+ * decision is made before first paint.
+ */
+function isDeepLinkEntry(): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.hash.replace(/^#/, "").split("?")[0] || "/";
+  // Only the bare root ("/" or "") gets the cinematic cold-open. Any concrete
+  // module path skips straight to the shell.
+  return path !== "/" && path !== "";
+}
+
 function App() {
   // One-shot cinematic boot loader on first paint of the app session. We
-  // suppress it on `?noboot=1` and after sessionStorage flag so navigation
-  // inside the app doesn't re-trigger the cinematic ignition.
+  // suppress it on `?noboot=1`, after the sessionStorage flag, and on any
+  // direct deep-link entry so navigation/bookmarks land on the shell fast.
+  // When it does run (root cold-open only) it is brief and renders as a
+  // non-blocking overlay above the already-mounted shell.
   const [bootDone, setBootDone] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -345,6 +362,7 @@ function App() {
       if (url.searchParams.get("noboot") === "1") return true;
       if (sessionStorage.getItem("dtom_boot_done") === "1") return true;
     } catch {}
+    if (isDeepLinkEntry()) return true;
     return false;
   });
 
@@ -354,7 +372,7 @@ function App() {
         {!bootDone && (
           <DtomBootLoader
             active={!bootDone}
-            minimumDrama={2200}
+            minimumDrama={900}
             onComplete={() => {
               try { sessionStorage.setItem("dtom_boot_done", "1"); } catch {}
               setBootDone(true);
