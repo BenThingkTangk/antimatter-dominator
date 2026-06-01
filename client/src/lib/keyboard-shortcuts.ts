@@ -2,7 +2,7 @@
  * Leader-key state machine + Cmd/Ctrl+K command palette trigger.
  *
  * Press `g` to enter leader mode, then within 1.2s press a second key
- * to navigate:  g→h (home/pitch), g→c (campaigns), g→w (war room),
+ * to navigate:  g→h (home/pipeline), g→c (campaigns), g→w (war room),
  * g→p (prospects), g→d (dialer/leadgen), g→m (market intent),
  * g→b (billing), g→s (sonar).
  *
@@ -13,7 +13,7 @@ type NavigateFn = (path: string) => void;
 type PaletteToggleFn = () => void;
 
 const LEADER_ROUTES: Record<string, string> = {
-  h: "/pitch",
+  h: "/pipeline",
   c: "/campaigns",
   w: "/war-room",
   p: "/prospects",

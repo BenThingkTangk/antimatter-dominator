@@ -15,6 +15,12 @@ import {
   Rocket,
   Settings,
   LogOut,
+  LayoutDashboard,
+  MessageSquareWarning,
+  Shield,
+  Radar,
+  Swords,
+  BookOpen,
 } from "lucide-react";
 import { useSessionContext } from "@/auth/AuthGate";
 
@@ -22,10 +28,11 @@ interface NavItem {
   href: string;
   icon: typeof Crosshair;
   label: string;
-  group: "ZONES" | "SYSTEM";
+  group: "ZONES" | "SYSTEM" | "LEGACY";
 }
 
 export const SALES_OS_NAV: NavItem[] = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", group: "ZONES" },
   { href: "/pipeline", icon: Crosshair, label: "Pipeline Command", group: "ZONES" },
   { href: "/calls", icon: PhoneCall, label: "Calls", group: "ZONES" },
   { href: "/campaigns", icon: Megaphone, label: "Campaigns", group: "ZONES" },
@@ -37,6 +44,14 @@ export const SALES_OS_NAV: NavItem[] = [
   { href: "/xr", icon: Boxes, label: "War Room (XR)", group: "SYSTEM" },
   { href: "/onboarding", icon: Rocket, label: "Onboarding", group: "SYSTEM" },
   { href: "/settings", icon: Settings, label: "Settings", group: "SYSTEM" },
+  // Legacy ATOM Pitch modules — kept reachable from the Sales OS shell but
+  // never the default landing experience. They render in the legacy layout.
+  { href: "/pitch", icon: TrendingUp, label: "ΔTOM Pitch", group: "LEGACY" },
+  { href: "/objections", icon: MessageSquareWarning, label: "Objection Handler", group: "LEGACY" },
+  { href: "/market", icon: Shield, label: "Market Intent", group: "LEGACY" },
+  { href: "/prospects", icon: Radar, label: "Prospect Engine", group: "LEGACY" },
+  { href: "/war-room", icon: Swords, label: "War Room", group: "LEGACY" },
+  { href: "/company-intelligence", icon: BookOpen, label: "WarBook", group: "LEGACY" },
 ];
 
 const CYAN = "#00d4ff";
@@ -77,6 +92,7 @@ export function SalesOsNav() {
   const session = useSessionContext();
   const zones = SALES_OS_NAV.filter((n) => n.group === "ZONES");
   const system = SALES_OS_NAV.filter((n) => n.group === "SYSTEM");
+  const legacy = SALES_OS_NAV.filter((n) => n.group === "LEGACY");
 
   return (
     <aside
@@ -142,6 +158,18 @@ export function SalesOsNav() {
         </p>
         <div className="space-y-1">
           {system.map((item) => (
+            <NavLink key={item.href} item={item} active={location === item.href} />
+          ))}
+        </div>
+
+        <p
+          className="px-3 mt-6 mb-2 text-[9px] font-mono uppercase tracking-[0.28em]"
+          style={{ color: "rgba(246,248,255,0.35)" }}
+        >
+          Legacy
+        </p>
+        <div className="space-y-1">
+          {legacy.map((item) => (
             <NavLink key={item.href} item={item} active={location === item.href} />
           ))}
         </div>

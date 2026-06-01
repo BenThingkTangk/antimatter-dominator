@@ -68,7 +68,7 @@ function SuperAdminOnly({ children }: { children: React.ReactNode }) {
   const session = useEffectiveSession();
   if (!session.isSuperAdmin) {
     if (typeof window !== "undefined") {
-      window.location.hash = "#/pitch";
+      window.location.hash = "#/pipeline";
     }
     return null;
   }
@@ -213,10 +213,10 @@ function AuthenticatedRoutesInner() {
   }
 
   // ATOM Sales OS zone routes — new left-nav shell + persistent Agent dock.
-  // Root redirects to /pipeline (Pipeline Command). The XR War Room renders
+  // Root and /dashboard both resolve inside this shell. The XR War Room renders
   // its own full-screen canvas inside the shell.
   const SALES_OS_PATHS = [
-    "/pipeline", "/calls", "/intel", "/revenue", "/compliance",
+    "/dashboard", "/pipeline", "/calls", "/intel", "/revenue", "/compliance",
     "/partners", "/agents", "/xr", "/xr/warroom", "/onboarding", "/settings",
   ];
   if (location === "/" || SALES_OS_PATHS.includes(location) || location === "/campaigns") {
@@ -224,6 +224,7 @@ function AuthenticatedRoutesInner() {
       <SalesOsLayout>
         <Switch>
           <Route path="/">{() => <Redirect to="/pipeline" />}</Route>
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/pipeline" component={PipelineCommand} />
           <Route path="/calls" component={SalesOsCalls} />
           <Route path="/campaigns" component={SalesOsCampaigns} />
@@ -260,7 +261,9 @@ function AuthenticatedRoutesInner() {
         {/* Demo dial — cinematic activation moment (no layout chrome needed but
             rendered inside AppLayout for trial banner + nav escape hatch) */}
         <Route path="/demo-dial" component={DemoDial} />
-        <Route path="/dashboard" component={Dashboard} />
+        {/* /dashboard now resolves inside the Sales OS shell (see above).
+            Legacy product modules below remain as compatibility routes,
+            reachable from the Sales OS shell, but never the default landing. */}
         <Route path="/pitch" component={PitchGenerator} />
         <Route path="/objections" component={ObjectionHandler} />
         <Route path="/market" component={MarketIntent} />

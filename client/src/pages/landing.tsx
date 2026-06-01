@@ -15,9 +15,9 @@ export default function LandingPage() {
   const { user } = useSessionContext();
   const [, navigate] = useLocation();
 
-  // If authenticated, redirect to pitch (the main app)
+  // If authenticated, enter the Sales OS shell (Pipeline Command is the default zone).
   useEffect(() => {
-    if (user) navigate("/pitch");
+    if (user) navigate("/pipeline");
   }, [user, navigate]);
 
   return (
