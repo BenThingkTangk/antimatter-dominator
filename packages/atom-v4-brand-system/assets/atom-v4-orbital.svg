@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-labelledby="v4-orb-title v4-orb-desc">
+  <title id="v4-orb-title">ΔTOM V4 orbital mark</title>
+  <desc id="v4-orb-desc">ΔTOM V4 canonical orbital mark. Three cyan elliptical orbits at 0°/60°/120° around a glowing nucleus. Brand cyan #39BFC0 echoes the O ring of the ΔTOM wordmark; the hot white core echoes the Δ/T/M letterforms. Static-first, geometry-pure, for dark surfaces.</desc>
+  <defs>
+    <radialGradient id="v4-orb-nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#c8f3f3"/>
+      <stop offset="65%" stop-color="#39bfc0" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#39bfc0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g fill="none" stroke="#39bfc0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="60" cy="60" rx="46" ry="17"/>
+    <ellipse cx="60" cy="60" rx="46" ry="17" transform="rotate(60 60 60)"/>
+    <ellipse cx="60" cy="60" rx="46" ry="17" transform="rotate(120 60 60)"/>
+  </g>
+  <circle cx="60" cy="60" r="8" fill="url(#v4-orb-nucleus)"/>
+  <circle cx="60" cy="60" r="2.2" fill="#ffffff"/>
+</svg>

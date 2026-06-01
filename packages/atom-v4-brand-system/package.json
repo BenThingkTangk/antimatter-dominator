@@ -1,0 +1,41 @@
+{
+  "name": "@nirmata/atom-v4-brand-system",
+  "version": "4.0.0",
+  "description": "ΔTOM Brand / Experience System V4 — canonical black & cyan identity (multi-orbit atom, glowing nucleus, ΔTOM wordmark) for web apps, mobile, AI agents, and VR/Meta/Oculus/WebXR.",
+  "license": "UNLICENSED",
+  "private": false,
+  "author": "Nirmata",
+  "type": "module",
+  "main": "react/index.tsx",
+  "module": "react/index.tsx",
+  "exports": {
+    ".": "./react/index.tsx",
+    "./react": "./react/index.tsx",
+    "./css": "./css/atom-v4.css",
+    "./js": "./js/atom-v4.js",
+    "./assets/*": "./assets/*"
+  },
+  "files": [
+    "css/",
+    "js/",
+    "assets/",
+    "react/",
+    "docs/",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}

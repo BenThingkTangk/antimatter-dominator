@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220" role="img" aria-labelledby="v4-lm-title v4-lm-desc">
+  <title id="v4-lm-title">ΔTOM V4 lettermark</title>
+  <desc id="v4-lm-desc">ΔTOM V4 lettermark: a hollow Greek capital Delta (Δ), geometrically consistent with the ΔTOM wordmark. Use for collapsed nav, app icons, social avatars, or any context where the full lockup is too wide. The visible "A" is always Delta-shaped, never Latin A.</desc>
+  <path d="M 110 26 L 210 196 L 10 196 Z M 110 86 L 162 180 L 58 180 Z"
+        fill="#ffffff" fill-rule="evenodd"/>
+</svg>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 220" width="1080" height="220" role="img" aria-labelledby="v4-lk-title v4-lk-desc">
+  <title id="v4-lk-title">ΔTOM V4 canonical lockup</title>
+  <desc id="v4-lk-desc">ΔTOM V4 canonical brand lockup: multi-orbit cyan atom with a glowing nucleus on the left, ΔTOM wordmark on the right. The visible "A" is ALWAYS a capital Greek Delta (Δ) — never Latin A. Orbital stroke and O-ring share brand cyan #39BFC0. Δ, T and M are pure white #FFFFFF. Static-first; works at 24px and at hero scale. Designed for black/dark surfaces.</desc>
+  <defs>
+    <radialGradient id="v4-lk-nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#c8f3f3"/>
+      <stop offset="65%" stop-color="#39bfc0" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#39bfc0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Orbital icon (left) -->
+  <g>
+    <g fill="none" stroke="#39bfc0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="110" cy="110" rx="80" ry="30"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(60 110 110)"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(120 110 110)"/>
+    </g>
+    <circle cx="110" cy="110" r="14" fill="url(#v4-lk-nucleus)"/>
+    <circle cx="110" cy="110" r="3.6" fill="#ffffff"/>
+  </g>
+  <!-- ΔTOM wordmark (right) -->
+  <g transform="translate(260,0)">
+    <path d="M 96 26 L 192 194 L 0 194 Z M 96 84 L 146 178 L 46 178 Z" fill="#ffffff" fill-rule="evenodd"/>
+    <path d="M 218 26 H 388 V 56 H 320 V 194 H 286 V 56 H 218 Z" fill="#ffffff"/>
+    <circle cx="498" cy="110" r="74" fill="none" stroke="#39bfc0" stroke-width="24"/>
+    <path d="M 614 194 V 26 H 646 L 710 168 L 774 26 H 806 V 194 H 774 V 96 L 722 194 H 698 L 646 96 V 194 Z" fill="#ffffff"/>
+  </g>
+</svg>

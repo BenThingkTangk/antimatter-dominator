@@ -1,0 +1,320 @@
+/* ============================================================
+   ΔTOM Brand / Experience System — V4
+   Aggregate stylesheet: tokens · components · motion · VR/spatial
+   Canonical visual: black/dark field, cyan multi-orbit atom with
+   glowing nucleus, ΔTOM wordmark (Δ/T/M white, O cyan).
+   Brand cyan #39BFC0. Designed for dark surfaces.
+   @nirmata/atom-v4-brand-system 4.0.0
+   ============================================================ */
+
+/* ---------- 1. DESIGN TOKENS ---------- */
+:root {
+  /* Brand color */
+  --atom-cyan:        #39BFC0;   /* canonical brand cyan — orbits + O ring */
+  --atom-cyan-bright: #5BD9DA;   /* hover / active accent */
+  --atom-cyan-dim:    #2A8C8D;   /* muted accent, borders */
+  --atom-cyan-glow:   rgba(57, 191, 192, 0.45);
+  --atom-nucleus:     #c8f3f3;   /* nucleus halo */
+  --atom-white:       #FFFFFF;   /* Δ / T / M letterforms */
+
+  /* Dark field — the canonical surface */
+  --atom-black:       #050708;   /* primary background (true command-center black) */
+  --atom-surface:     #0B0F11;   /* panels */
+  --atom-surface-2:   #11171A;   /* raised panels */
+  --atom-surface-3:   #161D21;   /* cards on cards */
+  --atom-glass:       rgba(16, 23, 26, 0.62);
+  --atom-glass-brd:   rgba(57, 191, 192, 0.18);
+  --atom-hairline:    rgba(255, 255, 255, 0.08);
+
+  /* Text */
+  --atom-text:        #E7EDEE;
+  --atom-text-muted:  #8A989B;
+  --atom-text-faint:  #5A686B;
+
+  /* Semantic */
+  --atom-success: #6DD3A8;
+  --atom-warning: #E8B14C;
+  --atom-error:   #E2728A;
+
+  /* Type */
+  --atom-font: "Inter", "Satoshi", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --atom-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+  --atom-tracking-wide: 0.18em;
+  --atom-tracking-mark: 0.02em;
+
+  /* Radius / elevation */
+  --atom-r-sm: 8px;
+  --atom-r-md: 14px;
+  --atom-r-lg: 22px;
+  --atom-r-pill: 999px;
+  --atom-shadow: 0 24px 70px -28px rgba(0,0,0,0.8);
+  --atom-shadow-glow: 0 0 0 1px var(--atom-glass-brd), 0 30px 80px -40px var(--atom-cyan-glow);
+
+  /* Logo sizing rules (restrained, per brand standard) */
+  --atom-logo-nav:    30px;   /* nav lockup height: 28–34px */
+  --atom-logo-loader: 280px;  /* loader/splash width: 220–320px */
+  --atom-logo-hero:   420px;  /* hero max width */
+
+  /* Motion */
+  --atom-spin-dur:   28s;   /* orbital rotation — slow, premium */
+  --atom-breath-dur: 8s;    /* nucleus breathe */
+  --atom-ease:       cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---------- 2. BASE ---------- */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body.atom-v4 {
+  margin: 0;
+  background: var(--atom-black);
+  color: var(--atom-text);
+  font-family: var(--atom-font);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+}
+.atom-v4 ::selection { background: var(--atom-cyan-glow); color: #fff; }
+
+/* Ambient command-center field (subtle, never noisy) */
+.atom-field {
+  position: relative;
+  background:
+    radial-gradient(900px 600px at 18% -10%, rgba(57,191,192,0.10), transparent 60%),
+    radial-gradient(1100px 700px at 100% 0%, rgba(57,191,192,0.06), transparent 55%),
+    var(--atom-black);
+}
+.atom-grid-overlay {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.4;
+  background-image:
+    linear-gradient(var(--atom-hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--atom-hairline) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 75%);
+          mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 75%);
+}
+
+/* ---------- 3. LOGO / LOCKUP COMPONENTS ---------- */
+.atom-lockup { display: inline-flex; align-items: center; gap: 0; line-height: 0; }
+.atom-lockup svg, .atom-lockup img { display: block; }
+
+/* Nav lockup — restrained 28–34px */
+.atom-lockup--nav      { height: var(--atom-logo-nav); }
+.atom-lockup--nav svg,
+.atom-lockup--nav img  { height: var(--atom-logo-nav); width: auto; }
+
+.atom-lockup--loader   { width: var(--atom-logo-loader); }
+.atom-lockup--loader svg,
+.atom-lockup--loader img { width: 100%; height: auto; }
+
+.atom-lockup--hero     { width: min(var(--atom-logo-hero), 80vw); }
+.atom-lockup--hero svg,
+.atom-lockup--hero img { width: 100%; height: auto; }
+
+/* Text fallback lockup using live type — visual wordmark must be ΔTOM */
+.atom-wordmark-type {
+  font-family: var(--atom-font);
+  font-weight: 800;
+  letter-spacing: var(--atom-tracking-mark);
+  color: var(--atom-white);
+  display: inline-flex; align-items: baseline;
+}
+.atom-wordmark-type .o { color: var(--atom-cyan); }
+
+/* ---------- 4. ORBITAL ANIMATION (CSS, premium, slow) ---------- */
+.atom-orbit { display: inline-block; }
+.atom-orbit .orbits {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: atom-spin var(--atom-spin-dur) linear infinite;
+  will-change: transform;
+}
+.atom-orbit .nucleus {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: atom-breath var(--atom-breath-dur) ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes atom-spin  { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes atom-breath{ 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: .92; } }
+
+/* ---------- 5. BUTTONS / CHIPS ---------- */
+.atom-btn {
+  display: inline-flex; align-items: center; gap: .55em;
+  padding: .72em 1.4em; border-radius: var(--atom-r-pill);
+  font: inherit; font-weight: 600; font-size: .95rem; letter-spacing: .01em;
+  cursor: pointer; border: 1px solid transparent; text-decoration: none;
+  transition: transform .25s var(--atom-ease), box-shadow .25s var(--atom-ease), background .25s var(--atom-ease);
+}
+.atom-btn--primary {
+  background: linear-gradient(180deg, var(--atom-cyan-bright), var(--atom-cyan));
+  color: #03191a; box-shadow: 0 10px 30px -12px var(--atom-cyan-glow);
+}
+.atom-btn--primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -14px var(--atom-cyan-glow); }
+.atom-btn--ghost {
+  background: transparent; color: var(--atom-text);
+  border-color: var(--atom-glass-brd);
+}
+.atom-btn--ghost:hover { border-color: var(--atom-cyan); color: #fff; }
+
+.atom-chip {
+  display: inline-flex; align-items: center; gap: .4em;
+  padding: .3em .85em; border-radius: var(--atom-r-pill);
+  font-size: .72rem; letter-spacing: var(--atom-tracking-wide); text-transform: uppercase;
+  color: var(--atom-cyan-bright); border: 1px solid var(--atom-glass-brd);
+  background: rgba(57,191,192,0.06);
+}
+
+/* ---------- 6. PANELS / CARDS / GLASS ---------- */
+.atom-panel {
+  background: var(--atom-glass);
+  border: 1px solid var(--atom-glass-brd);
+  border-radius: var(--atom-r-lg);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: var(--atom-shadow);
+}
+.atom-card {
+  background: var(--atom-surface-2);
+  border: 1px solid var(--atom-hairline);
+  border-radius: var(--atom-r-md);
+  padding: 1.25rem;
+  transition: border-color .25s var(--atom-ease), transform .25s var(--atom-ease);
+}
+.atom-card:hover { border-color: var(--atom-glass-brd); transform: translateY(-3px); }
+
+/* ---------- 7. LOADER / SPLASH ---------- */
+.atom-loader {
+  display: flex; flex-direction: column; align-items: center; gap: 1.4rem;
+  padding: 3rem;
+}
+.atom-loader__bar {
+  width: var(--atom-logo-loader); max-width: 80vw; height: 2px;
+  background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
+}
+.atom-loader__bar > i {
+  display: block; height: 100%; width: 40%;
+  background: linear-gradient(90deg, transparent, var(--atom-cyan), transparent);
+  animation: atom-load 1.8s var(--atom-ease) infinite;
+}
+@keyframes atom-load { 0% { transform: translateX(-110%);} 100% { transform: translateX(360%);} }
+.atom-loader__caption {
+  font-size: .72rem; letter-spacing: var(--atom-tracking-wide);
+  text-transform: uppercase; color: var(--atom-text-faint);
+}
+
+/* ---------- 8. APP SHELL ---------- */
+.atom-appshell { display: grid; grid-template-columns: 240px 1fr; min-height: 520px; }
+.atom-appshell__nav {
+  background: var(--atom-surface); border-right: 1px solid var(--atom-hairline);
+  padding: 1.1rem;
+}
+.atom-appshell__topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.4rem; border-bottom: 1px solid var(--atom-hairline);
+  background: var(--atom-surface);
+}
+.atom-navitem {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .6rem .8rem; border-radius: var(--atom-r-sm);
+  color: var(--atom-text-muted); font-size: .9rem; cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.atom-navitem:hover { background: rgba(255,255,255,0.03); color: var(--atom-text); }
+.atom-navitem--active { background: rgba(57,191,192,0.10); color: var(--atom-cyan-bright); }
+.atom-navitem--active::before { content:""; width:3px; height:18px; border-radius:3px; background: var(--atom-cyan); margin-left:-.8rem; margin-right:.5rem; }
+
+/* ---------- 9. KPI / STAT ---------- */
+.atom-kpi__value { font-size: 2rem; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.atom-kpi__label { font-size: .72rem; letter-spacing: var(--atom-tracking-wide); text-transform: uppercase; color: var(--atom-text-faint); }
+.atom-kpi__delta { color: var(--atom-success); font-size: .85rem; font-weight: 600; }
+
+/* ---------- 10. AGENT CHAT BRANDING ---------- */
+/* Branded agent names ALWAYS render with Delta geometry: ΔTOM */
+.atom-agent-badge {
+  display: inline-flex; align-items: center; gap: .6rem;
+  padding: .4rem .8rem; border-radius: var(--atom-r-pill);
+  background: rgba(57,191,192,0.07); border: 1px solid var(--atom-glass-brd);
+}
+.atom-agent-badge .name { font-weight: 700; letter-spacing: var(--atom-tracking-mark); color: #fff; }
+.atom-agent-badge .name .o { color: var(--atom-cyan); }
+.atom-agent-badge__avatar { width: 26px; height: 26px; flex: none; }
+
+.atom-msg { display: flex; gap: .8rem; padding: .9rem 0; }
+.atom-msg__bubble {
+  background: var(--atom-surface-2); border: 1px solid var(--atom-hairline);
+  border-radius: 4px 14px 14px 14px; padding: .8rem 1rem; max-width: 60ch;
+  color: var(--atom-text); font-size: .94rem;
+}
+.atom-msg--agent .atom-msg__bubble { border-color: var(--atom-glass-brd); background: rgba(57,191,192,0.05); }
+
+/* ---------- 11. MOBILE SHELL ---------- */
+.atom-phone {
+  width: 300px; aspect-ratio: 9/19.5; border-radius: 40px;
+  background: var(--atom-black); border: 8px solid #15181b;
+  box-shadow: var(--atom-shadow); overflow: hidden; position: relative;
+}
+.atom-phone__notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 24px; background: #15181b; border-radius: 0 0 16px 16px; z-index: 5;
+}
+.atom-phone__splash {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.2rem;
+}
+.atom-phone__tabbar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+  display: flex; align-items: center; justify-content: space-around;
+  background: var(--atom-surface); border-top: 1px solid var(--atom-hairline);
+}
+
+/* ============================================================
+   12. VR / SPATIAL RULES — Oculus / Meta / WebXR
+   World-space surfaces must read against dark spatial fields.
+   ============================================================ */
+
+/* Emissive treatment: the brand "glows" rather than reflects.
+   In CSS preview we approximate with text-shadow / drop-shadow. */
+.atom-vr-emissive {
+  filter: drop-shadow(0 0 14px var(--atom-cyan-glow));
+}
+
+/* World-space panel — semi-opaque dark glass + cyan rim.
+   Mirrors atom-v4-vr-panel.svg. Use as texture on a world quad. */
+.atom-vr-panel {
+  background:
+    linear-gradient(180deg, rgba(14,20,22,0.92), rgba(7,11,12,0.96));
+  border: 1px solid rgba(57,191,192,0.55);
+  border-radius: 28px;
+  box-shadow: 0 0 60px -10px var(--atom-cyan-glow), inset 0 0 0 1px rgba(255,255,255,0.05);
+  /* Contrast floor: panel keeps >= 4.5:1 for lockup white on this fill */
+}
+
+/* Spatial field backdrop for VR splash previews */
+.atom-vr-field {
+  background:
+    radial-gradient(60% 50% at 50% 42%, rgba(57,191,192,0.18), transparent 70%),
+    radial-gradient(80% 80% at 50% 42%, #0c181a, #000 80%);
+}
+
+/* Headset readability helpers (documented in VR_OCULUS_META_GUIDE.md):
+   - .atom-vr-safe-text enforces a readable minimum at typical 1.5–2.5m. */
+.atom-vr-safe-text {
+  letter-spacing: 0.04em;          /* aberration-safe spacing */
+  font-weight: 600;                /* heavier weight survives low PPD */
+  color: #fff;
+  text-shadow: 0 0 10px rgba(57,191,192,0.30); /* subtle bloom */
+}
+/* Comfort zone marker (foveal): keep primary brand within central ~30° */
+.atom-vr-foveal { max-width: 38ch; margin-inline: auto; text-align: center; }
+
+/* ---------- 13. MOTION / ACCESSIBILITY ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .atom-orbit .orbits,
+  .atom-orbit .nucleus,
+  .atom-loader__bar > i { animation: none !important; }
+  .v4-lka-orbits, .v4-lka-nucleus { animation: none !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* ---------- 14. UTILITIES ---------- */
+.atom-eyebrow { font-size: .72rem; letter-spacing: var(--atom-tracking-wide); text-transform: uppercase; color: var(--atom-cyan-bright); }
+.atom-muted { color: var(--atom-text-muted); }
+.atom-faint { color: var(--atom-text-faint); }
+.atom-mono  { font-family: var(--atom-mono); }
+.atom-divider { height: 1px; background: var(--atom-hairline); border: 0; }

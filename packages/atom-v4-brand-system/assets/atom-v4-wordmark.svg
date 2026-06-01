@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 220" width="820" height="220" role="img" aria-labelledby="v4-wm-title v4-wm-desc">
+  <title id="v4-wm-title">ΔTOM V4 wordmark</title>
+  <desc id="v4-wm-desc">ΔTOM V4 wordmark. The branded wordmark uses a capital Greek Delta (Δ) in place of Latin A — the visible "A" is ALWAYS Delta-shaped, never Latin A. Hollow Δ + block T + cyan O ring + block M on one cap height. Δ, T and M are pure white #FFFFFF; the O is brand cyan #39BFC0. For dark surfaces.</desc>
+  <!-- Δ — hollow triangle, sharp apex, flat baseline -->
+  <path d="M 96 26 L 192 194 L 0 194 Z M 96 84 L 146 178 L 46 178 Z"
+        fill="#ffffff" fill-rule="evenodd"/>
+  <!-- T — geometric block T -->
+  <path d="M 218 26 H 388 V 56 H 320 V 194 H 286 V 56 H 218 Z" fill="#ffffff"/>
+  <!-- O — cyan ring -->
+  <circle cx="498" cy="110" r="74" fill="none" stroke="#39bfc0" stroke-width="24"/>
+  <!-- M — two verticals + central V -->
+  <path d="M 614 194 V 26 H 646 L 710 168 L 774 26 H 806 V 194 H 774 V 96 L 722 194 H 698 L 646 96 V 194 Z"
+        fill="#ffffff"/>
+</svg>

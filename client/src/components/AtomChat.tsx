@@ -193,7 +193,7 @@ export default function AtomChat() {
           <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
             <div className="flex-1 min-w-0 flex items-baseline gap-2">
               <span className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>Ask</span>
-              <DtomLogo size="sm" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
+              <DtomLogo size="sm" showIcon={true} spinning={true} showWordmark={true} ariaLabel="ΔTOM" />
             </div>
             <button
               onClick={() => setOpen(false)}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 220" width="1080" height="220" role="img" aria-labelledby="v4-lka-title v4-lka-desc">
+  <title id="v4-lka-title">ΔTOM V4 canonical lockup (animated)</title>
+  <desc id="v4-lka-desc">ΔTOM V4 animated lockup. Geometry identical to the static lockup; the orbits rotate slowly (28s) and the nucleus breathes (8s) — premium, never a cheap spinner. The wordmark never animates. Respects prefers-reduced-motion: animation pauses to the static frame.</desc>
+  <defs>
+    <radialGradient id="v4-lka-nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#c8f3f3"/>
+      <stop offset="65%" stop-color="#39bfc0" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#39bfc0" stop-opacity="0"/>
+    </radialGradient>
+    <style><![CDATA[
+      .v4-lka-orbits {
+        transform-box: fill-box; transform-origin: 50% 50%;
+        animation: v4-lka-spin 28s linear infinite; will-change: transform;
+      }
+      .v4-lka-nucleus {
+        transform-box: fill-box; transform-origin: 50% 50%;
+        animation: v4-lka-breath 8s ease-in-out infinite; will-change: transform, opacity;
+      }
+      @keyframes v4-lka-spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      @keyframes v4-lka-breath { 0%,100% { transform: scale(1); opacity: 1;} 50% { transform: scale(1.08); opacity: .92;} }
+      @media (prefers-reduced-motion: reduce) {
+        .v4-lka-orbits, .v4-lka-nucleus { animation: none; }
+      }
+    ]]></style>
+  </defs>
+  <g>
+    <g class="v4-lka-orbits" fill="none" stroke="#39bfc0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="110" cy="110" rx="80" ry="30"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(60 110 110)"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(120 110 110)"/>
+    </g>
+    <g class="v4-lka-nucleus">
+      <circle cx="110" cy="110" r="14" fill="url(#v4-lka-nucleus)"/>
+      <circle cx="110" cy="110" r="3.6" fill="#ffffff"/>
+    </g>
+  </g>
+  <g transform="translate(260,0)">
+    <path d="M 96 26 L 192 194 L 0 194 Z M 96 84 L 146 178 L 46 178 Z" fill="#ffffff" fill-rule="evenodd"/>
+    <path d="M 218 26 H 388 V 56 H 320 V 194 H 286 V 56 H 218 Z" fill="#ffffff"/>
+    <circle cx="498" cy="110" r="74" fill="none" stroke="#39bfc0" stroke-width="24"/>
+    <path d="M 614 194 V 26 H 646 L 710 168 L 774 26 H 806 V 194 H 774 V 96 L 722 194 H 698 L 646 96 V 194 Z" fill="#ffffff"/>
+  </g>
+</svg>

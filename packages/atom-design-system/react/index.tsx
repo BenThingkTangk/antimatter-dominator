@@ -104,99 +104,74 @@ export function AtomLogo({
       className={`atom-logo atom-logo--${size} ${className || ''}`.trim()}
       style={{ display: 'inline-flex', alignItems: 'center', gap: dims.gap, ...style }}
     >
-      {/* Orbital icon — canonical: 3 ellipses at 0°/60°/120° + glowing nucleus.
-          Default brand spec is wordmark-only; pass showIcon to add the orbital. */}
+      {/* Orbital icon — V4 canonical: 3 ellipses at 0°/60°/120° + glowing
+          nucleus, brand cyan #39BFC0. Default brand spec is wordmark-only;
+          pass showIcon to add the orbital. */}
       {showIcon && (
       <svg
-        viewBox="0 0 200 200"
+        viewBox="0 0 120 120"
         width={dims.icon}
         height={dims.icon}
         aria-hidden="true"
         style={{
           flexShrink: 0,
-          animation: spinning ? 'atom-orbit-spin 6s linear infinite reverse' : undefined,
-          filter: 'drop-shadow(0 0 14px rgba(0,200,200,0.45))',
+          filter: 'drop-shadow(0 0 14px rgba(57,191,192,0.45))',
         }}
       >
         <defs>
-          <radialGradient id="atomlogo-core" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`atomlogo-core-${size}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="35%" stopColor="#bff3f3" stopOpacity="0.95" />
-            <stop offset="70%" stopColor="#00c8c8" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#00c8c8" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="atomlogo-shell" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#0a1a1c" stopOpacity="1" />
-            <stop offset="70%" stopColor="#06181a" stopOpacity="1" />
-            <stop offset="100%" stopColor="#04121a" stopOpacity="1" />
+            <stop offset="35%" stopColor="#c8f3f3" stopOpacity="1" />
+            <stop offset="65%" stopColor="#39bfc0" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#39bfc0" stopOpacity="0" />
           </radialGradient>
         </defs>
-        <g fill="none" stroke="var(--atom-primary, #3fb5b5)" strokeWidth="4.5" strokeLinecap="round">
-          <ellipse cx="100" cy="100" rx="82" ry="32" />
-          <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(60 100 100)" />
-          <ellipse cx="100" cy="100" rx="82" ry="32" transform="rotate(120 100 100)" />
+        <g
+          fill="none"
+          stroke="var(--atom-cyan, #39BFC0)"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transformBox: 'fill-box',
+            transformOrigin: '50% 50%',
+            animation: spinning ? 'atom-orbit-spin 28s linear infinite' : undefined,
+          }}
+        >
+          <ellipse cx="60" cy="60" rx="46" ry="17" />
+          <ellipse cx="60" cy="60" rx="46" ry="17" transform="rotate(60 60 60)" />
+          <ellipse cx="60" cy="60" rx="46" ry="17" transform="rotate(120 60 60)" />
         </g>
-        <circle cx="100" cy="100" r="26" fill="url(#atomlogo-shell)" />
-        <circle cx="100" cy="100" r="18" fill="url(#atomlogo-core)" />
-        <circle cx="100" cy="100" r="5" fill="#ffffff" />
+        <circle cx="60" cy="60" r="8" fill={`url(#atomlogo-core-${size})`} />
+        <circle cx="60" cy="60" r="2.2" fill="#ffffff" />
       </svg>
       )}
 
-      {/* ΔTOM wordmark — canonical clean strokes per brand spec (image-3 reference).
-          Δ = open triangle outline. T = vertical + horizontal. O = glowing teal ring. M = peaks.
-          All strokes 18px on a 200-tall canvas. Equal optical spacing. */}
+      {/* ΔTOM wordmark — V4 canonical filled glyph geometry.
+          Δ/T/M in white (currentColor), O is the brand-cyan ring.
+          Greek Delta geometry; the visual wordmark is never Latin "A". */}
       {showWordmark && (
         <svg
           className="atom-logo__wordmark"
           aria-hidden="true"
-          viewBox="0 0 760 200"
+          viewBox="0 0 820 220"
           preserveAspectRatio="xMidYMid meet"
           style={{
             display: 'inline-block',
             height: dims.word * 1.4,
             width: 'auto',
-            color: 'var(--atom-text, #f0f0f0)',
+            color: 'var(--atom-text, #ffffff)',
             overflow: 'visible',
           }}
         >
-          <defs>
-            <filter id={`atom-o-glow-${size}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <g fill="none" strokeLinecap="square" strokeLinejoin="miter">
-            {/* Δ — large open triangle, apex aligned to T/O/M cap-line. Same x-height as the other letters. */}
-            <polygon
-              points="115,175 15,175 65,34"
-              stroke="currentColor"
-              strokeWidth="18"
-              strokeLinejoin="miter"
-            />
-            {/* T — horizontal crossbar + vertical stem, ample letterspacing */}
-            <line x1="175" y1="34" x2="345" y2="34" stroke="currentColor" strokeWidth="18" />
-            <line x1="260" y1="34" x2="260" y2="175" stroke="currentColor" strokeWidth="18" />
-            {/* O — glowing teal ring, centered on the cap-line midpoint */}
-            <circle
-              cx="460"
-              cy="104"
-              r="70"
-              stroke="var(--atom-primary, #00c8c8)"
-              strokeWidth="18"
-              filter={`url(#atom-o-glow-${size})`}
-            />
-            {/* M — four-stroke peak letterform */}
-            <polyline
-              points="570,175 570,34 645,150 720,34 720,175"
-              stroke="currentColor"
-              strokeWidth="18"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          </g>
+          {/* Δ — solid Greek Delta with cut-out (Greek Delta geometry, not Latin A) */}
+          <path d="M 96 26 L 192 194 L 0 194 Z M 96 84 L 146 178 L 46 178 Z" fill="currentColor" fillRule="evenodd" />
+          {/* T */}
+          <path d="M 218 26 H 388 V 56 H 320 V 194 H 286 V 56 H 218 Z" fill="currentColor" />
+          {/* O — brand cyan ring */}
+          <circle cx="498" cy="110" r="74" fill="none" stroke="var(--atom-cyan, #39BFC0)" strokeWidth="24" />
+          {/* M */}
+          <path d="M 614 194 V 26 H 646 L 710 168 L 774 26 H 806 V 194 H 774 V 96 L 722 194 H 698 L 646 96 V 194 Z" fill="currentColor" />
         </svg>
       )}
     </span>
@@ -405,7 +380,7 @@ export function AtomBootLoader({
               transformOrigin: 'center',
             }}
           >
-            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.9" />
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="var(--atom-cyan, #39BFC0)" strokeWidth="1.4" opacity="0.9" />
           </svg>
           <svg
             viewBox="0 0 180 180"
@@ -416,7 +391,7 @@ export function AtomBootLoader({
               transformOrigin: 'center',
             }}
           >
-            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.55" />
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="var(--atom-cyan, #39BFC0)" strokeWidth="1.4" opacity="0.55" />
           </svg>
           <svg
             viewBox="0 0 180 180"
@@ -427,21 +402,21 @@ export function AtomBootLoader({
               transformOrigin: 'center',
             }}
           >
-            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="#00c8c8" strokeWidth="1.4" opacity="0.35" />
+            <ellipse cx="90" cy="90" rx="78" ry="30" fill="none" stroke="var(--atom-cyan, #39BFC0)" strokeWidth="1.4" opacity="0.35" />
           </svg>
           <div
             style={{
               position: 'absolute', top: '50%', left: '50%',
               width: 22, height: 22, transform: 'translate(-50%,-50%)',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, #fff 0%, #fff 35%, rgba(0,200,200,0) 70%)',
-              boxShadow: '0 0 12px rgba(255,255,255,0.9), 0 0 36px rgba(0,200,200,0.6), 0 0 80px rgba(0,200,200,0.35)',
+              background: 'radial-gradient(circle, #fff 0%, #fff 35%, rgba(57,191,192,0) 70%)',
+              boxShadow: '0 0 12px rgba(255,255,255,0.9), 0 0 36px rgba(57,191,192,0.6), 0 0 80px rgba(57,191,192,0.35)',
               animation: 'atom-pulse-dot 2.2s ease-in-out infinite',
             }}
           />
         </div>
 
-        {/* ΔTOM staggered wordmark — 4 letters, O in teal, fade-in stagger */}
+        {/* ΔTOM staggered wordmark — 4 letters, O in brand cyan, fade-in stagger */}
         <div
           aria-label="ΔTOM"
           style={{
@@ -458,7 +433,7 @@ export function AtomBootLoader({
         >
           <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 200ms forwards' }}>Δ</span>
           <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 340ms forwards' }}>T</span>
-          <span style={{ opacity: 0, transform: 'translateY(0.4em)', color: 'var(--atom-primary, #00c8c8)', textShadow: '0 0 18px rgba(0,200,200,0.5)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 480ms forwards' }}>O</span>
+          <span style={{ opacity: 0, transform: 'translateY(0.4em)', color: 'var(--atom-cyan, #39BFC0)', textShadow: '0 0 18px rgba(57,191,192,0.5)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 480ms forwards' }}>O</span>
           <span style={{ opacity: 0, transform: 'translateY(0.4em)', animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 620ms forwards' }}>M</span>
         </div>
 
@@ -474,7 +449,7 @@ export function AtomBootLoader({
             animation: 'atom-reveal-fade 600ms cubic-bezier(0.16,1,0.3,1) 800ms forwards',
           }}
         >
-          Initialising voice stack · Nirmata
+          Initializing ΔTOM · Spatial · Agent · Cloud
         </div>
 
         {/* Progress bar */}
@@ -495,8 +470,8 @@ export function AtomBootLoader({
               position: 'absolute',
               inset: 0,
               width: '40%',
-              background: 'linear-gradient(90deg, transparent, var(--atom-primary, #00c8c8), transparent)',
-              boxShadow: '0 0 18px rgba(0,200,200,0.55)',
+              background: 'linear-gradient(90deg, transparent, var(--atom-cyan, #39BFC0), transparent)',
+              boxShadow: '0 0 18px rgba(57,191,192,0.55)',
               animation: 'atom-loader-sweep 1.4s ease-in-out infinite',
             }}
           />

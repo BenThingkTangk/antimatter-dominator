@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1024" width="2048" height="1024" role="img" aria-labelledby="v4-vrp-title v4-vrp-desc">
+  <title id="v4-vrp-title">ΔTOM V4 VR world-space panel</title>
+  <desc id="v4-vrp-desc">ΔTOM V4 VR-safe world-space panel (2:1) for Oculus/Meta dashboards, helmet/cockpit HUDs and menu surfaces. Semi-opaque dark glass plate with a subtle cyan rim keeps the lockup legible against any spatial background. Recommended world size ~0.8m wide at ~1.5m distance. Brand cyan #39BFC0.</desc>
+  <defs>
+    <linearGradient id="v4-vrp-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#0e1416" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#070b0c" stop-opacity="0.96"/>
+    </linearGradient>
+    <radialGradient id="v4-vrp-nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#c8f3f3"/>
+      <stop offset="65%" stop-color="#39bfc0" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#39bfc0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- glass plate with cyan rim -->
+  <rect x="40" y="40" width="1968" height="944" rx="64" fill="url(#v4-vrp-glass)" stroke="#39bfc0" stroke-opacity="0.55" stroke-width="3"/>
+  <rect x="40" y="40" width="1968" height="944" rx="64" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+  <!-- lockup centered -->
+  <g transform="translate(360,402) scale(1.05)">
+    <g fill="none" stroke="#39bfc0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="110" cy="110" rx="80" ry="30"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(60 110 110)"/>
+      <ellipse cx="110" cy="110" rx="80" ry="30" transform="rotate(120 110 110)"/>
+    </g>
+    <circle cx="110" cy="110" r="14" fill="url(#v4-vrp-nucleus)"/>
+    <circle cx="110" cy="110" r="3.6" fill="#ffffff"/>
+    <g transform="translate(260,0)">
+      <path d="M 96 26 L 192 194 L 0 194 Z M 96 84 L 146 178 L 46 178 Z" fill="#ffffff" fill-rule="evenodd"/>
+      <path d="M 218 26 H 388 V 56 H 320 V 194 H 286 V 56 H 218 Z" fill="#ffffff"/>
+      <circle cx="498" cy="110" r="74" fill="none" stroke="#39bfc0" stroke-width="24"/>
+      <path d="M 614 194 V 26 H 646 L 710 168 L 774 26 H 806 V 194 H 774 V 96 L 722 194 H 698 L 646 96 V 194 Z" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>

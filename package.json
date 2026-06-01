@@ -17,6 +17,7 @@
     "@humeai/voice-react": "^0.2.14",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@nirmata/atom-design-system": "file:./packages/atom-design-system",
+    "@nirmata/atom-v4-brand-system": "file:./packages/atom-v4-brand-system",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",
     "@radix-ui/react-aspect-ratio": "^1.1.3",
