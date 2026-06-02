@@ -13,8 +13,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, Send, X, ExternalLink, Loader2 } from "lucide-react";
-import { DtomLogo } from "@nirmata/atom-design-system/react";
+import { Send, X, ExternalLink } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -84,6 +83,15 @@ function getContext(pathname: string): string {
   }
   return "general";
 }
+
+const CONTEXT_LABEL: Record<string, string> = {
+  general: "Assistant",
+  warbook: "War Book",
+  market: "Market Intel",
+  pitch: "Pitch Lab",
+  objection: "Objections",
+  leadgen: "Call Review",
+};
 
 export default function AtomChat() {
   const [open, setOpen] = useState(false);
@@ -163,8 +171,10 @@ export default function AtomChat() {
       {/* Floating launcher — always present, bottom-right */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Ask ΔTOM"
-        className="fixed bottom-6 right-6 z-50 rounded-full flex items-center justify-center transition-all"
+        aria-label="Ask ATOM"
+        title="Ask ATOM"
+        className="atom-chat-launcher fixed bottom-6 right-6 z-50 rounded-full flex items-center justify-center transition-all"
+        data-open={open ? "1" : undefined}
         style={{
           width: 56, height: 56,
           background: "color-mix(in oklab, var(--color-primary) 18%, var(--color-bg))",
@@ -173,7 +183,7 @@ export default function AtomChat() {
           backdropFilter: "blur(12px)",
         }}
       >
-        <AtomChatMark size={28} />
+        {open ? <X size={22} style={{ color: "var(--color-primary)" }} /> : <AtomChatMark size={28} />}
       </button>
 
       {/* Panel */}
@@ -189,16 +199,46 @@ export default function AtomChat() {
             boxShadow: "var(--shadow-lg)",
           }}
         >
-          {/* Header — canonical ΔTOM wordmark only, no mode subtitle */}
+          {/* Header — ATOM mark + wordmark, live context + status */}
           <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
-            <div className="flex-1 min-w-0 flex items-baseline gap-2">
-              <span className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>Ask</span>
-              <DtomLogo size="sm" showIcon={true} spinning={true} showWordmark={true} ariaLabel="ΔTOM" />
+            <AtomChatMark size={26} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-sm font-semibold tracking-[0.2em]"
+                  style={{ color: "var(--color-text)", fontFamily: "var(--font-mono)" }}
+                >
+                  ATOM
+                </span>
+                <span
+                  className="text-[10px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded"
+                  style={{
+                    color: "var(--color-primary)",
+                    background: "color-mix(in oklab, var(--color-primary) 10%, transparent)",
+                    border: "1px solid color-mix(in oklab, var(--color-primary) 22%, transparent)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {CONTEXT_LABEL[context] || "Assistant"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span
+                  style={{
+                    width: 6, height: 6, borderRadius: 999,
+                    background: "var(--color-primary)",
+                    boxShadow: "0 0 8px var(--color-primary-glow-strong)",
+                  }}
+                />
+                <span className="text-[10px] tracking-[0.08em]" style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
+                  Online · cited answers
+                </span>
+              </div>
             </div>
             <button
               onClick={() => setOpen(false)}
               aria-label="Close ATOM Chat"
-              className="w-8 h-8 flex items-center justify-center rounded-lg"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
               style={{ color: "var(--color-text-muted)" }}
             >
               <X size={16} />
@@ -209,11 +249,14 @@ export default function AtomChat() {
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="atom-chat-hero-mark flex items-center justify-center mb-4">
+                  <AtomChatMark size={52} />
+                </div>
                 <div
-                  className="flex items-center justify-center mb-5"
-                  style={{ width: "170px" }}
+                  className="text-lg font-semibold tracking-[0.24em] mb-2"
+                  style={{ color: "var(--color-text)", fontFamily: "var(--font-mono)" }}
                 >
-                  <DtomLogo size="md" showIcon={false} showWordmark={true} ariaLabel="ΔTOM" />
+                  ATOM
                 </div>
                 <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--color-text-muted)" }}>
                   Ask anything about your prospects, products, the platform, or live market signals. Cited from primary sources.
@@ -298,11 +341,13 @@ export default function AtomChat() {
             {loading && (
               <div className="flex justify-start">
                 <div
-                  className="rounded-2xl px-4 py-3 text-sm flex items-center gap-2"
+                  className="rounded-2xl px-4 py-3 text-sm flex items-center gap-2.5"
                   style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                 >
-                  <Loader2 size={14} className="animate-spin" />
-                  <span style={{ fontFamily: "var(--font-mono)" }}>thinking…</span>
+                  <span className="atom-chat-dots" aria-hidden="true">
+                    <i /><i /><i />
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)" }}>thinking</span>
                 </div>
               </div>
             )}

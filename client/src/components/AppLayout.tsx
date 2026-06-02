@@ -158,7 +158,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // exists; rendered as a separate group beneath the main modules.
   const adminNavItems: NavItem[] = [];
   if (session.isSuperAdmin) {
-    adminNavItems.push({ href: "/admin/hq", icon: Crown, label: "Nirmata HQ" });
+    adminNavItems.push({ href: "/admin/hq", icon: Crown, label: "ATOM HQ" });
     adminNavItems.push({ href: "/admin/hq/seat-costs", icon: Coins, label: "Seat Costs" });
     adminNavItems.push({ href: "/admin/vibranium-ga", icon: Zap, label: "Vibranium GA" });
     adminNavItems.push({ href: "/billing", icon: CreditCard, label: "Billing & Plan" });
@@ -386,7 +386,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {(!collapsed || isMobile) && (
           <div className="px-3 py-2">
             <p className="text-xs font-light" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
-              ΔTOM · Nirmata Holdings · © 2026
+              ΔTOM · ATOM · © 2026
             </p>
           </div>
         )}

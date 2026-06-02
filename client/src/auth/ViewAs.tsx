@@ -102,7 +102,7 @@ const VIEW_META: Record<ViewAsRole, { label: string; icon: any; color: string; r
     icon: Crown,
     color: "#ffd166",
     rgba: "255,209,102",
-    desc: "Full Nirmata HQ · Seat Costs · Vibranium GA · every module",
+    desc: "Full ATOM HQ · Seat Costs · Vibranium GA · every module",
   },
   manager: {
     label: "Manager",

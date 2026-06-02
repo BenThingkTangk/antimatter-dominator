@@ -26,7 +26,7 @@ const DEMO_LEADS: Lead[] = [
   { id: "l2", name: "Carlos Gomez",  title: "Director of Sales",  company: "Akamai",        phone: "+1 555 0188", dealValueUsd: 240000, signalScore: 88, hot: true },
   { id: "l3", name: "Priya Shah",    title: "Head of RevOps",     company: "Five9",         phone: "+1 555 0177", dealValueUsd:  60000, signalScore: 81 },
   { id: "l4", name: "Owen Reilly",   title: "CMO",                company: "TierPoint",     phone: "+1 555 0123", dealValueUsd:  48000, signalScore: 74 },
-  { id: "l5", name: "Mei Tanaka",    title: "Chief Medical Off.", company: "ClinixAI",      phone: "+1 555 0166", dealValueUsd: 150000, signalScore: 70 },
+  { id: "l5", name: "Mei Tanaka",    title: "Chief Medical Off.", company: "Veradigm",      phone: "+1 555 0166", dealValueUsd: 150000, signalScore: 70 },
 ];
 
 function formatUsd(n: number): string {

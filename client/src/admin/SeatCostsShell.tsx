@@ -124,7 +124,7 @@ export default function SeatCostsShell() {
           </div>
           <p style={{ color: ATOM_MUTED }}>
             This surface exposes our COGS, competitive matrix, and recommended pricing across every ATOM module and is
-            visible only to Nirmata super-admins. Your account ({user?.email || "anon"}) is not on the allow-list.
+            visible only to ATOM super-admins. Your account ({user?.email || "anon"}) is not on the allow-list.
           </p>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function SeatCostsShell() {
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 18 }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: ATOM_AMBER, marginBottom: 6 }}>
-            <Crown size={14} /> Nirmata HQ · Internal COGS + Pricing
+            <Crown size={14} /> ATOM HQ · Internal COGS + Pricing
           </div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 800, letterSpacing: "-0.02em", margin: 0, color: "var(--color-text)" }}>
             Seat Costs, Competitors &amp; Plan Structure

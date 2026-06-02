@@ -1,0 +1,99 @@
+{
+  "$schema": "https://atom.systems/schema/brand-standard.json",
+  "brand": "ATOM",
+  "name": "ATOM Brand Standard OS",
+  "version": "2.1.0",
+  "mode": "dark-only",
+  "description": "The single source of truth for ATOM brand and design standards across ATOM VR, ATOM SalesOS, ATOM Sales Dominator, ATOM EvidenceOS, ATOM Console, ATOM Generator, web, mobile, PDF, presentation, voice intelligence, analytics, and ATOM AI chat-agent surfaces.",
+  "principles": [
+    "Velocity — every interaction resolves at human speed; 180ms base, spring easing.",
+    "Intelligence — type, contrast and color encode meaning before words do.",
+    "Restraint — one cyan signal, accents only as state or data. No decoration.",
+    "Consistency — one mark, one voice, one token sheet across every surface."
+  ],
+  "typography": {
+    "display": "Cabinet Grotesk",
+    "body": "Satoshi",
+    "mono": "JetBrains Mono",
+    "scaleTokens": ["--atom-text-xs","--atom-text-sm","--atom-text-base","--atom-text-lg","--atom-text-xl","--atom-text-2xl","--atom-text-3xl"]
+  },
+  "color": {
+    "surfaces": {
+      "bg": "#050607",
+      "surface": "#0b0e10",
+      "surface-2": "#11161a",
+      "surface-3": "#181f24",
+      "surface-4": "#1f282e"
+    },
+    "text": {
+      "default": "#eef6f5",
+      "muted": "#9aa8ad",
+      "faint": "#5a676d",
+      "inverse": "#04100f"
+    },
+    "primary": {
+      "name": "ATOM Cyan",
+      "value": "#22e6d6",
+      "bright": "#4ff3e6",
+      "dim": "#14a99d"
+    },
+    "accents": {
+      "coral": { "value": "#ff7b6b", "role": "error / alert / objection" },
+      "gold":  { "value": "#f5c842", "role": "warning / signal / score" },
+      "iris":  { "value": "#c084fc", "role": "reasoning / analytics" }
+    },
+    "semantic": {
+      "success": "#22e6d6",
+      "warning": "#f5c842",
+      "danger":  "#ff7b6b",
+      "info":    "#c084fc"
+    }
+  },
+  "radius": { "sm": "0.375rem", "md": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px" },
+  "elevation": {
+    "sm": "0 1px 3px rgba(0,0,0,0.45)",
+    "md": "0 4px 16px rgba(0,0,0,0.5)",
+    "lg": "0 12px 40px rgba(0,0,0,0.6)",
+    "xl": "0 24px 64px rgba(0,0,0,0.7)",
+    "glow": "0 0 40px rgba(34,230,214,0.16)"
+  },
+  "motion": {
+    "ease": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "easeInOut": "cubic-bezier(0.65, 0, 0.35, 1)",
+    "durations": { "fast": "120ms", "base": "180ms", "slow": "360ms" },
+    "reducedMotion": "Honor prefers-reduced-motion; collapse durations to ~1ms and freeze loops."
+  },
+  "voice": {
+    "tone": "Calm, precise, human. Listens before it speaks.",
+    "do": ["Lead with the answer", "Short, declarative sentences", "Name the next action"],
+    "dont": ["Hype words", "Exclamation stacking", "Generic AI filler"]
+  },
+  "loader": {
+    "asset": "/brand/atom-loader.svg",
+    "wordmark": "ATOM",
+    "rule": "Refined spinning orbital cage with solid strokes and a single breathing nucleus halo. Never fuzzy, sketchy, or inconsistent."
+  },
+  "productSurfaces": ["ATOM VR", "ATOM SalesOS", "ATOM Sales Dominator", "ATOM EvidenceOS", "ATOM Console", "ATOM Generator"],
+  "surfaces": ["web", "mobile", "vr-spatial", "pdf", "presentation", "sales-os", "sales-dominator", "evidence-os", "console", "generator", "voice-intelligence", "ai-chat-agent"],
+  "salesOsCompatibility": {
+    "rule": "Import tokens first and selectively apply namespaced .atom-* primitives. Do not override existing sidebars, dense tables, row heights, form controls, campaign lists, or bottom-right nucleus action controls.",
+    "density": "compact",
+    "allowedAccents": ["cyan actions", "iris reasoning", "gold scores", "coral objections"]
+  },
+  "agentGenUi": {
+    "requiredPanels": ["conversation", "tool telemetry", "evidence", "buyer intent", "sentiment", "next best action"],
+    "voiceStates": ["idle", "listening", "thinking", "speaking", "handoff"],
+    "analytics": ["intent score", "objection heat", "evidence fit", "confidence", "urgency", "empathy", "authority"]
+  },
+  "assets": {
+    "tokensCss": "/brand/atom-tokens.css",
+    "componentsCss": "/brand/atom-components.css",
+    "loaderSvg": "/brand/atom-loader.svg",
+    "logoSvg": "/assets/atom-logo.svg"
+  },
+  "governance": {
+    "versioning": "semver — MAJOR for token renames/removals, MINOR for additive tokens/components, PATCH for fixes.",
+    "channel": "atom-brand-os",
+    "darkOnly": true
+  }
+}

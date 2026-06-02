@@ -2,7 +2,8 @@ import { Switch, Route, Router, Redirect, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, useCallback } from "react";
-import { DtomBrandShell, DtomBootLoader } from "@nirmata/atom-design-system/react";
+import { DtomBrandShell } from "@nirmata/atom-design-system/react";
+import { AtomLoader } from "./components/AtomLoader";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AppLayout } from "./components/AppLayout";
@@ -39,7 +40,7 @@ import AtomChat from "./components/AtomChat";
 import MobileApp from "./mobile/MobileApp";
 import { initPush, subscribePush } from "./lib/push-notifications";
 
-// Tenant-admins do NOT see platform-level surfaces (Nirmata HQ, Vibranium GA,
+// Tenant-admins do NOT see platform-level surfaces (ATOM HQ, Vibranium GA,
 // Billing & Plan, ATOM System Control). Even if they type the URL directly,
 // they're bounced to the default product module.
 //
@@ -286,7 +287,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <DtomBrandShell assetBasePath="/dtom-assets" theme="dark" brand="atom">
         {!bootDone && (
-          <DtomBootLoader
+          <AtomLoader
             active={!bootDone}
             minimumDrama={2200}
             onComplete={() => {

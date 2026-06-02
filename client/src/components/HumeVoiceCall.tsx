@@ -153,10 +153,10 @@ function LiveCallInterface({ companyName, contactName, productName }: {
           {status.value === "connected" && <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
           <div>
             <h3 className="text-sm font-semibold">
-              {status.value === "connected" ? `ΔTOM Live Call — ${contactName} at ${companyName}` : "ΔTOM Voice Ready"}
+              {status.value === "connected" ? `ATOM Live Call — ${contactName} at ${companyName}` : "ATOM Voice Ready"}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {status.value === "connected" ? `${formatDuration(callDuration)} · ${productName}` : "Ring, pick up, say hello — ΔTOM will greet them by name"}
+              {status.value === "connected" ? `${formatDuration(callDuration)} · ${productName}` : "Ring, pick up, say hello — ATOM will greet them by name"}
             </p>
           </div>
         </div>
@@ -187,7 +187,7 @@ function LiveCallInterface({ companyName, contactName, productName }: {
                       {isAtom ? <Brain className="w-3 h-3 text-primary" /> : <User className="w-3 h-3" />}
                     </div>
                     <div className={`max-w-[85%] rounded-lg p-2 text-xs ${isAtom ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"}`}>
-                      <p className="text-[10px] font-medium text-muted-foreground mb-0.5">{isAtom ? "ΔTOM" : "Contact"}</p>
+                      <p className="text-[10px] font-medium text-muted-foreground mb-0.5">{isAtom ? "ATOM" : "Contact"}</p>
                       <p className="leading-relaxed">{msg.message?.content || ""}</p>
                     </div>
                   </div>
@@ -199,7 +199,7 @@ function LiveCallInterface({ companyName, contactName, productName }: {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Line open — waiting for pickup…</span>
                   </div>
-                  <span className="text-[10px] opacity-70">ΔTOM stays silent until the prospect says “hello”</span>
+                  <span className="text-[10px] opacity-70">ATOM stays silent until the prospect says “hello”</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -220,7 +220,7 @@ function LiveCallInterface({ companyName, contactName, productName }: {
               <MiniGauge
                 value={buyerIntent}
                 label="Buyer Intent"
-                color={buyerIntent >= 70 ? "hsl(150, 60%, 45%)" : buyerIntent >= 40 ? "hsl(190, 95%, 50%)" : "hsl(220, 14%, 50%)"}
+                color={buyerIntent >= 70 ? "var(--color-primary, #22e6d6)" : buyerIntent >= 40 ? "var(--color-primary-2, #4ff3e6)" : "hsl(220, 14%, 50%)"}
               />
             </div>
 
@@ -362,7 +362,7 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
-        <span className="text-sm">Initializing ΔTOM voice engine...</span>
+        <span className="text-sm">Initializing ATOM voice engine...</span>
       </div>
     );
   }
@@ -377,7 +377,7 @@ export function HumeVoiceCallWrapper({ companyName, contactName, productName, pr
     );
   }
 
-  // ΔTOM Voice 2.0 — Pickup Detection + Steve Jobs Keynote voice
+  // ATOM Voice 2.0 — Pickup Detection + Steve Jobs Keynote voice
   // Prompt, voice, pickup-wait logic all live in the Hume EVI config.
   // We inject prospect context per session via sessionSettings.variables so the
   // agent can greet "Hey [FirstName]" after the caller picks up and says hello.

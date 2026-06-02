@@ -102,19 +102,19 @@ export default function MobileSettings() {
           </div>
         )}
 
-        {/* Stack — Nirmata internal names only */}
+        {/* Stack — ATOM internal codenames only */}
         <div className="m-card">
           <div className="m-card-eyebrow">Stack</div>
           <div className="m-stack" style={{ marginTop: 12, fontSize: 14 }}>
             <div className="m-row-btw"><span className="m-text-muted">Voice</span><span className="m-mono">PiQ</span></div>
-            <div className="m-row-btw"><span className="m-text-muted">LLM ensemble</span><span className="m-mono">NirmX-UFO</span></div>
+            <div className="m-row-btw"><span className="m-text-muted">LLM ensemble</span><span className="m-mono">ATOM-UFO</span></div>
             <div className="m-row-btw"><span className="m-text-muted">Retrieval</span><span className="m-mono">SiQ</span></div>
             <div className="m-row-btw"><span className="m-text-muted">Vector store</span><span className="m-mono">XiQ</span></div>
           </div>
         </div>
 
         {/* Switch to desktop */}
-        <a className="m-row" href="#/?desktop=1" style={{ justifyContent: "center", gap: 6, color: "#00a7ff", fontSize: 14, padding: 12 }}>
+        <a className="m-row" href="#/?desktop=1" style={{ justifyContent: "center", gap: 6, color: "var(--m-teal, #22e6d6)", fontSize: 14, padding: 12 }}>
           <ExternalLink size={14} /> Switch to desktop view
         </a>
       </div>

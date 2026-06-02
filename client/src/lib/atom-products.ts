@@ -7,9 +7,8 @@
  *
  *   ΔTOM Platform, Vidzee, MoleculeAI, Red Team ΔTOM, Custom Product
  *
- * Retired sub-brands removed: ClinixAI, rrg.bio, thingk tangk-humanos. Active
- * sub-brand registry per the ΔTOM Brand Design System v2: Nirmata Holdings,
- * ΔTOM only.
+ * Legacy sub-brands removed from all user-facing surfaces. Active registry per
+ * the ATOM Brand Standard OS: ΔTOM only.
  *
  * "Custom Product" toggles a free-text input where the user types whatever
  * (PhysioPS, Akamai, Five9, Segway, anything). The free-text value is what

@@ -38,7 +38,7 @@ export function BootScreen({ onDone, minDuration = 2400 }: BootScreenProps) {
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">NET&nbsp;&nbsp;&nbsp;</span>
-          <span className="m-boot-val">Handshake · Nirmata.Holdings</span>
+          <span className="m-boot-val">Handshake · ATOM.Cloud</span>
         </div>
         <div className="m-boot-line">
           <span className="m-boot-key">LLM&nbsp;&nbsp;&nbsp;</span>

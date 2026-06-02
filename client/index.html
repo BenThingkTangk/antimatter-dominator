@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
@@ -24,14 +24,21 @@
     <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800,900&f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <title>ΔTOM — AntimatterAI</title>
+    <!-- ATOM Brand Standard OS — reusable, drop-in brand kit (dark-only, cyan
+         #22e6d6). Served statically from /brand so any ATOM Vercel app can adopt
+         the standard with two <link> tags. The same tokens are also bundled via
+         src/brand for deterministic cascade order. Tokens first, components second. -->
+    <link rel="stylesheet" href="/brand/atom-tokens.css">
+    <link rel="stylesheet" href="/brand/atom-components.css">
+
+    <title>ΔTOM — ATOM Sales Dominator</title>
     <meta name="description" content="ΔTOM routes live intent into action. AI voice agents that operate at human speed and think at machine scale." />
-    <meta name="theme-color" content="#0b0b0c" />
-    <meta property="og:title" content="ΔTOM — AntimatterAI" />
+    <meta name="theme-color" content="#050607" />
+    <meta property="og:title" content="ΔTOM — ATOM Sales Dominator" />
     <meta property="og:description" content="AI systems that operate at human speed, think at machine scale, and feel like people." />
     <meta property="og:type" content="website" />
   </head>
-  <body>
+  <body data-atom-brand="atom">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!-- Service worker registration handled by vite-plugin-pwa (auto-update mode) -->

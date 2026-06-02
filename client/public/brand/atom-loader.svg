@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="ATOM loading">
+  <title>ATOM</title>
+  <defs>
+    <radialGradient id="atomCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9af6ec"/>
+      <stop offset="55%" stop-color="#22e6d6"/>
+      <stop offset="100%" stop-color="#13b3a6"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Static guide ring, very subtle -->
+  <circle cx="60" cy="60" r="46" fill="none" stroke="#22e6d6" stroke-width="1" opacity="0.12"/>
+
+  <!-- Spinning orbital cage: solid, clean strokes -->
+  <g transform="translate(60 60)" fill="none" stroke="#22e6d6" stroke-width="2" stroke-linecap="round">
+    <g>
+      <ellipse rx="42" ry="17" opacity="0.9"/>
+      <ellipse rx="42" ry="17" opacity="0.55" transform="rotate(60)"/>
+      <ellipse rx="42" ry="17" opacity="0.35" transform="rotate(120)"/>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="9s" repeatCount="indefinite"/>
+    </g>
+  </g>
+
+  <!-- Nucleus: solid core + single soft breathing halo -->
+  <circle cx="60" cy="60" r="8" fill="url(#atomCore)"/>
+  <circle cx="60" cy="60" r="8" fill="none" stroke="#22e6d6" stroke-width="1.5" opacity="0.5">
+    <animate attributeName="r" values="8;15;8" dur="2.6s" repeatCount="indefinite" calcMode="spline" keySplines="0.16 1 0.3 1; 0.16 1 0.3 1" keyTimes="0;0.5;1"/>
+    <animate attributeName="opacity" values="0.5;0;0.5" dur="2.6s" repeatCount="indefinite"/>
+  </circle>
+</svg>

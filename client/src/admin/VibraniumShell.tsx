@@ -1144,7 +1144,7 @@ export default function VibraniumShell() {
             Super-admin only
           </div>
           <div style={{ color: t.muted, fontSize: 13 }}>
-            The Vibranium GA Console is restricted to Nirmata Holdings super-admins.
+            The Vibranium GA Console is restricted to ATOM super-admins.
             You are signed in as {session.user?.email || "a tenant user"}.
           </div>
         </div>
@@ -1220,7 +1220,7 @@ export default function VibraniumShell() {
 
       {/* Footer */}
       <div style={{ marginTop: 32, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontFamily: FONT_MONO, fontSize: 10.5, color: t.faint, letterSpacing: "0.06em" }}>
-        ΔTOM · Vibranium GA Console v2 · Nirmata Holdings · @nirmata/atom-design-system v1.0
+        ΔTOM · Vibranium GA Console v2 · ATOM · Brand Standard OS v2.1.0
       </div>
     </div>
   );

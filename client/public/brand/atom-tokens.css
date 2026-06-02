@@ -1,0 +1,100 @@
+/* =========================================================
+   ATOM Brand Standard OS — Design Tokens
+   v2.1.0 · Dark-only · Single source of truth
+   Import this first in any ATOM Vercel app:
+     <link rel="stylesheet" href="/brand/atom-tokens.css">
+   These tokens are theme-agnostic variable names; ATOM ships
+   dark-only by design. Do not add a light theme.
+   ========================================================= */
+
+:root {
+  /* ---- Type families ---- */
+  --atom-font-display: 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif;
+  --atom-font-body: 'Satoshi', 'Inter', system-ui, sans-serif;
+  --atom-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---- Type scale (fluid) ---- */
+  --atom-text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.8125rem);
+  --atom-text-sm: clamp(0.8125rem, 0.78rem + 0.3vw, 0.9375rem);
+  --atom-text-base: clamp(0.9375rem, 0.9rem + 0.25vw, 1.0625rem);
+  --atom-text-lg: clamp(1.125rem, 1rem + 0.6vw, 1.4rem);
+  --atom-text-xl: clamp(1.4rem, 1.15rem + 1vw, 2rem);
+  --atom-text-2xl: clamp(1.9rem, 1.3rem + 2.4vw, 3.2rem);
+  --atom-text-3xl: clamp(2.6rem, 1.4rem + 4.4vw, 5.2rem);
+
+  /* ---- Spacing (4px base) ---- */
+  --atom-space-1: 0.25rem;  --atom-space-2: 0.5rem;  --atom-space-3: 0.75rem;
+  --atom-space-4: 1rem;     --atom-space-5: 1.25rem; --atom-space-6: 1.5rem;
+  --atom-space-8: 2rem;     --atom-space-10: 2.5rem; --atom-space-12: 3rem;
+  --atom-space-16: 4rem;    --atom-space-20: 5rem;   --atom-space-24: 6rem;
+
+  /* ---- Radius ---- */
+  --atom-radius-sm: 0.375rem; --atom-radius-md: 0.5rem; --atom-radius-lg: 0.75rem;
+  --atom-radius-xl: 1rem;     --atom-radius-2xl: 1.5rem; --atom-radius-full: 9999px;
+
+  /* ---- Surfaces: graphite/black base ---- */
+  --atom-bg: #050607;
+  --atom-surface: #0b0e10;
+  --atom-surface-2: #11161a;
+  --atom-surface-3: #181f24;
+  --atom-surface-4: #1f282e;
+  --atom-border: rgba(255,255,255,0.08);
+  --atom-border-bright: rgba(255,255,255,0.15);
+  --atom-divider: rgba(255,255,255,0.05);
+
+  /* ---- Text ---- */
+  --atom-text: #eef6f5;
+  --atom-text-muted: #b5c1c5;
+  --atom-text-faint: #7b8a90;
+  --atom-text-inverse: #04100f;
+
+  /* ---- Primary: ATOM Cyan ---- */
+  --atom-primary: #22e6d6;
+  --atom-primary-bright: #4ff3e6;
+  --atom-primary-dim: #14a99d;
+  --atom-primary-glow: rgba(34,230,214,0.16);
+  --atom-primary-glow-strong: rgba(34,230,214,0.34);
+
+  /* ---- State / data accents (restrained, never decorative) ---- */
+  --atom-coral: #ff7b6b;          /* error / alert / objection */
+  --atom-coral-glow: rgba(255,123,107,0.14);
+  --atom-gold: #f5c842;           /* warning / signal / score */
+  --atom-gold-glow: rgba(245,200,66,0.14);
+  --atom-iris: #c084fc;           /* reasoning / analytics */
+  --atom-iris-glow: rgba(192,132,252,0.14);
+  --atom-salesos-density: 0.86;   /* compact cockpit/table multiplier */
+  --atom-voice-live: #22e6d6;
+  --atom-intent-hot: #f5c842;
+  --atom-evidence-proof: #c084fc;
+  --atom-objection-risk: #ff7b6b;
+
+  /* ---- Semantic state ---- */
+  --atom-success: #22e6d6;
+  --atom-warning: #f5c842;
+  --atom-danger:  #ff7b6b;
+  --atom-info:    #c084fc;
+
+  /* ---- Elevation (dark) ---- */
+  --atom-shadow-sm: 0 1px 3px rgba(0,0,0,0.45);
+  --atom-shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --atom-shadow-lg: 0 12px 40px rgba(0,0,0,0.6);
+  --atom-shadow-xl: 0 24px 64px rgba(0,0,0,0.7);
+  --atom-glow: 0 0 40px var(--atom-primary-glow);
+
+  /* ---- Motion ---- */
+  --atom-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --atom-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --atom-dur-fast: 120ms;
+  --atom-dur-base: 180ms;
+  --atom-dur-slow: 360ms;
+  --atom-transition: var(--atom-dur-base) var(--atom-ease);
+
+  /* ---- Layout ---- */
+  --atom-content: 1140px;
+  --atom-content-wide: 1400px;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --atom-dur-fast: 1ms; --atom-dur-base: 1ms; --atom-dur-slow: 1ms; }
+}

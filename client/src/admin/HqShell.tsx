@@ -64,8 +64,8 @@ export default function HqShell() {
           background: "linear-gradient(180deg, rgba(255,107,139,0.06), rgba(255,107,139,0.02))",
           border: "1px solid rgba(255,107,139,0.32)", textAlign: "center" }}>
           <Crown size={28} style={{ color: ATOM_AMBER, marginBottom: 12 }} />
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: "var(--color-text)", marginBottom: 6 }}>Nirmata HQ — restricted</div>
-          <p style={{ color: ATOM_MUTED }}>This overlord console is visible only to Nirmata super_admins. Your account ({user?.email || "anon"}) is not on the allow-list.</p>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: "var(--color-text)", marginBottom: 6 }}>ATOM HQ — restricted</div>
+          <p style={{ color: ATOM_MUTED }}>This overlord console is visible only to ATOM super_admins. Your account ({user?.email || "anon"}) is not on the allow-list.</p>
         </div>
       </div>
     );
@@ -91,7 +91,7 @@ export default function HqShell() {
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 18 }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: ATOM_AMBER, marginBottom: 6 }}>
-            <Crown size={14} /> Nirmata · Overlord
+            <Crown size={14} /> ATOM · Overlord
           </div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 800, letterSpacing: "-0.02em", margin: 0, color: "var(--color-text)" }}>
             HQ Console

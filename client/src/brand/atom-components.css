@@ -1,0 +1,221 @@
+/* =========================================================
+   ATOM Brand Standard OS — Component Primitives
+   v2.1.0 · Dark-only · Requires atom-tokens.css first
+     <link rel="stylesheet" href="/brand/atom-tokens.css">
+     <link rel="stylesheet" href="/brand/atom-components.css">
+   Drop-in classes prefixed `atom-` so they never collide with
+   an existing app's styles. Apply to any ATOM Vercel surface.
+   ========================================================= */
+
+/* ---- Base ---- */
+.atom-root,
+[data-atom-brand] {
+  font-family: var(--atom-font-body);
+  color: var(--atom-text);
+  background: var(--atom-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Buttons ---- */
+.atom-btn {
+  display: inline-flex; align-items: center; gap: var(--atom-space-2);
+  padding: 0.625rem 1.1rem; border-radius: var(--atom-radius-md);
+  font-family: var(--atom-font-body); font-size: var(--atom-text-sm); font-weight: 600;
+  border: 1px solid transparent; cursor: pointer; line-height: 1;
+  transition: var(--atom-transition);
+}
+.atom-btn--primary {
+  background: linear-gradient(180deg, var(--atom-primary-bright), var(--atom-primary));
+  color: var(--atom-text-inverse);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 0 30px var(--atom-primary-glow);
+}
+.atom-btn--primary:hover { box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 44px var(--atom-primary-glow-strong); transform: translateY(-1px); }
+.atom-btn--ghost {
+  background: rgba(255,255,255,0.03); color: var(--atom-text);
+  border-color: var(--atom-border);
+}
+.atom-btn--ghost:hover { border-color: var(--atom-border-bright); background: rgba(255,255,255,0.06); }
+.atom-btn:disabled, .atom-btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+
+/* ---- Badges / chips ---- */
+.atom-badge {
+  display: inline-flex; align-items: center; gap: var(--atom-space-2);
+  padding: 0.25rem 0.7rem; border-radius: var(--atom-radius-full);
+  font-family: var(--atom-font-mono); font-size: var(--atom-text-xs); font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--atom-border); color: var(--atom-text-muted);
+  background: var(--atom-surface-3);
+}
+.atom-chip {
+  display: inline-flex; align-items: center; padding: 0.15rem 0.55rem;
+  border-radius: var(--atom-radius-sm); font-family: var(--atom-font-mono);
+  font-size: var(--atom-text-xs); letter-spacing: 0.04em;
+  border: 1px solid var(--atom-border); color: var(--atom-text-muted);
+  background: rgba(255,255,255,0.03);
+}
+.atom-chip--primary { color: var(--atom-primary); border-color: rgba(34,230,214,0.3); background: var(--atom-primary-glow); }
+.atom-chip--coral { color: var(--atom-coral); border-color: rgba(255,123,107,0.3); background: var(--atom-coral-glow); }
+.atom-chip--gold  { color: var(--atom-gold);  border-color: rgba(245,200,66,0.3); background: var(--atom-gold-glow); }
+.atom-chip--iris  { color: var(--atom-iris);  border-color: rgba(192,132,252,0.3); background: var(--atom-iris-glow); }
+
+/* ---- Status dot ---- */
+.atom-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--atom-primary);
+  box-shadow: 0 0 0 0 var(--atom-primary-glow); animation: atom-pulse 2s var(--atom-ease-in-out) infinite;
+}
+@keyframes atom-pulse {
+  0%,100% { box-shadow: 0 0 0 0 var(--atom-primary-glow); }
+  50% { box-shadow: 0 0 0 5px rgba(34,230,214,0); }
+}
+
+/* ---- Panel / card ---- */
+.atom-panel {
+  border: 1px solid var(--atom-border); border-radius: var(--atom-radius-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012)), var(--atom-surface);
+  padding: var(--atom-space-6); box-shadow: var(--atom-shadow-md);
+}
+.atom-card {
+  border: 1px solid var(--atom-border); border-radius: var(--atom-radius-lg);
+  background: var(--atom-surface-2); padding: var(--atom-space-5);
+  transition: var(--atom-transition);
+}
+.atom-card:hover { border-color: rgba(34,230,214,0.28); box-shadow: 0 0 36px var(--atom-primary-glow); transform: translateY(-2px); }
+
+/* ---- Inputs ---- */
+.atom-input {
+  width: 100%; padding: 0.6rem 0.85rem; border-radius: var(--atom-radius-md);
+  background: var(--atom-surface); border: 1px solid var(--atom-border);
+  color: var(--atom-text); font-family: var(--atom-font-body); font-size: var(--atom-text-sm);
+  transition: var(--atom-transition);
+}
+.atom-input:focus { outline: none; border-color: var(--atom-primary); box-shadow: 0 0 0 3px var(--atom-primary-glow); }
+.atom-input::placeholder { color: var(--atom-text-faint); }
+
+/* ---- Data table ---- */
+.atom-table { width: 100%; border-collapse: collapse; font-size: var(--atom-text-sm); }
+.atom-table th {
+  text-align: left; padding: 0.7rem 0.9rem; font-family: var(--atom-font-mono);
+  font-size: var(--atom-text-xs); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--atom-text-faint); border-bottom: 1px solid var(--atom-border-bright);
+}
+.atom-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--atom-divider); color: var(--atom-text-muted); }
+.atom-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ---- Toast ---- */
+.atom-toast {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(8px);
+  padding: 0.6rem 1rem; border-radius: var(--atom-radius-md);
+  background: var(--atom-surface-3); border: 1px solid var(--atom-border-bright);
+  color: var(--atom-text); font-family: var(--atom-font-mono); font-size: var(--atom-text-xs);
+  letter-spacing: 0.04em; box-shadow: var(--atom-shadow-lg); opacity: 0; pointer-events: none;
+  transition: var(--atom-transition); z-index: 9999;
+}
+.atom-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- Skeleton ---- */
+.atom-skeleton {
+  border-radius: var(--atom-radius-md); background: var(--atom-surface-3);
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  background-size: 200% 100%; animation: atom-shimmer 1.4s linear infinite;
+}
+@keyframes atom-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---- Loader (inline use of atom-loader.svg or this CSS-only variant) ---- */
+.atom-loader { width: 88px; height: 88px; }
+.atom-loader__cage { transform-origin: 60px 60px; animation: atom-spin 9s linear infinite; }
+.atom-loader__halo { transform-origin: 60px 60px; animation: atom-breathe 2.6s var(--atom-ease) infinite; }
+@keyframes atom-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes atom-breathe {
+  0%,100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.9); opacity: 0; }
+}
+
+/* ---- SalesOS-safe primitives (namespaced, no global table/sidebar overrides) ---- */
+.atom-salesos-panel {
+  border: 1px solid var(--atom-border);
+  border-radius: var(--atom-radius-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)), var(--atom-surface);
+  box-shadow: var(--atom-shadow-lg);
+}
+.atom-salesos-row {
+  display: grid;
+  grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,0.7fr) auto;
+  gap: var(--atom-space-3);
+  align-items: center;
+  min-height: 42px;
+  padding: calc(var(--atom-space-3) * var(--atom-salesos-density, .86)) var(--atom-space-4);
+  border-bottom: 1px solid var(--atom-divider);
+  color: var(--atom-text-muted);
+  font-size: var(--atom-text-sm);
+}
+.atom-salesos-row:hover { background: rgba(34,230,214,0.035); }
+.atom-score {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 22px; border-radius: var(--atom-radius-sm);
+  font-family: var(--atom-font-mono); font-size: var(--atom-text-xs); font-weight: 700;
+  color: var(--atom-gold); border: 1px solid rgba(245,200,66,0.28); background: var(--atom-gold-glow);
+}
+.atom-fab-nucleus {
+  position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 80;
+  width: 56px; height: 56px; border-radius: var(--atom-radius-full);
+  display: grid; place-items: center; color: var(--atom-primary);
+  border: 1px solid rgba(34,230,214,0.34);
+  background: radial-gradient(circle, rgba(34,230,214,0.16), rgba(5,6,7,0.92) 68%);
+  box-shadow: 0 0 38px var(--atom-primary-glow), var(--atom-shadow-lg);
+}
+
+/* ---- Agent / Voice GenUI primitives ---- */
+.atom-agent-shell {
+  border: 1px solid rgba(34,230,214,0.2);
+  border-radius: var(--atom-radius-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012)), var(--atom-surface);
+  box-shadow: var(--atom-shadow-xl);
+  overflow: hidden;
+}
+.atom-agent-message {
+  max-width: 78%;
+  padding: .65rem .9rem;
+  border-radius: var(--atom-radius-lg);
+  border: 1px solid rgba(34,230,214,0.22);
+  background: var(--atom-primary-glow);
+  color: var(--atom-text);
+  font-size: var(--atom-text-sm);
+  line-height: 1.5;
+}
+.atom-agent-event {
+  font-family: var(--atom-font-mono);
+  color: var(--atom-text-faint);
+  font-size: var(--atom-text-xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.atom-tool-card {
+  border: 1px solid rgba(192,132,252,0.24);
+  border-radius: var(--atom-radius-lg);
+  background: var(--atom-iris-glow);
+  padding: var(--atom-space-4);
+}
+.atom-voice-meter {
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.atom-voice-meter i {
+  width: 3px; border-radius: 999px; background: var(--atom-primary);
+  animation: atom-voice-wave 1s var(--atom-ease) infinite;
+}
+.atom-voice-meter i:nth-child(1){height:8px}.atom-voice-meter i:nth-child(2){height:16px;animation-delay:.1s}.atom-voice-meter i:nth-child(3){height:22px;animation-delay:.2s}.atom-voice-meter i:nth-child(4){height:14px;animation-delay:.3s}
+@keyframes atom-voice-wave { 0%,100% { transform: scaleY(.72); opacity:.7; } 50% { transform: scaleY(1.12); opacity:1; } }
+.atom-intent-bar {
+  height: 6px; width: 100%; border-radius: 999px; overflow: hidden;
+  background: var(--atom-surface-3);
+}
+.atom-intent-bar > span {
+  display: block; height: 100%; width: var(--atom-intent, 72%);
+  background: linear-gradient(90deg, var(--atom-primary), var(--atom-gold));
+  box-shadow: 0 0 20px var(--atom-primary-glow);
+}
+
+/* ---- Focus & selection ---- */
+.atom-root :focus-visible, [data-atom-brand] :focus-visible {
+  outline: 2px solid var(--atom-primary); outline-offset: 3px; border-radius: var(--atom-radius-sm);
+}
+.atom-root ::selection, [data-atom-brand] ::selection { background: var(--atom-primary-glow-strong); color: var(--atom-text); }

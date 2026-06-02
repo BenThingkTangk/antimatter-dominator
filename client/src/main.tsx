@@ -8,6 +8,12 @@ import "@nirmata/atom-design-system/css";
 import "@nirmata/atom-v4-brand-system/css";
 import App from "./App";
 import "./index.css";
+// ATOM Brand Standard OS — canonical, reusable brand kit (dark-only, cyan
+// #22e6d6). Loaded LAST so its --atom-* tokens and namespaced .atom-* component
+// classes win the cascade over the older vendored brand packages. This is the
+// same kit shipped to client/public/brand for drop-in use by any ATOM Vercel app.
+import "./brand/atom-tokens.css";
+import "./brand/atom-components.css";
 
 if (!window.location.hash) {
   window.location.hash = "#/";

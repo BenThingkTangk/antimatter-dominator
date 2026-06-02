@@ -3,13 +3,16 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ATOM Brand & Design System v2.0 — Cinematic Systems Edition
-   Owner: Nirmata Holdings / ΔTOM
-   Reference: ATOM Brand and Design System Configuration Standards v2.0
+   ATOM Brand & Design System — Cinematic Systems Edition
+   Reference: ATOM Brand Standard OS (dark-only, cyan #22e6d6)
+
+   App-level aliases (--color-*) bridge to the canonical ATOM Brand Standard OS
+   tokens (--atom-*) loaded from /brand. ATOM is dark-only by design — there is
+   no light theme or theme toggle.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: dark light;
+  color-scheme: dark;
 
   /* ─── Typography ─────────────────────────────────────────────────────── */
   --font-display: 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif;
@@ -76,38 +79,41 @@
 :root,
 [data-theme="dark"],
 .dark {
-  /* Legacy aliases retained for backwards compat — they point to the new
-     canonical @nirmata/atom-design-system tokens (--atom-*). Update those
-     in css/atom-tokens.css to change brand-wide values; do NOT change
-     these aliases here. */
-  --color-bg:            var(--atom-bg,        #0b0b0c);
-  --color-bg-2:          var(--atom-surface-1, #111113);
-  --color-surface:       var(--atom-surface-1, #111113);
-  --color-surface-2:     var(--atom-surface-2, #161618);
-  --color-surface-3:     var(--atom-surface-3, #1c1c1f);
-  --color-surface-glass: color-mix(in oklab, var(--atom-surface-1, #111113) 72%, transparent);
+  /* App-level aliases bridge to the canonical ATOM Brand Standard OS tokens
+     (--atom-*) loaded from /brand. Update brand-wide values in
+     /brand/atom-tokens.css — do NOT change these aliases here. Fallbacks point
+     at the Brand Standard OS dark palette so the app is consistent even if the
+     kit fails to load. */
+  --color-bg:            var(--atom-bg,        #050607);
+  --color-bg-2:          var(--atom-surface,   #0b0e10);
+  --color-surface:       var(--atom-surface,   #0b0e10);
+  --color-surface-2:     var(--atom-surface-2, #11161a);
+  --color-surface-3:     var(--atom-surface-3, #181f24);
+  --color-surface-glass: color-mix(in oklab, var(--atom-surface, #0b0e10) 72%, transparent);
   --color-border:        var(--atom-border,        rgba(255,255,255,0.08));
-  --color-border-strong: var(--atom-border-strong, rgba(255,255,255,0.14));
-  --color-divider:       rgba(255,255,255,0.055);
+  --color-border-strong: var(--atom-border-bright, rgba(255,255,255,0.15));
+  --color-divider:       var(--atom-divider,    rgba(255,255,255,0.05));
 
-  --color-text:         var(--atom-text,       #e8e8ea);
-  --color-text-muted:   var(--atom-text-muted, #8a8a96);
-  --color-text-faint:   var(--atom-text-faint, #4a4a55);
-  --color-text-inverse: #061011;
+  --color-text:         var(--atom-text,       #eef6f5);
+  --color-text-muted:   var(--atom-text-muted, #b5c1c5);
+  --color-text-faint:   var(--atom-text-faint, #7b8a90);
+  --color-text-inverse: var(--atom-text-inverse, #04100f);
 
-  /* ATOM teal plasma — derived from --atom-primary */
-  --color-primary:             var(--atom-primary,        #00c8c8);
-  --color-primary-2:           var(--atom-accent-gpt,     #74c0fc);
-  --color-primary-dim:         var(--atom-primary-dim,    #00989c);
-  --color-primary-glow:        var(--atom-primary-glow,   rgba(0,200,200,0.15));
-  --color-primary-glow-strong: var(--atom-primary-strong, rgba(0,200,200,0.25));
+  /* ATOM Cyan — the single signal color, from --atom-primary (#22e6d6) */
+  --color-primary:             var(--atom-primary,           #22e6d6);
+  --color-primary-2:           var(--atom-primary-bright,    #4ff3e6);
+  --color-primary-dim:         var(--atom-primary-dim,       #14a99d);
+  --color-primary-glow:        var(--atom-primary-glow,      rgba(34,230,214,0.16));
+  --color-primary-glow-strong: var(--atom-primary-glow-strong, rgba(34,230,214,0.34));
 
-  /* Model accents (used for chips / data viz only) */
-  --color-claude:  var(--atom-accent-claude, #c084fc);
-  --color-hume:    var(--atom-accent-hume,   #ff7b6b);
-  --color-samba:   var(--atom-accent-samba,  #f5c842);
-  --color-gpt:     var(--atom-accent-gpt,    #74c0fc);
-  --color-success: var(--atom-success, #4ade80);
+  /* State / data accents (restrained — never decorative). Mapped to the
+     Brand Standard OS accent tokens: iris=reasoning, coral=objection,
+     gold=score/signal. */
+  --color-claude:  var(--atom-iris,    #c084fc);
+  --color-hume:    var(--atom-coral,   #ff7b6b);
+  --color-samba:   var(--atom-gold,    #f5c842);
+  --color-gpt:     var(--atom-iris,    #c084fc);
+  --color-success: var(--atom-success, #22e6d6);
   --color-warning: var(--atom-warning, #f5c842);
   --color-error:   var(--atom-danger,  #ff7b6b);
 
@@ -117,121 +123,50 @@
   --shadow-glow:        0 0 48px var(--color-primary-glow);
   --shadow-glow-strong: 0 0 80px var(--color-primary-glow-strong);
 
-  /* ─── Tailwind / shadcn HSL bridge tokens ──────────────────────────────── */
-  --background:            240 6% 4%;
-  --foreground:            180 50% 96%;
-  --card:                  240 8% 7%;
-  --card-foreground:       180 50% 96%;
-  --popover:               240 8% 7%;
-  --popover-foreground:    180 50% 96%;
-  --primary:               174 100% 45%;
-  --primary-foreground:    180 100% 4%;
-  --secondary:             240 6% 11%;
-  --secondary-foreground:  180 50% 96%;
-  --muted:                 240 5% 14%;
-  --muted-foreground:      200 6% 64%;
-  --accent:                174 100% 45%;
-  --accent-foreground:     180 100% 4%;
-  --destructive:           346 100% 71%;
+  /* ─── Tailwind / shadcn HSL bridge tokens ──────────────────────────────────
+     Tuned to the ATOM Brand Standard OS dark palette: graphite/black surfaces
+     and ATOM Cyan (#22e6d6 ≈ hsl(173 78% 52%)) as the single signal color.
+     Accents (iris/gold/coral) used only for data viz + state. */
+  --background:            200 14% 3%;
+  --foreground:            174 35% 95%;
+  --card:                  200 17% 6%;
+  --card-foreground:       174 35% 95%;
+  --popover:               200 17% 6%;
+  --popover-foreground:    174 35% 95%;
+  --primary:               173 78% 52%;
+  --primary-foreground:    176 90% 5%;
+  --secondary:             200 15% 10%;
+  --secondary-foreground:  174 35% 95%;
+  --muted:                 200 14% 13%;
+  --muted-foreground:      190 10% 73%;
+  --accent:                173 78% 52%;
+  --accent-foreground:     176 90% 5%;
+  --destructive:           7 100% 71%;
   --destructive-foreground: 0 0% 100%;
-  --border:                240 5% 14%;
-  --input:                 240 5% 14%;
-  --ring:                  174 100% 45%;
+  --border:                200 12% 14%;
+  --input:                 200 12% 14%;
+  --ring:                  173 78% 52%;
   --radius:                0.75rem;
 
-  --sidebar:               240 7% 3%;
-  --sidebar-foreground:    180 30% 86%;
-  --sidebar-border:        240 5% 8%;
-  --sidebar-primary:       174 100% 45%;
-  --sidebar-primary-foreground: 180 100% 4%;
-  --sidebar-accent:        240 6% 9%;
-  --sidebar-accent-foreground: 180 50% 96%;
-  --sidebar-ring:          174 100% 45%;
+  --sidebar:               200 16% 3%;
+  --sidebar-foreground:    180 22% 86%;
+  --sidebar-border:        200 14% 8%;
+  --sidebar-primary:       173 78% 52%;
+  --sidebar-primary-foreground: 176 90% 5%;
+  --sidebar-accent:        200 15% 9%;
+  --sidebar-accent-foreground: 174 35% 95%;
+  --sidebar-ring:          173 78% 52%;
 
-  --chart-1: 174 100% 45%; /* teal */
-  --chart-2: 270 100% 76%; /* claude lavender */
-  --chart-3: 142 70% 70%;  /* success green */
-  --chart-4: 45 100% 70%;  /* warning amber */
-  --chart-5: 6 100% 71%;   /* hume coral */
+  --chart-1: 173 78% 52%;  /* ATOM cyan */
+  --chart-2: 270 95% 75%;  /* iris — reasoning */
+  --chart-3: 142 70% 70%;  /* success */
+  --chart-4: 45 89% 62%;   /* gold — score */
+  --chart-5: 7 100% 71%;   /* coral — objection */
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LIGHT MODE
-   "soft mineral white" — quieter teal, charcoal text
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-:root:not(.dark),
-[data-theme="light"] {
-  --color-bg:            #f3f5f2;
-  --color-bg-2:          #e9eeee;
-  --color-surface:       #fbfcf9;
-  --color-surface-2:     #ffffff;
-  --color-surface-3:     #e8efec;
-  --color-surface-glass: color-mix(in oklab, #ffffff 76%, transparent);
-  --color-border:        rgba(6,16,17,0.09);
-  --color-border-strong: rgba(6,16,17,0.16);
-  --color-divider:       rgba(6,16,17,0.06);
-
-  --color-text:         #061011;
-  --color-text-muted:   #546164;
-  --color-text-faint:   #8d989a;
-  --color-text-inverse: #edf8f8;
-
-  --color-primary:             #007e79;
-  --color-primary-2:           #006da8;
-  --color-primary-dim:         #005c59;
-  --color-primary-glow:        rgba(0,126,121,0.12);
-  --color-primary-glow-strong: rgba(0,126,121,0.22);
-
-  --color-claude:  #6d32d9;
-  --color-hume:    #cf463c;
-  --color-samba:   #9c7200;
-  --color-gpt:     #0067ad;
-  --color-success: #2d7a46;
-  --color-warning: #9c7200;
-  --color-error:   #b42c50;
-
-  --shadow-sm:          0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md:          0 8px 24px rgba(0,0,0,0.10);
-  --shadow-lg:          0 24px 80px rgba(0,0,0,0.14);
-  --shadow-glow:        0 0 48px var(--color-primary-glow);
-  --shadow-glow-strong: 0 0 80px var(--color-primary-glow-strong);
-
-  --background:            120 10% 95%;
-  --foreground:            186 50% 5%;
-  --card:                  90 20% 98%;
-  --card-foreground:       186 50% 5%;
-  --popover:               90 20% 98%;
-  --popover-foreground:    186 50% 5%;
-  --primary:               176 100% 25%;
-  --primary-foreground:    0 0% 100%;
-  --secondary:             140 10% 92%;
-  --secondary-foreground:  186 50% 5%;
-  --muted:                 140 10% 92%;
-  --muted-foreground:      192 8% 36%;
-  --accent:                176 100% 25%;
-  --accent-foreground:     0 0% 100%;
-  --destructive:           344 64% 44%;
-  --destructive-foreground: 0 0% 98%;
-  --border:                140 6% 86%;
-  --input:                 140 6% 82%;
-  --ring:                  176 100% 25%;
-
-  --sidebar:               240 7% 3%;
-  --sidebar-foreground:    180 30% 86%;
-  --sidebar-border:        240 5% 8%;
-  --sidebar-primary:       174 100% 45%;
-  --sidebar-primary-foreground: 180 100% 4%;
-  --sidebar-accent:        240 6% 9%;
-  --sidebar-accent-foreground: 180 50% 96%;
-  --sidebar-ring:          174 100% 45%;
-
-  --chart-1: 176 100% 25%;
-  --chart-2: 268 64% 53%;
-  --chart-3: 142 50% 33%;
-  --chart-4: 36 100% 31%;
-  --chart-5: 4 64% 53%;
-}
+/* ATOM is dark-only by design — no light theme. The previous light-mode block
+   and its inline-style override safety net were removed during the ATOM Brand
+   Standard OS migration. color-scheme is pinned to dark above. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Base reset
@@ -511,28 +446,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Light-mode override safety net (keeps prior compatibility for inline styles)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-:root:not(.dark) main [class*="bg-\\[#111113\\]"],
-:root:not(.dark) main [class*="bg-\\[#111114\\]"] { background: var(--color-surface) !important; }
-:root:not(.dark) main [class*="bg-\\[#161618\\]"],
-:root:not(.dark) main [class*="bg-\\[#18181d\\]"] { background: var(--color-surface-3) !important; }
-:root:not(.dark) main [class*="text-\\[#e8e8ea\\]"],
-:root:not(.dark) main [class*="text-\\[#f6f6fd\\]"] { color: var(--color-text) !important; }
-:root:not(.dark) main [class*="text-white\\/"]      { color: var(--color-text-muted) !important; }
-:root:not(.dark) main [class*="border-white\\/"]    { border-color: var(--color-border) !important; }
-:root:not(.dark) main [style*="border-color: rgba(255,255,255"] { border-color: var(--color-border) !important; }
-
-:root:not(.dark) main select,
-:root:not(.dark) main input,
-:root:not(.dark) main textarea {
-  background: var(--color-surface-2) !important;
-  color: var(--color-text) !important;
-  border-color: var(--color-border-strong) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
    ATOM Mobile — v2.0 native-feeling PWA surface
    Isolated under .atom-mobile-root so desktop surfaces are untouched.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -542,18 +455,20 @@
   --m-bg-2:        #0a1014;
   --m-surface:     #0f161b;
   --m-surface-2:   #131b22;
-  --m-border:      rgba(0,230,211,0.12);
+  --m-border:      rgba(34,230,214,0.14);
   --m-border-soft: rgba(255,255,255,0.06);
   --m-divider:     rgba(255,255,255,0.04);
-  --m-teal:        #00e6d3;
-  --m-teal-soft:   rgba(0,230,211,0.18);
-  --m-teal-glow:   rgba(0,230,211,0.42);
-  --m-warn:        #ff8a65;
-  --m-warn-soft:   rgba(255,138,101,0.16);
-  --m-danger:      #ff6b8b;
-  --m-text:        #e8f4f3;
-  --m-text-muted:  #7b8b8a;
-  --m-text-faint:  #54625f;
+  /* ATOM Cyan from the Brand Standard OS — kept under the legacy --m-teal name
+     so the large mobile stylesheet doesn't need a sweeping rename. */
+  --m-teal:        var(--atom-primary, #22e6d6);
+  --m-teal-soft:   var(--atom-primary-glow, rgba(34,230,214,0.18));
+  --m-teal-glow:   var(--atom-primary-glow-strong, rgba(34,230,214,0.42));
+  --m-warn:        var(--atom-gold, #f5c842);
+  --m-warn-soft:   var(--atom-gold-glow, rgba(245,200,66,0.16));
+  --m-danger:      var(--atom-coral, #ff7b6b);
+  --m-text:        var(--atom-text, #eef6f5);
+  --m-text-muted:  var(--atom-text-muted, #b5c1c5);
+  --m-text-faint:  var(--atom-text-faint, #7b8a90);
   --m-safe-top:    env(safe-area-inset-top, 0px);
   --m-safe-bot:    env(safe-area-inset-bottom, 0px);
 
@@ -848,7 +763,7 @@
 }
 .atom-mobile-root .m-boot-bar-fill {
   position: absolute; inset: 0; right: auto;
-  background: linear-gradient(90deg, var(--m-teal) 0%, #00e6d3 100%);
+  background: linear-gradient(90deg, var(--m-teal) 0%, var(--atom-primary-bright, #4ff3e6) 100%);
   border-radius: 2px;
   box-shadow: 0 0 14px var(--m-teal-glow);
   animation: m-boot-progress 2.4s var(--ease-out) forwards;
@@ -1112,6 +1027,94 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── 1. Loader / boot — override dtom-brand-system purple to ATOM teal ──── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATOM Loader — canonical cold-open. One word, refined nucleus, dark-only.
+   (Namespaced .atom-loader-screen — does not touch any app layout.)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.atom-loader-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  background:
+    radial-gradient(circle at 50% 42%, var(--atom-primary-glow, rgba(34,230,214,0.18)), transparent 42%),
+    radial-gradient(circle at 50% 50%, #07090b, #050607 70%);
+  opacity: 1;
+  transition: opacity 440ms var(--atom-ease, cubic-bezier(0.16,1,0.3,1));
+}
+.atom-loader-screen[data-leaving="1"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.atom-loader-screen__core {
+  filter: drop-shadow(0 0 38px var(--atom-primary-glow-strong, rgba(34,230,214,0.34)));
+}
+.atom-loader-screen__svg {
+  display: block;
+}
+.atom-loader-screen__word {
+  font-family: var(--atom-font-mono, ui-monospace, monospace);
+  font-size: clamp(1.6rem, 1.1rem + 2.2vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: var(--atom-text, #eef6f5);
+  text-shadow: 0 0 26px var(--atom-primary-glow, rgba(34,230,214,0.22));
+  animation: atom-loader-word-in 700ms var(--atom-ease, cubic-bezier(0.16,1,0.3,1)) both;
+}
+@keyframes atom-loader-word-in {
+  from { opacity: 0; transform: translateY(8px); letter-spacing: 0.7em; }
+  to   { opacity: 1; transform: translateY(0);   letter-spacing: 0.42em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atom-loader-screen__word { animation: none; }
+  .atom-loader-screen__svg animate,
+  .atom-loader-screen__svg animateTransform { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATOM Chat — launcher pulse + thinking dots (namespaced, no layout impact)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.atom-chat-launcher::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+  opacity: 0;
+  animation: atom-chat-pulse 3.4s var(--atom-ease, cubic-bezier(0.16,1,0.3,1)) infinite;
+  pointer-events: none;
+}
+.atom-chat-launcher[data-open]::before { animation: none; opacity: 0; }
+.atom-chat-launcher:hover { transform: translateY(-1px) scale(1.03); }
+@keyframes atom-chat-pulse {
+  0%   { opacity: 0.55; transform: scale(1); }
+  70%  { opacity: 0;    transform: scale(1.5); }
+  100% { opacity: 0;    transform: scale(1.5); }
+}
+.atom-chat-hero-mark { filter: drop-shadow(0 0 22px var(--color-primary-glow)); }
+.atom-chat-dots { display: inline-flex; align-items: center; gap: 4px; }
+.atom-chat-dots i {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary-glow);
+  animation: atom-chat-dot 1.2s ease-in-out infinite;
+}
+.atom-chat-dots i:nth-child(2) { animation-delay: 0.16s; }
+.atom-chat-dots i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes atom-chat-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atom-chat-launcher::before { animation: none; }
+  .atom-chat-dots i { animation: none; opacity: 0.7; }
+}
+
 /* The vendored dtom-brand-system ships with a lavender primary. Within the
    ATOM brand, the cinematic loader must read as black-titanium + teal plasma,
    matching the wider ΔTOM identity. We override at the data-dtom-brand scope
@@ -1133,20 +1136,20 @@
   --dtom-color-text-muted:          #9ca8ad;
   --dtom-color-text-faint:          #5e6970;
 
-  --dtom-color-primary:             #00c8c8;
-  --dtom-color-primary-2:           #00e6d3;
-  --dtom-color-primary-dim:         #00a89e;
-  --dtom-color-primary-glow:        rgba(0,200,200,0.22);
-  --dtom-color-primary-glow-strong: rgba(0,230,211,0.38);
-  --dtom-color-primary-cinematic:   #00e6d3;
-  --dtom-brand-accent:              #00c8c8;
+  --dtom-color-primary:             var(--atom-primary, #22e6d6);
+  --dtom-color-primary-2:           var(--atom-primary-bright, #4ff3e6);
+  --dtom-color-primary-dim:         var(--atom-primary-dim, #16b3a6);
+  --dtom-color-primary-glow:        var(--atom-primary-glow, rgba(34,230,214,0.22));
+  --dtom-color-primary-glow-strong: var(--atom-primary-glow-strong, rgba(79,243,230,0.38));
+  --dtom-color-primary-cinematic:   var(--atom-primary-bright, #4ff3e6);
+  --dtom-brand-accent:              var(--atom-primary, #22e6d6);
 }
 
 /* Belt-and-braces: even if the brand attribute is missing or a downstream
    override slips in, the loader element itself must read teal. */
 .dtom-loader {
   background:
-    radial-gradient(circle at 50% 45%, rgba(0,230,211,0.22), transparent 26%),
+    radial-gradient(circle at 50% 45%, var(--atom-primary-glow, rgba(34,230,214,0.22)), transparent 26%),
     linear-gradient(180deg, #06080a, #0b0b0c) !important;
 }
 .dtom-loader__word,
@@ -1155,31 +1158,31 @@
 .dtom-loader__rail,
 .dtom-loader__telemetry-tag,
 .dtom-loader__scanline-beam {
-  color: #00e6d3;
+  color: var(--atom-primary-bright, #4ff3e6);
 }
 .dtom-loader__word { color: #edf8f8; }
-.dtom-loader__word-o { color: #00e6d3; text-shadow: 0 0 28px rgba(0,230,211,0.55); }
+.dtom-loader__word-o { color: var(--atom-primary-bright, #4ff3e6); text-shadow: 0 0 28px var(--atom-primary-glow-strong, rgba(79,243,230,0.55)); }
 .dtom-loader__wordmark { color: #edf8f8; }
-.dtom-loader__corner { border-color: #00c8c8; }
+.dtom-loader__corner { border-color: var(--atom-primary, #22e6d6); }
 .dtom-loader__scanline-beam {
-  background: linear-gradient(90deg, transparent, #00e6d3, transparent) !important;
+  background: linear-gradient(90deg, transparent, var(--atom-primary-bright, #4ff3e6), transparent) !important;
 }
 .dtom-loader__telemetry-tag {
-  color: #00e6d3;
-  border-color: rgba(0,230,211,0.32);
-  background: rgba(0,230,211,0.06);
+  color: var(--atom-primary-bright, #4ff3e6);
+  border-color: var(--atom-primary-border, rgba(34,230,214,0.32));
+  background: var(--atom-primary-soft, rgba(34,230,214,0.06));
 }
 .dtom-loader__logo-wrap {
-  filter: drop-shadow(0 0 38px rgba(0,230,211,0.42));
+  filter: drop-shadow(0 0 38px var(--atom-primary-glow-strong, rgba(79,243,230,0.42)));
 }
 .dtom-loader__logo-wrap .dtom-logo__mark,
 .dtom-loader__logo-wrap svg {
-  color: #00e6d3;
+  color: var(--atom-primary-bright, #4ff3e6);
 }
 
 /* Mobile boot bar: previously gradiented teal→#9b7bff. Drop the purple stop. */
 .atom-mobile-root .m-boot-bar-fill {
-  background: linear-gradient(90deg, var(--m-teal) 0%, #00e6d3 100%) !important;
+  background: linear-gradient(90deg, var(--m-teal) 0%, var(--atom-primary-bright, #4ff3e6) 100%) !important;
 }
 
 /* ─── 2. Forms — visible boxed surfaces with teal focus ──────────────────── */
@@ -1435,7 +1438,7 @@ button[role="combobox"][data-state="open"]:where(:not(.atom-bare)) {
 .dtom-loader [class*="text-violet"],
 .dtom-loader [class*="text-purple"] {
   background-color: transparent !important;
-  color: #00e6d3 !important;
+  color: var(--atom-primary-bright, #4ff3e6) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
