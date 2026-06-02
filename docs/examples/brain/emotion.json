@@ -1,0 +1,4 @@
+{
+  "task": "emotion",
+  "audio_base64": "<base64-encoded caller audio snippet>"
+}

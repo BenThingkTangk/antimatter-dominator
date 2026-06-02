@@ -1,0 +1,6 @@
+{
+  "task": "pii_redact",
+  "anonymize": true,
+  "entities": ["PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS", "CREDIT_CARD"],
+  "text": "Hi, this is John Smith, my number is 415-555-0199 and email john@acme.com."
+}

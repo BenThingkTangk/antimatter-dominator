@@ -1,0 +1,16 @@
+{
+  "task": "vector_upsert",
+  "collection": "atom_prospects",
+  "points": [
+    {
+      "id": "prospect_8821",
+      "text": "Acme Corp — Series B fintech, hiring RevOps, evaluating outbound tooling",
+      "payload": { "tenant": "acme", "stage": "discovery", "score": 0.81 }
+    },
+    {
+      "id": "prospect_8822",
+      "vector": [0.0123, -0.0456, 0.0789],
+      "payload": { "tenant": "acme", "stage": "qualified" }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "task": "chat",
+  "tier": "vibranium",
+  "frontier": true,
+  "frontier_vendor": "anthropic",
+  "max_tokens": 1500,
+  "messages": [
+    { "role": "system", "content": "You are ATOM's strategic deal advisor for an enterprise account." },
+    { "role": "user", "content": "Build a multi-thread close plan for a $1.2M ACV deal stalled at legal review." }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "task": "vector_search",
+  "collection": "atom_prospects",
+  "query": "fintech companies recently hiring RevOps leadership",
+  "limit": 8,
+  "filter": { "must": [{ "key": "tenant", "match": { "value": "acme" } }] }
+}

@@ -1,0 +1,10 @@
+{
+  "task": "chat",
+  "model": "llama",
+  "temperature": 0.5,
+  "max_tokens": 1024,
+  "messages": [
+    { "role": "system", "content": "You are ATOM, a sales co-pilot. Be concise." },
+    { "role": "user", "content": "Draft a one-line opener for a CFO at a Series B fintech." }
+  ]
+}
