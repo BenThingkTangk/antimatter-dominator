@@ -1,0 +1,6 @@
+{
+  "task": "asr",
+  "language": "en",
+  "sample_rate": 16000,
+  "audio_base64": "<base64-encoded 16kHz mono PCM/WAV audio>"
+}

@@ -1,0 +1,15 @@
+{
+  "task": "vision",
+  "tier": "vibranium",
+  "frontier": false,
+  "max_tokens": 1024,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "Summarize the key metrics in this dashboard screenshot." },
+        { "type": "image_url", "image_url": { "url": "data:image/png;base64,<base64-image>" } }
+      ]
+    }
+  ]
+}

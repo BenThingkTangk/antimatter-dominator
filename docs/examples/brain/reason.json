@@ -1,0 +1,11 @@
+{
+  "task": "reason",
+  "model": "qwen",
+  "tier": "vibranium",
+  "frontier": false,
+  "max_tokens": 2048,
+  "messages": [
+    { "role": "system", "content": "Think step by step. Show your reasoning, then a final answer." },
+    { "role": "user", "content": "Given a 14-day trial with 3 dials/day and a 22% connect rate, how many connects before expiry, and what cadence maximizes a demo booking?" }
+  ]
+}
