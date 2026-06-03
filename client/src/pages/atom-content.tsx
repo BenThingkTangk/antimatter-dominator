@@ -804,6 +804,11 @@ interface RecentEventsResponse {
   demoTotal: number;
   sample: Array<{ id: number; eventType: string; sourceSystem: string; occurredAt: string; isDemo: boolean }>;
 }
+interface WebhookStatusResponse {
+  tokenConfigured: boolean;
+  failClosedInProduction: boolean;
+  channels: Array<{ channel: string; path: string; description: string; emits: string[] }>;
+}
 const EVENT_LABELS: Record<string, string> = {
   email_sent: "Emails sent", outreach_sent: "Outreach sent", reply_received: "Replies",
   meeting_booked: "Meetings booked", conversation_event: "Conversations",
@@ -813,6 +818,10 @@ function ActivityEventsCard() {
   const { data } = useQuery<RecentEventsResponse>({
     queryKey: ["/api/content/activity-events/recent"],
     queryFn: async () => (await apiRequest("GET", "/api/content/activity-events/recent")).json(),
+  });
+  const { data: webhooks } = useQuery<WebhookStatusResponse>({
+    queryKey: ["/api/content/activity-events/webhooks/status"],
+    queryFn: async () => (await apiRequest("GET", "/api/content/activity-events/webhooks/status")).json(),
   });
   const entries = Object.entries(data?.countsByType || {});
   return (
@@ -841,6 +850,27 @@ function ActivityEventsCard() {
         </div>
       ) : (
         <Muted>No production events ingested yet. Connect a product system or POST to the activity-events endpoint — nothing is fabricated.</Muted>
+      )}
+      {webhooks && (
+        <div className="mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold">Provider webhook layer</span>
+            <Badge variant="outline" className="text-[10px]" style={webhooks.tokenConfigured ? { color: "#34d399", borderColor: "#34d39955" } : { color: "#f59e0b", borderColor: "#f59e0b55" }}>
+              {webhooks.tokenConfigured ? "auth configured" : "auth not set (dev only)"}
+            </Badge>
+          </div>
+          <p className="text-[11px] mb-2" style={{ color: "var(--color-text-muted)" }}>
+            Real external producers POST native payloads here; each is normalized into the event feed above, idempotent on the provider's own event id. Bearer-token guarded, fails closed in production. No secrets shown.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-1.5">
+            {webhooks.channels.map((c) => (
+              <div key={c.channel} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
+                <code className="text-[10px] truncate">…/webhooks/{c.channel}</code>
+                <span className="text-[10px] shrink-0" style={{ color: "var(--color-text-muted)" }}>{c.emits.join(", ")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -12,6 +12,9 @@ import { parseVoiceYaml, validateVoiceYaml, DEFAULT_VOICE_YAML } from "@shared/c
 import { getLiveNumbers } from "./liveNumbersEngine";
 import { previewIngestion, runIngestion, ADAPTERS } from "./productActivityIngestion";
 import { ingestEvents, recentEvents } from "./eventIngestion";
+import {
+  ingestProviderWebhook, PROVIDER_NORMALIZERS, type ProviderChannel,
+} from "./providerWebhooks";
 import crypto from "node:crypto";
 import {
   createContentBrief, generateContentAsset, verifyContentClaims, scoreVoiceCompliance,
@@ -258,6 +261,57 @@ export function registerContentRoutes(app: Express) {
     } catch (err: any) {
       res.status(err?.issues ? 400 : 500).json({ error: err.message, details: err?.issues });
     }
+  });
+
+  // ── Provider webhook layer (provider-level proof) ───────────────────────────
+  // Real external producer systems (outbound email/outreach senders, inbox reply
+  // webhooks, calendar bookers, conversation/transcript systems) POST their
+  // native payloads here. Each endpoint validates with a provider-specific Zod
+  // schema, normalizes into canonical product_activity_events with a STABLE
+  // source_record_id (idempotent on the provider's own event id), and persists
+  // via the same ingestEvents path the generic route uses.
+  //
+  // Auth: the SAME server-side bearer token as the generic activity-events route
+  // (verifyEventIngestToken → CONTENT_EVENTS_INGEST_TOKEN / CRON_SECRET). Fails
+  // closed (503) in production when no token is configured. Real providers that
+  // sign with their own scheme (e.g. Resend's svix) should be fronted by a thin
+  // verifier that forwards here with the bearer token; the bearer is the single
+  // server-side trust boundary so no secret reaches the client.
+  const PROVIDER_CHANNELS: ProviderChannel[] = ["email", "reply", "calendar", "conversation"];
+  for (const channel of PROVIDER_CHANNELS) {
+    app.post(`/api/content/activity-events/webhooks/${channel}`, (req, res) => {
+      const auth = verifyEventIngestToken(req);
+      if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+      try {
+        res.json(ingestProviderWebhook(channel, req.body));
+      } catch (err: any) {
+        // ZodError → 400 with field-level issues; anything else → 500.
+        res.status(err?.issues ? 400 : 500).json({ error: err.message || "Provider webhook failed", details: err?.issues });
+      }
+    });
+  }
+
+  // Operator-facing readiness view: which provider webhook channels exist, what
+  // they emit, and whether the ingest token is configured. Returns NO secret —
+  // only a boolean of whether auth is wired, so an operator can confirm the
+  // surface is production-ready before pointing a real provider at it.
+  app.get("/api/content/activity-events/webhooks/status", (_req, res) => {
+    const tokenConfigured = Boolean(
+      process.env.CONTENT_EVENTS_INGEST_TOKEN || process.env.CRON_SECRET || process.env.ATOM_OPS_CRON_SECRET,
+    );
+    res.json({
+      tokenConfigured,
+      failClosedInProduction: true,
+      channels: PROVIDER_CHANNELS.map((c) => {
+        const n = PROVIDER_NORMALIZERS[c];
+        return {
+          channel: c,
+          path: `/api/content/activity-events/webhooks/${c}`,
+          description: n.description,
+          emits: n.emits,
+        };
+      }),
+    });
   });
 
   // ── Voice profiles
