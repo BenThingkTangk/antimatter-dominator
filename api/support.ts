@@ -18,18 +18,19 @@
  *   - ingest requires X-Admin-Key (ADMIN_API_KEY).
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { resolveSession } from "./_lib/support/auth.js";
-import { answer } from "./_lib/support/chat.js";
-import { runAction, actionCatalog, ACTION_IDS, type ActionId } from "./_lib/support/actions.js";
-import { escalate } from "./_lib/support/escalation.js";
-import { recordFeedback } from "./_lib/support/eval.js";
-import { ingestSources, ingestRepoDefaults } from "./_lib/support/ingest.js";
+// Lightweight status readers only (pure env reads). The public GET surface
+// (op=config / op=voice) depends on nothing heavier than these, so it stays up
+// even if a deeper module in the chat/ingest graph fails to load.
+import { actionCatalog, ACTION_IDS, type ActionId } from "./_lib/support/actions.js";
 import { voiceStatus } from "./_lib/support/voice.js";
 import { llmStatus } from "./_lib/support/llm.js";
 import { embeddingProviderStatus } from "./_lib/support/embeddings.js";
 import { activeBackend } from "./_lib/support/retrieval.js";
 import { escalationProviders } from "./_lib/support/escalation.js";
 import type { SupportTurn } from "./_lib/support/types.js";
+// The heavy, write-capable ops (chat RAG, actions, escalation, ingest, session)
+// are loaded lazily inside their POST branches. @vercel/nft still traces these
+// static-specifier dynamic imports into the function bundle.
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY);
@@ -83,6 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const provided = (req.headers["x-admin-key"] || "").toString().trim();
       if (!ADMIN_API_KEY) return res.status(500).json({ error: "ADMIN_API_KEY not configured" });
       if (provided !== ADMIN_API_KEY) return res.status(401).json({ error: "Unauthorized" });
+      const { ingestSources, ingestRepoDefaults } = await import("./_lib/support/ingest.js");
       if (body?.mode === "repo-defaults") {
         const result = await ingestRepoDefaults();
         return res.status(200).json({ ok: true, ...result });
@@ -94,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Resolve session for the remaining (user-facing) ops.
+    const { resolveSession } = await import("./_lib/support/auth.js");
     const session = await resolveSession(req.headers.cookie);
 
     // ── Chat ─────────────────────────────────────────────────────────────────
@@ -109,6 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const sessionId = sessionIdFrom(body);
       const surface = body?.surface === "marketing" ? "marketing" : (session.authenticated ? "app" : "marketing");
 
+      const { answer } = await import("./_lib/support/chat.js");
       const result = await answer({ message, history, sessionId, surface, session });
 
       const wantsStream =
@@ -140,6 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Feedback (thumbs) ────────────────────────────────────────────────────
     if (op === "feedback") {
+      const { recordFeedback } = await import("./_lib/support/eval.js");
       const verdict = body?.verdict === "helpful" ? "helpful" : "not_helpful";
       const id = await recordFeedback({
         messageId: body?.messageId, conversationId: body?.conversationId, sessionId: body?.sessionId,
@@ -152,6 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Manual escalate ──────────────────────────────────────────────────────
     if (op === "escalate") {
+      const { escalate } = await import("./_lib/support/escalation.js");
       const transcript: SupportTurn[] = Array.isArray(body?.transcript) ? body.transcript : [];
       const result = await escalate({
         conversationId: body?.conversationId, sessionId: body?.sessionId,
@@ -168,6 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (op === "action") {
       const action = String(body?.action || "") as ActionId;
       if (!ACTION_IDS.includes(action)) return res.status(400).json({ error: "unknown action" });
+      const { runAction } = await import("./_lib/support/actions.js");
       const result = await runAction(action, session, body?.args || {});
       return res.status(result.ok ? 200 : (result.denied ? 403 : 200)).json(result);
     }

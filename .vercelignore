@@ -1,0 +1,6 @@
+# Test files must never ship as serverless functions.
+# The functions glob in vercel.json ("api/**/*.ts") would otherwise match
+# co-located *.test.ts files and deploy them as functions. Those test modules
+# run assertions and call process.exit() at import time, which crashes the
+# lambda during cold-start init. Keep them out of the deployment entirely.
+**/*.test.ts
