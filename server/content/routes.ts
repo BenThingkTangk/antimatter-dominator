@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { parseVoiceYaml, validateVoiceYaml, DEFAULT_VOICE_YAML } from "@shared/constants/atom-content";
 import { getLiveNumbers } from "./liveNumbersEngine";
+import { previewIngestion, runIngestion, ADAPTERS } from "./productActivityIngestion";
 import {
   createContentBrief, generateContentAsset, verifyContentClaims, scoreVoiceCompliance,
   createDerivativeAssets, refineGeneration, approveGeneration, saveEditedGeneration,
@@ -152,6 +153,46 @@ export function registerContentRoutes(app: Express) {
       allowDemoData: req.query.allowDemoData === "true",
     });
     res.json(result);
+  });
+
+  // ── Live-metrics ingestion (production proof)
+  // Derives metrics from persisted production data (prospects, campaigns) and
+  // writes them as isDemo=false. Demo metrics are never read or promoted here.
+  const ingestQuerySchema = z.object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
+    sourceSystem: z.string().optional(),
+  });
+
+  // List the registered production adapters and whether each currently has data.
+  app.get("/api/content/live-metrics/sources", (_req, res) => {
+    res.json(
+      ADAPTERS.map((a) => ({ sourceSystem: a.sourceSystem, description: a.description, available: a.available() })),
+    );
+  });
+
+  // Preview what an ingest would derive — pure read, persists nothing.
+  app.get("/api/content/live-metrics/preview", (req, res) => {
+    try {
+      const q = ingestQuerySchema.parse({
+        from: req.query.from || undefined,
+        to: req.query.to || undefined,
+        sourceSystem: req.query.sourceSystem || undefined,
+      });
+      res.json(previewIngestion(q));
+    } catch (err: any) {
+      res.status(err?.issues ? 400 : 500).json({ error: err.message });
+    }
+  });
+
+  // Trigger ingestion: derive + persist production metrics (idempotent upsert).
+  app.post("/api/content/live-metrics/ingest", (req, res) => {
+    try {
+      const q = ingestQuerySchema.parse(req.body ?? {});
+      res.json(runIngestion(q));
+    } catch (err: any) {
+      res.status(err?.issues ? 400 : 500).json({ error: err.message });
+    }
   });
 
   // ── Voice profiles

@@ -682,18 +682,108 @@ function VoiceView() {
 }
 
 // ─── Live Numbers ─────────────────────────────────────────────────────────────────
+interface IngestedMetric {
+  metricKey: string; metricLabel: string; value: number; unit: string;
+  sourceSystem: string; sourceRecordId: string; confidence: string;
+  capturedAt: string; metadata: Record<string, unknown>;
+}
+interface IngestionResponse {
+  window: { from: string | null; to: string | null; windowId: string };
+  metrics: IngestedMetric[];
+  totalMetrics: number; availableSources: number; emptySources: string[];
+  persisted?: number;
+  adapters: Array<{ sourceSystem: string; description: string; available: boolean; metrics: IngestedMetric[] }>;
+}
+
 function LiveNumbersView() {
-  const [demo, setDemo] = useState(true);
+  const { toast } = useToast();
+  const [demo, setDemo] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const { data } = useQuery<LiveNumbersResult>({
     queryKey: ["/api/content/live-numbers", "panel", demo],
     queryFn: async () => (await apiRequest("GET", `/api/content/live-numbers?allowDemoData=${demo}`)).json(),
   });
+
+  const body = () => ({
+    from: from ? new Date(from).toISOString() : undefined,
+    to: to ? new Date(to).toISOString() : undefined,
+  });
+  const [preview, setPreview] = useState<IngestionResponse | null>(null);
+
+  const previewMut = useMutation({
+    mutationFn: async () => {
+      const p = new URLSearchParams();
+      const b = body();
+      if (b.from) p.set("from", b.from);
+      if (b.to) p.set("to", b.to);
+      return (await apiRequest("GET", `/api/content/live-metrics/preview?${p.toString()}`)).json() as Promise<IngestionResponse>;
+    },
+    onSuccess: (d) => { setPreview(d); toast({ title: `Preview: ${d.totalMetrics} production metric(s)`, description: d.emptySources.length ? `Empty sources: ${d.emptySources.join(", ")}` : "All sources produced data." }); },
+    onError: (e: any) => toast({ title: "Preview failed", description: e.message, variant: "destructive" }),
+  });
+
+  const ingestMut = useMutation({
+    mutationFn: async () => (await apiRequest("POST", "/api/content/live-metrics/ingest", body())).json() as Promise<IngestionResponse>,
+    onSuccess: (d) => {
+      setPreview(d);
+      queryClient.invalidateQueries({ queryKey: ["/api/content/live-numbers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/content/summary"] });
+      toast({ title: `Ingested ${d.persisted ?? d.totalMetrics} production metric(s)`, description: "Written as demo=false. Demo metrics untouched." });
+    },
+    onError: (e: any) => toast({ title: "Ingest failed", description: e.message, variant: "destructive" }),
+  });
+
+  const win = preview?.window;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Only verified & high-confidence metrics can back factual claims. Each carries source, timestamp, and confidence.</p>
-        <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} /> Show demo data</label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} data-testid="live-demo-toggle" /> Show demo data</label>
       </div>
+
+      {/* ── Production ingestion control ─────────────────────────────────── */}
+      <div className="p-4 rounded-xl" style={panel()}>
+        <div className="flex items-center gap-2 mb-3">
+          <RefreshCw className="w-4 h-4" style={{ color: PRIMARY }} />
+          <span className="text-sm font-semibold">Ingest production proof</span>
+        </div>
+        <p className="text-xs mb-3" style={{ color: "var(--color-text-muted)" }}>
+          Derives real metrics from persisted production data (prospects, campaigns). Writes <code>demo=false</code> rows only — seeded demo metrics are never overwritten or promoted.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div><Label>From (optional)</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 mt-1" data-testid="ingest-from" /></div>
+          <div><Label>To (optional)</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 mt-1" data-testid="ingest-to" /></div>
+          <Button variant="outline" size="sm" onClick={() => previewMut.mutate()} disabled={previewMut.isPending} data-testid="ingest-preview">
+            {previewMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Preview"}
+          </Button>
+          <Button size="sm" onClick={() => ingestMut.mutate()} disabled={ingestMut.isPending} data-testid="ingest-run" style={{ background: PRIMARY, color: "#04201d" }}>
+            {ingestMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ingest now"}
+          </Button>
+        </div>
+        {preview && (
+          <div className="mt-3 text-xs space-y-2">
+            <div style={{ color: "var(--color-text-muted)" }}>
+              Window: <span className="font-mono">{win?.from?.slice(0, 10) || "all-time"}</span> → <span className="font-mono">{win?.to?.slice(0, 10) || "now"}</span>
+              {typeof preview.persisted === "number" && <> · <span style={{ color: "#34d399" }}>persisted {preview.persisted}</span></>}
+              · {preview.availableSources} source(s) with data
+            </div>
+            <div className="grid sm:grid-cols-2 gap-1.5">
+              {preview.metrics.map((m) => (
+                <div key={m.metricKey + m.sourceSystem} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{m.metricLabel}</div>
+                    <div className="text-[10px] truncate" style={{ color: "var(--color-text-muted)" }}>{m.sourceSystem} · {m.confidence}</div>
+                  </div>
+                  <div className="font-bold tabular-nums shrink-0" style={{ color: PRIMARY }}>{m.value}{m.unit === "%" ? "%" : m.unit ? ` ${m.unit}` : ""}</div>
+                </div>
+              ))}
+              {preview.metrics.length === 0 && <Muted>No production rows in this window — nothing fabricated.</Muted>}
+            </div>
+          </div>
+        )}
+      </div>
+
       {data?.fallbackMessage && <div className="text-xs p-3 rounded-lg" style={{ background: "rgba(251,191,36,0.08)", color: "#fbbf24" }}><AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> {data.fallbackMessage}</div>}
       <div className="grid md:grid-cols-3 gap-3">
         <Bucket title="Usable (final content)" color="#34d399" items={data?.usable || []} />
