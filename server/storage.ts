@@ -4,6 +4,8 @@ import { eq, desc, sql } from "drizzle-orm";
 import {
   products, pitches, objections, prospects, marketIntel,
   campaigns, campaignAccounts, scoringTemplates,
+  contentProjects, contentGenerations, voiceProfiles,
+  productActivityMetrics, contentClaims, approvalLog,
   type Product, type InsertProduct,
   type Pitch, type InsertPitch,
   type Objection, type InsertObjection,
@@ -12,7 +14,14 @@ import {
   type Campaign, type InsertCampaign,
   type CampaignAccount, type InsertCampaignAccount,
   type ScoringTemplate, type InsertScoringTemplate,
+  type ContentProject, type InsertContentProject,
+  type ContentGeneration, type InsertContentGeneration,
+  type VoiceProfile, type InsertVoiceProfile,
+  type ProductActivityMetric, type InsertProductActivityMetric,
+  type ContentClaim, type InsertContentClaim,
+  type ApprovalLogEntry, type InsertApprovalLogEntry,
 } from "@shared/schema";
+import { DEFAULT_VOICE_YAML } from "@shared/constants/atom-content";
 
 const sqlite = new Database("antimatter.db");
 sqlite.pragma("journal_mode = WAL");
@@ -152,6 +161,84 @@ sqlite.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_campaign_accounts_campaign_id ON campaign_accounts(campaign_id);
   CREATE INDEX IF NOT EXISTS idx_campaign_accounts_final_score ON campaign_accounts(final_score DESC);
+
+  -- ── ATOM CONTENT WORKER ────────────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS content_projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    target_audience TEXT NOT NULL,
+    funnel_stage TEXT NOT NULL,
+    intensity TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_by TEXT NOT NULL DEFAULT 'operator',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS content_generations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    prompt_input TEXT NOT NULL,
+    generated_output TEXT NOT NULL,
+    voice_score REAL NOT NULL DEFAULT 0,
+    claim_score REAL NOT NULL DEFAULT 0,
+    evidence_json TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'demo',
+    status TEXT NOT NULL DEFAULT 'generated',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS voice_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    yaml_content TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS product_activity_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metric_key TEXT NOT NULL,
+    metric_label TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    unit TEXT NOT NULL DEFAULT '',
+    source_system TEXT NOT NULL,
+    source_record_id TEXT,
+    confidence TEXT NOT NULL DEFAULT 'unverified',
+    is_demo INTEGER NOT NULL DEFAULT 0,
+    captured_at TEXT NOT NULL,
+    metadata_json TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS content_claims (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    generation_id INTEGER NOT NULL,
+    claim_text TEXT NOT NULL,
+    claim_type TEXT NOT NULL,
+    metric_key TEXT,
+    verified TEXT NOT NULL DEFAULT 'needs_review',
+    source_system TEXT,
+    confidence TEXT,
+    risk_level TEXT NOT NULL DEFAULT 'low',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS approval_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    generation_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    approved_by TEXT NOT NULL DEFAULT 'operator',
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_content_generations_project ON content_generations(project_id);
+  CREATE INDEX IF NOT EXISTS idx_content_claims_generation ON content_claims(generation_id);
+  CREATE INDEX IF NOT EXISTS idx_approval_log_generation ON approval_log(generation_id);
+  CREATE INDEX IF NOT EXISTS idx_pam_source ON product_activity_metrics(source_system);
 `);
 
 export interface IStorage {
@@ -197,6 +284,32 @@ export interface IStorage {
   getScoringTemplates(): ScoringTemplate[];
   getScoringTemplateBySlug(slug: string): ScoringTemplate | undefined;
   createScoringTemplate(data: InsertScoringTemplate): ScoringTemplate;
+
+  // ── ATOM Content
+  getContentProjects(): ContentProject[];
+  getContentProjectById(id: number): ContentProject | undefined;
+  createContentProject(data: InsertContentProject): ContentProject;
+  updateContentProject(id: number, patch: Partial<InsertContentProject>): ContentProject | undefined;
+
+  getContentGenerations(projectId?: number): ContentGeneration[];
+  getContentGenerationById(id: number): ContentGeneration | undefined;
+  createContentGeneration(data: InsertContentGeneration): ContentGeneration;
+  updateContentGeneration(id: number, patch: Partial<InsertContentGeneration>): ContentGeneration | undefined;
+
+  getVoiceProfiles(): VoiceProfile[];
+  getActiveVoiceProfile(): VoiceProfile | undefined;
+  createVoiceProfile(data: InsertVoiceProfile): VoiceProfile;
+  updateVoiceProfile(id: number, patch: Partial<InsertVoiceProfile>): VoiceProfile | undefined;
+  setActiveVoiceProfile(id: number): void;
+
+  getProductActivityMetrics(opts?: { sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean }): ProductActivityMetric[];
+  createProductActivityMetric(data: InsertProductActivityMetric): ProductActivityMetric;
+
+  getContentClaims(generationId: number): ContentClaim[];
+  replaceContentClaims(generationId: number, rows: InsertContentClaim[]): void;
+
+  getApprovalLog(generationId?: number): ApprovalLogEntry[];
+  createApprovalLogEntry(data: InsertApprovalLogEntry): ApprovalLogEntry;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -361,6 +474,98 @@ export class DatabaseStorage implements IStorage {
 
   createScoringTemplate(data: InsertScoringTemplate): ScoringTemplate {
     return db.insert(scoringTemplates).values(data).returning().get();
+  }
+
+  // ── ATOM Content: Projects
+  getContentProjects(): ContentProject[] {
+    return db.select().from(contentProjects).orderBy(desc(contentProjects.id)).all();
+  }
+  getContentProjectById(id: number): ContentProject | undefined {
+    return db.select().from(contentProjects).where(eq(contentProjects.id, id)).get();
+  }
+  createContentProject(data: InsertContentProject): ContentProject {
+    return db.insert(contentProjects).values(data).returning().get();
+  }
+  updateContentProject(id: number, patch: Partial<InsertContentProject>): ContentProject | undefined {
+    return db.update(contentProjects).set(patch).where(eq(contentProjects.id, id)).returning().get();
+  }
+
+  // ── ATOM Content: Generations
+  getContentGenerations(projectId?: number): ContentGeneration[] {
+    if (projectId) {
+      return db.select().from(contentGenerations).where(eq(contentGenerations.projectId, projectId)).orderBy(desc(contentGenerations.id)).all();
+    }
+    return db.select().from(contentGenerations).orderBy(desc(contentGenerations.id)).all();
+  }
+  getContentGenerationById(id: number): ContentGeneration | undefined {
+    return db.select().from(contentGenerations).where(eq(contentGenerations.id, id)).get();
+  }
+  createContentGeneration(data: InsertContentGeneration): ContentGeneration {
+    return db.insert(contentGenerations).values(data).returning().get();
+  }
+  updateContentGeneration(id: number, patch: Partial<InsertContentGeneration>): ContentGeneration | undefined {
+    return db.update(contentGenerations).set(patch).where(eq(contentGenerations.id, id)).returning().get();
+  }
+
+  // ── ATOM Content: Voice profiles
+  getVoiceProfiles(): VoiceProfile[] {
+    return db.select().from(voiceProfiles).orderBy(desc(voiceProfiles.id)).all();
+  }
+  getActiveVoiceProfile(): VoiceProfile | undefined {
+    return db.select().from(voiceProfiles).where(eq(voiceProfiles.active, true)).get();
+  }
+  createVoiceProfile(data: InsertVoiceProfile): VoiceProfile {
+    return db.insert(voiceProfiles).values(data).returning().get();
+  }
+  updateVoiceProfile(id: number, patch: Partial<InsertVoiceProfile>): VoiceProfile | undefined {
+    return db.update(voiceProfiles).set(patch).where(eq(voiceProfiles.id, id)).returning().get();
+  }
+  setActiveVoiceProfile(id: number): void {
+    const tx = sqlite.transaction(() => {
+      db.update(voiceProfiles).set({ active: false }).run();
+      db.update(voiceProfiles).set({ active: true }).where(eq(voiceProfiles.id, id)).run();
+    });
+    tx();
+  }
+
+  // ── ATOM Content: Product activity metrics
+  getProductActivityMetrics(opts?: { sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean }): ProductActivityMetric[] {
+    const clauses: any[] = [];
+    if (opts?.sourceSystem) clauses.push(sql`${productActivityMetrics.sourceSystem} = ${opts.sourceSystem}`);
+    if (opts?.from) clauses.push(sql`${productActivityMetrics.capturedAt} >= ${opts.from}`);
+    if (opts?.to) clauses.push(sql`${productActivityMetrics.capturedAt} <= ${opts.to}`);
+    if (!opts?.includeDemo) clauses.push(sql`${productActivityMetrics.isDemo} = 0`);
+    let q: any = db.select().from(productActivityMetrics);
+    if (clauses.length) {
+      q = q.where(clauses.reduce((acc, c) => sql`${acc} AND ${c}`));
+    }
+    return q.orderBy(desc(productActivityMetrics.capturedAt)).all();
+  }
+  createProductActivityMetric(data: InsertProductActivityMetric): ProductActivityMetric {
+    return db.insert(productActivityMetrics).values(data).returning().get();
+  }
+
+  // ── ATOM Content: Claims
+  getContentClaims(generationId: number): ContentClaim[] {
+    return db.select().from(contentClaims).where(eq(contentClaims.generationId, generationId)).orderBy(desc(contentClaims.id)).all();
+  }
+  replaceContentClaims(generationId: number, rows: InsertContentClaim[]): void {
+    const tx = sqlite.transaction(() => {
+      db.delete(contentClaims).where(eq(contentClaims.generationId, generationId)).run();
+      for (const r of rows) db.insert(contentClaims).values(r).run();
+    });
+    tx();
+  }
+
+  // ── ATOM Content: Approval log
+  getApprovalLog(generationId?: number): ApprovalLogEntry[] {
+    if (generationId) {
+      return db.select().from(approvalLog).where(eq(approvalLog.generationId, generationId)).orderBy(desc(approvalLog.id)).all();
+    }
+    return db.select().from(approvalLog).orderBy(desc(approvalLog.id)).all();
+  }
+  createApprovalLogEntry(data: InsertApprovalLogEntry): ApprovalLogEntry {
+    return db.insert(approvalLog).values(data).returning().get();
   }
 }
 
@@ -589,3 +794,37 @@ function seedScoringTemplates() {
 }
 
 seedScoringTemplates();
+
+// ── ATOM Content seeds: default voice profile + demo activity metrics
+function seedVoiceProfile() {
+  if (storage.getVoiceProfiles().length > 0) return;
+  const now = new Date().toISOString();
+  storage.createVoiceProfile({
+    name: "ATOM Sales OS — Command Voice",
+    yamlContent: DEFAULT_VOICE_YAML,
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+  });
+  console.log("Seeded ATOM Content default voice profile");
+}
+seedVoiceProfile();
+
+function seedDemoMetrics() {
+  // Only seed demo metrics; production metrics arrive from real worker activity.
+  const existingDemo = storage.getProductActivityMetrics({ includeDemo: true }).filter((m) => m.isDemo);
+  if (existingDemo.length > 0) return;
+  const now = Date.now();
+  const iso = (daysAgo: number) => new Date(now - daysAgo * 86_400_000).toISOString();
+  const demo: InsertProductActivityMetric[] = [
+    { metricKey: "leads_generated", metricLabel: "Leads generated", metricValue: 42, unit: "", sourceSystem: "atom-leadgen", sourceRecordId: "demo-lg-1", confidence: "high", isDemo: true, capturedAt: iso(3), metadataJson: JSON.stringify({ window: "last_30d" }) },
+    { metricKey: "reply_rate_delta", metricLabel: "Reply-rate increase", metricValue: 31, unit: "%", sourceSystem: "campaigns", sourceRecordId: "demo-cmp-7", confidence: "verified", isDemo: true, capturedAt: iso(5), metadataJson: JSON.stringify({ baseline: "9%", current: "11.8%" }) },
+    { metricKey: "events_processed", metricLabel: "Signal events processed", metricValue: 5204, unit: "events", sourceSystem: "atom-warroom", sourceRecordId: "demo-wr-3", confidence: "high", isDemo: true, capturedAt: iso(1), metadataJson: null },
+    { metricKey: "followup_time_reduction", metricLabel: "Follow-up time reduced", metricValue: 74, unit: "%", sourceSystem: "atom-leadgen", sourceRecordId: "demo-lg-9", confidence: "medium", isDemo: true, capturedAt: iso(8), metadataJson: JSON.stringify({ note: "sample of 120 sequences" }) },
+    { metricKey: "dials_today", metricLabel: "Outbound dials (today)", metricValue: 318, unit: "", sourceSystem: "atom-leadgen", sourceRecordId: "demo-lg-12", confidence: "verified", isDemo: true, capturedAt: iso(0), metadataJson: null },
+    { metricKey: "pipeline_influenced", metricLabel: "Pipeline influenced", metricValue: 1.2, unit: "$M", sourceSystem: "campaigns", sourceRecordId: "demo-cmp-22", confidence: "low", isDemo: true, capturedAt: iso(12), metadataJson: JSON.stringify({ caveat: "attribution model v0" }) },
+  ];
+  for (const m of demo) storage.createProductActivityMetric(m);
+  console.log("Seeded", demo.length, "demo product activity metrics");
+}
+seedDemoMetrics();

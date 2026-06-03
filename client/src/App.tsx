@@ -19,6 +19,7 @@ import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
 import CompanyIntelligence from "./pages/company-intelligence";
 import AtomWarRoom from "./pages/atom-warroom";
+import AtomContent from "./pages/atom-content";
 import Campaigns from "./pages/campaigns";
 import AdminTenants from "./pages/admin-tenants";
 import BillingPage from "./pages/billing";
@@ -215,6 +216,7 @@ function AuthenticatedRoutesInner() {
         <Route path="/atom-campaign">{() => <Redirect to="/campaigns" />}</Route>
         <Route path="/company-intelligence" component={CompanyIntelligence} />
         <Route path="/war-room" component={AtomWarRoom} />
+        <Route path="/atom-content" component={AtomContent} />
         <Route path="/campaigns" component={Campaigns} />
         <Route path="/admin/tenants">{() => <SuperAdminOnly><AdminTenants /></SuperAdminOnly>}</Route>
         <Route path="/billing">{() => <SuperAdminOnly><BillingPage /></SuperAdminOnly>}</Route>

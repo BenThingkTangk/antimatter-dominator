@@ -4,7 +4,7 @@ import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Brain,
   Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks, AlertCircle,
-  LayoutDashboard, ArrowUpRight,
+  LayoutDashboard, ArrowUpRight, FileText,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { href: "/prospects", icon: Radar, label: "ΔTOM Prospect" },
   { href: "/atom-leadgen", icon: PhoneCall, label: "ΔTOM Lead Gen" },
   { href: "/campaigns", icon: ListChecks, label: "ΔTOM Campaigns" },
+  { href: "/atom-content", icon: FileText, label: "ΔTOM Content" },
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
 ];
 

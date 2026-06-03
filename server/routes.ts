@@ -13,6 +13,7 @@ import {
   pushRequestSchema,
 } from "@shared/schema";
 import { scorePublic, scoreAtom, tierOf, HEALTHCARE_HIPAA_TEMPLATE } from "./scoring/engine";
+import { registerContentRoutes } from "./content/routes";
 
 const anthropic = new Anthropic();
 
@@ -527,4 +528,7 @@ Focus on companies that have public signals of need: regulatory pressure, digita
   app.get("/api/scoring-templates", (_req, res) => {
     res.json(storage.getScoringTemplates());
   });
+
+  // ===== ATOM CONTENT WORKER =====
+  registerContentRoutes(app);
 }

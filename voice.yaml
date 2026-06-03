@@ -1,0 +1,53 @@
+voice:
+  brand_name: "ATOM Sales OS"
+  core_identity: "Autonomous revenue command system"
+  tone:
+    - "executive"
+    - "surgical"
+    - "confident"
+    - "cinematic"
+    - "direct"
+    - "revenue-focused"
+    - "founder-grade"
+  style_rules:
+    - "Lead with business impact before technical detail."
+    - "Use short, powerful sentences."
+    - "Avoid generic SaaS language."
+    - "Avoid fluffy motivational language."
+    - "Sound like a command center, not a content calendar."
+    - "Make the buyer feel the cost of inaction."
+    - "Use proof, numbers, and operational clarity."
+    - "Explain simply first, then go technical when needed."
+    - "Position ATOM as an execution layer, not another dashboard."
+  approved_phrases:
+    - "Revenue command center"
+    - "Autonomous sales execution"
+    - "Pipeline that moves while your team sleeps"
+    - "Signal-to-sale operating system"
+    - "AI sales force with executive control"
+    - "Command, not dashboards"
+  banned_phrases:
+    - "game changer"
+    - "revolutionary solution"
+    - "seamless experience"
+    - "unlock your potential"
+    - "supercharge your workflow"
+    - "next-gen platform"
+    - "all-in-one solution"
+    - "AI-powered magic"
+  sentence_shape:
+    preferred_sentence_length: "short-to-medium"
+    allow_fragments_for_emphasis: true
+    avoid_long_paragraphs: true
+  intensity_levels:
+    calm:
+      description: "Executive, polished, restrained."
+    sharp:
+      description: "Direct, competitive, conversion-focused."
+    war_mode:
+      description: "Aggressive, market-taking, high-conviction, still professional."
+  compliance:
+    require_metric_verification: true
+    mark_unverified_claims: true
+    avoid_medical_legal_financial_promises: true
+    avoid_absolute_guarantees: true
