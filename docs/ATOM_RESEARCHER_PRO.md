@@ -120,12 +120,39 @@ npm run dev      # serves UI + /api on :5000
 If `PERPLEXITY_API_KEY` is unset you'll see the polished activation state instead
 of a dossier — expected.
 
+## Citations & source map (robust extraction)
+
+Perplexity Sonar returns sources in several shapes depending on tier/model:
+`citations` may be a `string[]` (legacy) **or** an object array
+(`{ url, title, date }`), and newer tiers also return a separate
+`search_results` object array. `harvestCitations()` consumes **all** of these,
+dedupes by URL, and preserves order — so the source map is populated even when
+the model writes inline `[1]…[n]` markers but no literal URLs in the prose.
+
+- **Clickable sources always render.** Numeric `[n]` chips in the dossier map to
+  the corresponding `sourceMap[n]` URL; the Source Map tab lists title, domain,
+  date, tier, and a quality bar.
+- **Export integrity.** If the model's `## 12. Source Map` section lacks real
+  URLs but the API returned citations, `ensureSourceMapMarkdown()` appends a
+  generated, fully-linked Source Map to `rawMarkdown` so `.md` / copy exports
+  always carry real URLs. A pre-linked source map is left untouched.
+- **`dossier.confidenceScore`** is always populated as a number (alias of
+  `confidence`), alongside `confidenceLabel` and `sourceCount`, per the public
+  contract.
+- No URLs are ever fabricated — only URLs the API actually returned (or that the
+  model literally wrote) are surfaced.
+
+Offline verification: `npx tsx scripts/atom-researcher-smoke.ts` exercises the
+object-citation, `search_results`, URL-less-source-map, legacy `string[]`, and
+source-thin paths with no network or API key.
+
 ## Guardrails
 
 - API key is server-side only; the browser never sees it.
-- Citations come from Perplexity's `citations` array (no fabricated URLs); the
-  source map is quality-scored (primary / credible / secondary).
-- Source-thin (<3 sources) dossiers are flagged and confidence is capped.
+- Citations come from Perplexity's `citations` **and** `search_results` (no
+  fabricated URLs); the source map is quality-scored (primary / credible /
+  secondary) with a recency nudge for recently-dated sources.
+- Source-thin (<3 sources) dossiers are flagged and confidence is capped at 55.
 - Confidence + Gaps section separates verified vs inferred; the system prompt
   forbids invented facts.
 - Malformed upstream responses are handled (empty body, non-JSON, timeout).

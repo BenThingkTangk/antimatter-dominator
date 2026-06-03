@@ -21,14 +21,18 @@ interface SourceMapEntry {
   domain: string;
   quality: number;
   tier: "primary" | "credible" | "secondary";
+  date?: string;
+  supports?: string;
 }
 
 interface Dossier {
   company: string;
   mode: ResearchMode;
   confidence: number;
+  confidenceScore?: number;
   confidenceLabel: "High" | "Moderate" | "Low";
   sourceThin: boolean;
+  sourceCount?: number;
   executiveBrief: string;
   sections: { id: string; title: string; markdown: string }[];
   buyingSignals: { category: string; detected: boolean; detail: string }[];
@@ -171,13 +175,23 @@ function renderInline(text: string, sources: SourceMapEntry[]): React.ReactNode[
     } else if (/^\[\d+\]$/.test(tok)) {
       const n = parseInt(tok.slice(1, -1), 10);
       const src = sources.find((s) => s.index === n);
-      out.push(
-        <a key={key++} href={src?.url || "#"} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center align-middle mx-0.5 px-1 rounded text-[10px] font-mono"
-          style={{ background: "rgba(34,230,214,0.12)", color: "#22e6d6", border: "1px solid rgba(34,230,214,0.25)" }}>
-          {n}
-        </a>
-      );
+      if (src) {
+        out.push(
+          <a key={key++} href={src.url} target="_blank" rel="noopener noreferrer"
+            title={src.title || src.domain}
+            className="inline-flex items-center align-middle mx-0.5 px-1 rounded text-[10px] font-mono hover:brightness-125"
+            style={{ background: "rgba(34,230,214,0.12)", color: "#22e6d6", border: "1px solid rgba(34,230,214,0.25)" }}>
+            {n}
+          </a>
+        );
+      } else {
+        // No matching source — show the marker as an inert chip, never a dead link.
+        out.push(
+          <span key={key++} className="inline-flex items-center align-middle mx-0.5 px-1 rounded text-[10px] font-mono text-white/35 border border-white/10">
+            {n}
+          </span>
+        );
+      }
     } else if (tok.startsWith("[")) {
       const lm = tok.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (lm) out.push(<a key={key++} href={lm[2]} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">{lm[1]}</a>);
@@ -797,7 +811,10 @@ function SourceMap({ sources }: { sources: SourceMapEntry[] }) {
           className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors group">
           <span className="text-[10px] font-mono w-5 text-center shrink-0" style={{ color: tierColor(s.tier) }}>{s.index}</span>
           <div className="min-w-0 flex-1">
-            <div className="text-[12px] text-white/70 truncate group-hover:text-[#22e6d6] transition-colors">{s.domain}</div>
+            <div className="text-[12px] text-white/70 truncate group-hover:text-[#22e6d6] transition-colors">
+              {s.title && s.title !== s.url ? s.title : s.domain}
+              {s.date ? <span className="text-[9px] text-white/30 font-mono ml-1.5">{s.date}</span> : null}
+            </div>
             <div className="text-[10px] text-white/30 truncate">{s.url}</div>
           </div>
           <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full shrink-0"

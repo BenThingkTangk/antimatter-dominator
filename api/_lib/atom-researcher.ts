@@ -45,14 +45,28 @@ export interface SourceMapEntry {
   /** 0–100 heuristic credibility score. */
   quality: number;
   tier: "primary" | "credible" | "secondary";
+  /** Publication/crawl date when the API provides one (ISO or raw string). */
+  date?: string;
+  /** Short note on what this source supports (from the source map or fallback). */
+  supports: string;
+}
+
+/** Normalized citation harvested from any Perplexity response shape. */
+interface RawCitation {
+  url: string;
+  title?: string;
+  date?: string;
 }
 
 export interface Dossier {
   company: string;
   mode: ResearchMode;
   confidence: number; // 0–100
+  /** Public-contract alias of `confidence`, always a number. */
+  confidenceScore: number;
   confidenceLabel: "High" | "Moderate" | "Low";
   sourceThin: boolean;
+  sourceCount: number;
   executiveBrief: string;
   sections: { id: string; title: string; markdown: string }[];
   buyingSignals: {
@@ -189,15 +203,17 @@ const CREDIBLE_DOMAINS = [
   "g2.com", "glassdoor.com",
 ];
 
-function scoreSource(url: string, index: number): SourceMapEntry {
+function scoreSource(cite: RawCitation, index: number): SourceMapEntry {
+  const url = cite.url;
   let domain = "";
-  let title = `Source ${index}`;
+  let title = (cite.title || "").trim();
   try {
     const u = new URL(url);
     domain = u.hostname.replace(/^www\./, "");
-    title = domain + (u.pathname !== "/" ? u.pathname.slice(0, 48) : "");
+    if (!title) title = domain + (u.pathname !== "/" ? u.pathname.slice(0, 48) : "");
   } catch {
     domain = "unknown";
+    if (!title) title = `Source ${index}`;
   }
   const lower = url.toLowerCase();
   let tier: SourceMapEntry["tier"] = "secondary";
@@ -211,8 +227,52 @@ function scoreSource(url: string, index: number): SourceMapEntry {
   } else if (lower.startsWith("https://")) {
     quality = 55;
   }
+  // Recency nudge: a dated source within the last ~6 months is fresher signal.
+  if (cite.date) {
+    const ts = Date.parse(cite.date);
+    if (!Number.isNaN(ts)) {
+      const ageDays = (Date.now() - ts) / 86_400_000;
+      if (ageDays >= 0 && ageDays <= 180) quality = Math.min(100, quality + 5);
+    }
+  }
   // Official company domain (matches target) would be primary — handled by caller.
-  return { index, url, title, domain, quality, tier };
+  return { index, url, title, domain, quality, tier, date: cite.date, supports: title };
+}
+
+/**
+ * Harvest citation URLs from EVERY shape Perplexity Sonar may return:
+ *   - `citations`: string[] (legacy) OR object[] ({url,title,date,...})
+ *   - `search_results`: object[] ({url,title,date}) — newer Sonar tiers
+ * Deduped by URL, order-preserving. Never fabricates URLs.
+ */
+export function harvestCitations(data: any): RawCitation[] {
+  const out: RawCitation[] = [];
+  const seen = new Set<string>();
+  const push = (url: unknown, title?: unknown, date?: unknown) => {
+    if (typeof url !== "string") return;
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed) || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    out.push({
+      url: trimmed,
+      title: typeof title === "string" && title.trim() ? title.trim() : undefined,
+      date: typeof date === "string" && date.trim() ? date.trim() : undefined,
+    });
+  };
+  const consume = (arr: any) => {
+    if (!Array.isArray(arr)) return;
+    for (const c of arr) {
+      if (typeof c === "string") push(c);
+      else if (c && typeof c === "object") {
+        push(c.url ?? c.link, c.title ?? c.name, c.date ?? c.published_date ?? c.last_updated);
+      }
+    }
+  };
+  consume(data?.citations);
+  consume(data?.search_results);
+  // Some responses nest results under choices[].message.
+  consume(data?.choices?.[0]?.message?.citations);
+  return out;
 }
 
 const SIGNAL_CATEGORIES = [
@@ -223,7 +283,7 @@ const SIGNAL_CATEGORIES = [
 /** Parse the model's Markdown into the structured Dossier shape. */
 export function parseDossier(
   markdown: string,
-  citations: string[],
+  citations: RawCitation[],
   req: ResearchRequest,
   mode: ResearchMode,
 ): Dossier {
@@ -270,13 +330,16 @@ export function parseDossier(
     return { category, detected, detail: detail || (line ? line.trim() : "No clear signal in current sources.") };
   });
 
-  // Source map. Prefer Perplexity citations array; fall back to URLs in markdown.
-  const urls = citations.length
+  // Source map. Prefer the API's structured citations (handles string OR
+  // object shapes, plus search_results). Only fall back to scraping raw URLs
+  // out of the markdown when the API returned nothing — and even then we never
+  // invent URLs, we only surface ones the model actually wrote.
+  const rawCites: RawCitation[] = citations.length
     ? citations
-    : Array.from(new Set((markdown.match(/https?:\/\/[^\s)\]]+/g) || [])));
+    : Array.from(new Set((markdown.match(/https?:\/\/[^\s)\]]+/g) || []))).map((url) => ({ url }));
   const targetDomain = (req.domain || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
-  const sourceMap: SourceMapEntry[] = urls.map((url, i) => {
-    const entry = scoreSource(url, i + 1);
+  const sourceMap: SourceMapEntry[] = rawCites.map((cite, i) => {
+    const entry = scoreSource(cite, i + 1);
     if (targetDomain && entry.domain.includes(targetDomain)) {
       entry.tier = "primary";
       entry.quality = Math.max(entry.quality, 90);
@@ -299,14 +362,45 @@ export function parseDossier(
     company,
     mode,
     confidence,
+    confidenceScore: confidence,
     confidenceLabel,
     sourceThin,
+    sourceCount: sourceMap.length,
     executiveBrief,
     sections,
     buyingSignals,
     sourceMap,
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * If the model's markdown has no usable "## Source Map" section with real URLs
+ * but the API returned citations, append a generated Source Map so exports
+ * (.md / copy) always carry clickable, real source URLs. Never fabricates URLs.
+ */
+export function ensureSourceMapMarkdown(markdown: string, sourceMap: SourceMapEntry[]): string {
+  if (!sourceMap.length) return markdown;
+  // Does an existing Source Map section already contain at least one real URL?
+  const smMatch = markdown.match(/##\s+\d+\.\s+Source\s+Map[\s\S]*$/i);
+  const hasRealUrls = smMatch ? /https?:\/\//i.test(smMatch[0]) : false;
+  if (hasRealUrls) return markdown;
+
+  const lines = sourceMap.map((s) => {
+    const tier = s.tier.charAt(0).toUpperCase() + s.tier.slice(1);
+    const meta = [`${tier} • quality ${s.quality}`, s.date ? `dated ${s.date}` : null]
+      .filter(Boolean)
+      .join(" • ");
+    const label = s.title && s.title !== s.url ? s.title : s.domain;
+    return `${s.index}. [${label}](${s.url}) — ${s.supports || s.domain} _(${meta})_`;
+  });
+  const block = `\n\n## 12. Source Map\n\n${lines.join("\n")}\n`;
+
+  if (smMatch) {
+    // Replace the URL-less stub the model wrote with our enriched, linked version.
+    return markdown.slice(0, smMatch.index).trimEnd() + block;
+  }
+  return markdown.trimEnd() + block;
 }
 
 // Best-effort durable persistence. No-op unless Supabase is configured, and
@@ -410,15 +504,18 @@ export async function runResearch(req: ResearchRequest): Promise<RunResult> {
     }
 
     const data: any = await r.json();
-    const rawMarkdown: string = data?.choices?.[0]?.message?.content || "";
-    if (!rawMarkdown.trim()) {
+    const modelMarkdown: string = data?.choices?.[0]?.message?.content || "";
+    if (!modelMarkdown.trim()) {
       return { ok: false, researchId, mode, error: "empty_response", details: "Perplexity returned an empty dossier body." };
     }
-    const citations: string[] = Array.isArray(data?.citations)
-      ? data.citations.filter((c: any) => typeof c === "string")
-      : [];
+    // Harvest citations from every shape the API may use (string[], object[],
+    // search_results). This is what makes the source map robust.
+    const citations = harvestCitations(data);
 
-    const dossier = parseDossier(rawMarkdown, citations, req, mode);
+    const dossier = parseDossier(modelMarkdown, citations, req, mode);
+    // Guarantee the exported markdown carries real, clickable source URLs even
+    // when the model omitted them or wrote a URL-less stub.
+    const rawMarkdown = ensureSourceMapMarkdown(modelMarkdown, dossier.sourceMap);
 
     void persistDossier(researchId, req, dossier, rawMarkdown, strat.model);
 
