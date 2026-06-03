@@ -15,7 +15,8 @@
     "test:content-events": "tsx scripts/atom-content-events-smoke.ts",
     "test:content-producers": "tsx scripts/atom-content-producers-smoke.ts",
     "test:content-provider-webhooks": "tsx scripts/atom-content-provider-webhooks-smoke.ts",
-    "test:content-vercel-bridge": "tsx scripts/atom-content-vercel-bridge-smoke.ts"
+    "test:content-vercel-bridge": "tsx scripts/atom-content-vercel-bridge-smoke.ts",
+    "test:content-outreach-tags": "tsx scripts/atom-content-outreach-tags-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
