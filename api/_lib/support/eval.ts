@@ -4,8 +4,8 @@
  * user tier, thumbs result, escalation result, timestamp, tenant, model,
  * failure category.
  */
-import { sb, sbInsert, supabaseConfigured } from "./supabase";
-import type { Citation, SupportTier } from "./types";
+import { sb, sbInsert, supabaseConfigured } from "./supabase.js";
+import type { Citation, SupportTier } from "./types.js";
 
 export interface PersistConversationInput {
   sessionId: string;

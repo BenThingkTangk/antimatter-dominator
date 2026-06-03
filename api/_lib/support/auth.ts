@@ -3,7 +3,7 @@
  * Reads the atom_session cookie → user_sessions → tenant_users → tenants.
  * Mirrors api/auth/me.ts but returns a lean shape for support context.
  */
-import { sb, parseCookies, supabaseConfigured } from "./supabase";
+import { sb, parseCookies, supabaseConfigured } from "./supabase.js";
 
 export interface ResolvedSession {
   authenticated: boolean;

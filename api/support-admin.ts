@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === "POST" && view === "eval-run") {
       // Eval harness is invoked from the test page; defer to the scenarios module.
-      const { runEvalScenarios } = await import("./_lib/support/evalScenarios");
+      const { runEvalScenarios } = await import("./_lib/support/evalScenarios.js");
       const out = await runEvalScenarios();
       return res.status(200).json({ ok: true, ...out });
     }

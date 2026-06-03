@@ -1,5 +1,5 @@
 /** Tier-aware tone policy. Plan/tier shapes the assistant's voice. */
-import type { SupportTier } from "./types";
+import type { SupportTier } from "./types.js";
 
 /** Map a tenant plan (trial|growth|advisory|enterprise|...) to a support tier. */
 export function planToTier(plan: string | null | undefined): SupportTier {

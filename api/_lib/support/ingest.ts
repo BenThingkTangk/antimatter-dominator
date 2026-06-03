@@ -12,10 +12,10 @@
  */
 import { promises as fs } from "fs";
 import path from "path";
-import { chunkSource, type RawSource } from "./chunking";
-import { embed } from "./embeddings";
-import { upsertChunks, activeBackend } from "./retrieval";
-import type { ContentType } from "./types";
+import { chunkSource, type RawSource } from "./chunking.js";
+import { embed } from "./embeddings.js";
+import { upsertChunks, activeBackend } from "./retrieval.js";
+import type { ContentType } from "./types.js";
 
 export interface IngestSource {
   title: string;

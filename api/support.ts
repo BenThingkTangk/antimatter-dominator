@@ -18,18 +18,18 @@
  *   - ingest requires X-Admin-Key (ADMIN_API_KEY).
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { resolveSession } from "./_lib/support/auth";
-import { answer } from "./_lib/support/chat";
-import { runAction, actionCatalog, ACTION_IDS, type ActionId } from "./_lib/support/actions";
-import { escalate } from "./_lib/support/escalation";
-import { recordFeedback } from "./_lib/support/eval";
-import { ingestSources, ingestRepoDefaults } from "./_lib/support/ingest";
-import { voiceStatus } from "./_lib/support/voice";
-import { llmStatus } from "./_lib/support/llm";
-import { embeddingProviderStatus } from "./_lib/support/embeddings";
-import { activeBackend } from "./_lib/support/retrieval";
-import { escalationProviders } from "./_lib/support/escalation";
-import type { SupportTurn } from "./_lib/support/types";
+import { resolveSession } from "./_lib/support/auth.js";
+import { answer } from "./_lib/support/chat.js";
+import { runAction, actionCatalog, ACTION_IDS, type ActionId } from "./_lib/support/actions.js";
+import { escalate } from "./_lib/support/escalation.js";
+import { recordFeedback } from "./_lib/support/eval.js";
+import { ingestSources, ingestRepoDefaults } from "./_lib/support/ingest.js";
+import { voiceStatus } from "./_lib/support/voice.js";
+import { llmStatus } from "./_lib/support/llm.js";
+import { embeddingProviderStatus } from "./_lib/support/embeddings.js";
+import { activeBackend } from "./_lib/support/retrieval.js";
+import { escalationProviders } from "./_lib/support/escalation.js";
+import type { SupportTurn } from "./_lib/support/types.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY);

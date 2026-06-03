@@ -56,7 +56,7 @@ const session = {
 } as any;
 
 async function run() {
-  const { runAction } = await import("./actions");
+  const { runAction } = await import("./actions.js");
 
   // ── Case 1: happy path ─────────────────────────────────────────────────────
   installFetch(({ method, path }) => {

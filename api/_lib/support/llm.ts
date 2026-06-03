@@ -12,7 +12,7 @@
  *
  * Returns the assistant text. Streaming is handled by the caller via stream().
  */
-import type { SupportTurn } from "./types";
+import type { SupportTurn } from "./types.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const LLM_PROVIDER = clean(process.env.LLM_PROVIDER).toLowerCase() || "auto";

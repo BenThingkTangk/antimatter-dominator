@@ -4,7 +4,7 @@
  * boundaries so each chunk stays under a token budget while preserving the
  * nearest heading for citation.
  */
-import type { ContentType } from "./types";
+import type { ContentType } from "./types.js";
 
 export interface RawSource {
   title: string;
