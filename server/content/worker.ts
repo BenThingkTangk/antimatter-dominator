@@ -24,6 +24,8 @@ import {
   generateContent, transformContent, type GenerationEnvelope, type ProviderName, type ProviderFallback,
 } from "./generationAdapter";
 import { CONTENT_TYPE_LABELS } from "./promptBuilder";
+import { evaluatePublishGuard, PublishGuardError } from "./publishGuard";
+import { GUARDED_APPROVAL_ACTIONS } from "@shared/constants/atom-content";
 
 export interface EvidencePanel {
   provider: ProviderName;
@@ -371,6 +373,15 @@ export function saveEditedGeneration(generationId: number, editedContent: string
 export function approveGeneration(generationId: number, action: "approved" | "revised" | "rejected" | "exported", notes?: string) {
   const gen = storage.getContentGenerationById(generationId);
   if (!gen) return null;
+
+  // Server-side publish guard: approving or exporting promotes the asset to a
+  // published/ready state, so it must pass the claim-safety gate regardless of
+  // what the UI allowed. Throws PublishGuardError (HTTP 422) when blocked.
+  if (GUARDED_APPROVAL_ACTIONS.includes(action)) {
+    const result = evaluatePublishGuard(action, gen.claimScore, storage.getContentClaims(generationId));
+    if (!result.ok) throw new PublishGuardError(result);
+  }
+
   const project = storage.getContentProjectById(gen.projectId);
   const date = new Date().toISOString().slice(0, 10);
   const typeLabel = project ? CONTENT_TYPE_LABELS[project.contentType] || project.contentType : "asset";
@@ -392,6 +403,9 @@ export function approveGeneration(generationId: number, action: "approved" | "re
   if (action === "approved") {
     storage.updateContentGeneration(generationId, { status: "approved" });
     if (project) storage.updateContentProject(project.id, { status: "approved", updatedAt: new Date().toISOString() });
+  }
+  if (action === "exported") {
+    storage.updateContentGeneration(generationId, { status: "exported" });
   }
   return entry;
 }

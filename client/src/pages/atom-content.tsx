@@ -83,6 +83,19 @@ const NAV: Array<{ key: View; label: string; icon: any }> = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const PRIMARY = "var(--color-primary, #2DD4D4)";
 function scoreColor(s: number) { return s >= 85 ? "#34d399" : s >= 65 ? "#2DD4D4" : s >= 45 ? "#fbbf24" : "#f87171"; }
+// apiRequest throws Error("<status>: <body>"); pull the publish-guard reasons out of the body.
+function parseGuardError(err: any): string | null {
+  const msg = String(err?.message || err || "");
+  const m = msg.match(/^\d+:\s*(\{[\s\S]*\})$/);
+  if (!m) return null;
+  try {
+    const body = JSON.parse(m[1]);
+    const reasons: string[] = body?.guard?.reasons || [];
+    const remediation: string[] = body?.guard?.remediation || [];
+    if (!reasons.length) return null;
+    return [...reasons, ...remediation].join(" ");
+  } catch { return null; }
+}
 function confidenceBadge(c: string) {
   const map: Record<string, string> = {
     verified: "#34d399", high: "#2DD4D4", medium: "#fbbf24", low: "#fb923c", unverified: "#f87171",
@@ -426,6 +439,15 @@ function ResultView({ generationId, onBack, onOpen }: { generationId: number | n
   const approve = useMutation({
     mutationFn: async (action: string) => (await apiRequest("POST", "/api/content/approve", { generationId, action })).json(),
     onSuccess: (_d, action) => { refetch(); queryClient.invalidateQueries({ queryKey: ["/api/content/summary"] }); toast({ title: `Marked ${action}` }); },
+    onError: (err: any) => {
+      // Surface the server-side publish guard's structured 422 block reason.
+      const detail = parseGuardError(err);
+      toast({
+        title: detail ? "Blocked by claim guard" : "Action failed",
+        description: detail || String(err?.message || err),
+        variant: "destructive",
+      });
+    },
   });
 
   if (!generationId) return <Empty msg="Select a generation to view." />;

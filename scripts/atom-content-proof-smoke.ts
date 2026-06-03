@@ -14,6 +14,8 @@
 import { checkClaims, unitClass } from "../server/content/claimChecker";
 import type { LiveMetric, LiveNumbersResult } from "../server/content/liveNumbersEngine";
 import { validateVoiceYaml, DEFAULT_VOICE_YAML } from "../shared/constants/atom-content";
+import { evaluatePublishGuard } from "../server/content/publishGuard";
+import type { ContentClaim } from "../shared/schema";
 
 let failures = 0;
 function assert(cond: boolean, msg: string) {
@@ -139,6 +141,68 @@ assert(!validateVoiceYaml("just some random words\nnot yaml at all").valid, "gar
   const v = validateVoiceYaml(clearedBanned);
   assert(!v.valid, "clearing banned_phrases is rejected (guardrail removed)");
   assert(v.errors.some((e) => /banned_phrases/.test(e)), "error names banned_phrases");
+}
+
+// ─── publish/approval guard (server-side enforcement) ─────────────────────────
+console.log("\npublish/approval guard");
+function claim(p: Partial<ContentClaim> & { verified: string }): ContentClaim {
+  return {
+    id: p.id ?? 1,
+    generationId: p.generationId ?? 1,
+    claimText: p.claimText ?? "claim",
+    claimType: p.claimType ?? "metric",
+    metricKey: p.metricKey ?? null,
+    verified: p.verified,
+    sourceSystem: p.sourceSystem ?? null,
+    confidence: p.confidence ?? null,
+    riskLevel: p.riskLevel ?? "low",
+    createdAt: p.createdAt ?? "2026-06-01T00:00:00.000Z",
+  } as ContentClaim;
+}
+
+// clean generation (score 100, only verified claims) can approve AND export
+{
+  const claims = [claim({ verified: "verified", riskLevel: "low" })];
+  for (const action of ["approved", "exported"]) {
+    const r = evaluatePublishGuard(action, 100, claims);
+    assert(r.ok, `clean generation can ${action} (score 100, no risky claims)`);
+    assert(r.reasons.length === 0, `clean ${action} has no block reasons`);
+  }
+  // a claim-free asset (no rows) at 100 also passes
+  assert(evaluatePublishGuard("approved", 100, []).ok, "claim-free generation at score 100 can approve");
+}
+
+// rejected claim blocks approval AND export
+{
+  const claims = [claim({ verified: "rejected", riskLevel: "high", claimText: "We onboarded 42 enterprise logos." })];
+  for (const action of ["approved", "exported"]) {
+    const r = evaluatePublishGuard(action, 75, claims);
+    assert(!r.ok, `rejected claim blocks ${action}`);
+    assert(r.rejectedClaims.length === 1, `${action} block surfaces the rejected claim`);
+    assert(r.remediation.length > 0, `${action} block includes remediation guidance`);
+  }
+}
+
+// low claimScore blocks even when no rows are flagged as rejected/review
+{
+  const r = evaluatePublishGuard("approved", 90, [claim({ verified: "verified" })]);
+  assert(!r.ok, "claimScore below 100 blocks approval");
+  assert(r.reasons.some((x) => /claimScore/i.test(x)), "block reason names claimScore");
+  assert(r.minClaimScore === 100, "guard reports the required minimum score");
+}
+
+// demo-backed needs_review claim blocks by default policy (even at perfect-looking inputs)
+{
+  const claims = [claim({ verified: "needs_review", riskLevel: "medium", metricKey: "leads_generated", sourceSystem: "demo", claimText: "We generated 42 leads." })];
+  const r = evaluatePublishGuard("exported", 92, claims);
+  assert(!r.ok, "demo-backed needs_review claim blocks export under default policy");
+  assert(r.riskyClaims.length === 1, "needs_review claim surfaced as risky");
+}
+
+// non-guarded actions (revised / rejected) are never blocked by the guard
+{
+  const dirty = [claim({ verified: "rejected", riskLevel: "high" })];
+  assert(evaluatePublishGuard("revised", 0, dirty).ok, "guard does not block 'revised' (only approve/export are guarded)");
 }
 
 console.log(`\n${failures === 0 ? "ALL PASS" : failures + " FAILURE(S)"}`);
