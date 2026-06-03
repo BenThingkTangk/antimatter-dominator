@@ -14,6 +14,7 @@ import {
 } from "@shared/schema";
 import { scorePublic, scoreAtom, tierOf, HEALTHCARE_HIPAA_TEMPLATE } from "./scoring/engine";
 import { registerContentRoutes } from "./content/routes";
+import { recordProductActivityEvent, recordProductActivityEvents, type RecordEventInput } from "./content/eventRecorder";
 import {
   runResearch,
   PERPLEXITY_API_KEY as RESEARCHER_PPLX_KEY,
@@ -375,8 +376,30 @@ Focus on companies that have public signals of need: regulatory pressure, digita
 
   app.patch("/api/prospects/:id/status", (req, res) => {
     const { status } = req.body;
-    const prospect = storage.updateProspectStatus(Number(req.params.id), status);
+    const id = Number(req.params.id);
+    const prospect = storage.updateProspectStatus(id, status);
     if (!prospect) return res.status(404).json({ error: "Prospect not found" });
+    // Two prospect status transitions are documented production proxies in the
+    // ProspectsAdapter (status>=engaged → replies_received, status>=qualified →
+    // meetings_booked). Emit a first-class event for those two explicit states
+    // only — keyed per (prospect, status) so the same transition is counted
+    // once even if the status is re-applied. Other statuses are intentionally
+    // not emitted to avoid inflating metrics from vague transitions.
+    const normalized = String(status || "").toLowerCase();
+    const eventType =
+      normalized === "engaged" ? "reply_received" as const :
+      normalized === "qualified" ? "meeting_booked" as const :
+      null;
+    if (eventType) {
+      recordProductActivityEvent({
+        eventType,
+        sourceSystem: "atom-prospect-status",
+        sourceRecordId: `prospect:${id}:status:${normalized}`,
+        occurredAt: new Date().toISOString(),
+        prospectId: String(id),
+        metadata: { companyName: prospect.companyName, status: normalized },
+      });
+    }
     res.json(prospect);
   });
 
@@ -539,6 +562,18 @@ Focus on companies that have public signals of need: regulatory pressure, digita
               enrichStatus: "done",
               enrichError: null,
             });
+            // Enrichment reaching 'done' is the repo's documented follow-up
+            // proxy (CampaignsAdapter: followups_completed = enrichStatus='done').
+            // Emit a first-class event keyed per account so it's counted once.
+            recordProductActivityEvent({
+              eventType: "followup_completed",
+              sourceSystem: "atom-campaign-enrich",
+              sourceRecordId: `enrich:campaign:${id}:account:${accountId}`,
+              occurredAt: new Date().toISOString(),
+              accountId: String(accountId),
+              campaignId: String(id),
+              metadata: { account: acct.accountName },
+            });
           } catch (err: any) {
             storage.updateCampaignAccount(accountId, { enrichStatus: "failed", enrichError: err.message });
           }
@@ -560,6 +595,12 @@ Focus on companies that have public signals of need: regulatory pressure, digita
       const campaign = storage.getCampaignById(id);
       if (!campaign) return res.status(404).json({ error: "Campaign not found" });
       let count = 0;
+      const occurredAt = new Date().toISOString();
+      // First-class production events for the push. Pushing an account to
+      // outreach is a real outreach touch (outreach_sent); pushing to prospects
+      // also captures a lead (lead_captured). Keyed per (campaign, account) so a
+      // re-push of the same account never double-counts.
+      const pushEvents: RecordEventInput[] = [];
       for (const accountId of parsed.accountIds) {
         const acct = storage.getCampaignAccountById(accountId);
         if (!acct) continue;
@@ -576,10 +617,29 @@ Focus on companies that have public signals of need: regulatory pressure, digita
             recommendedProducts: JSON.stringify([campaign.productSlug]),
             createdAt: new Date().toISOString(),
           } as any);
+          pushEvents.push({
+            eventType: "lead_captured",
+            sourceSystem: "atom-campaign-push",
+            sourceRecordId: `push-lead:campaign:${id}:account:${accountId}`,
+            occurredAt,
+            accountId: String(accountId),
+            campaignId: String(id),
+            metadata: { account: acct.accountName, productSlug: campaign.productSlug },
+          });
         }
+        pushEvents.push({
+          eventType: "outreach_sent",
+          sourceSystem: "atom-campaign-push",
+          sourceRecordId: `push:campaign:${id}:account:${accountId}:to:${parsed.target}`,
+          occurredAt,
+          accountId: String(accountId),
+          campaignId: String(id),
+          metadata: { account: acct.accountName, target: parsed.target },
+        });
         storage.updateCampaignAccount(accountId, { pushedTo: parsed.target });
         count++;
       }
+      recordProductActivityEvents(pushEvents);
       res.json({ pushed: count, target: parsed.target });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
