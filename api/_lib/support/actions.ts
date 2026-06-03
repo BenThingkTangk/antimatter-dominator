@@ -192,29 +192,58 @@ async function regenerateApiKey(session: ResolvedSession): Promise<ActionResult>
   const prefix = plaintext.slice(0, 12);
 
   // We store ONLY the hash + prefix; the plaintext is returned once, never persisted.
+  //
+  // Order is security-critical: persist (insert) the NEW key FIRST and verify the
+  // insert actually succeeded before revoking the old one. sbInsert swallows REST
+  // errors and returns null, so a try/catch alone is insufficient — we must check
+  // the returned row. If persistence fails we leave the existing key intact so the
+  // tenant is never left with no working key.
+  let inserted: any = null;
   try {
-    // Revoke any existing active key for this tenant, then insert the new one.
-    await sb(`tenant_api_keys?tenant_id=eq.${session.tenantId}&revoked_at=is.null`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ revoked_at: new Date().toISOString() }),
-    }).catch(() => {});
-    await sbInsert("tenant_api_keys", {
+    inserted = await sbInsert("tenant_api_keys", {
       tenant_id: session.tenantId,
       key_hash: hash,
       key_prefix: prefix,
       created_by: session.userId,
     });
   } catch (e: any) {
+    inserted = null;
+    console.warn("[support action] regenerateApiKey insert threw:", e?.message);
+  }
+
+  // sbInsert returns the inserted row (return=representation) on success, or null
+  // on any failure. Require a persisted row with an id before proceeding.
+  if (!inserted || !inserted.id) {
     await audit({
       action: "regenerate_api_key", tenantId: session.tenantId, tenantSlug: session.tenantSlug,
       userId: session.userId, actorEmail: session.email, resource: `tenant:${session.tenantId}`,
-      result: "error", reason: e?.message,
+      result: "error", reason: "new_key_persist_failed",
     });
     return {
       ok: false, action: "regenerate_api_key",
       message: "I couldn't rotate the API key right now and logged it for our team. Your existing key is unchanged.",
     };
+  }
+
+  // New key is safely persisted — only now is it safe to revoke prior active keys.
+  // Exclude the row we just inserted so a transient clock/filter overlap can't
+  // revoke the brand-new key.
+  try {
+    await sb(`tenant_api_keys?tenant_id=eq.${session.tenantId}&revoked_at=is.null&id=neq.${encodeURIComponent(inserted.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ revoked_at: new Date().toISOString() }),
+    });
+  } catch (e: any) {
+    // The new key is live and returned to the user. Failing to revoke the old key
+    // is a non-fatal degradation: log/audit it but do not claim failure, since the
+    // rotation (new key issuance) did succeed.
+    await audit({
+      action: "regenerate_api_key", tenantId: session.tenantId, tenantSlug: session.tenantSlug,
+      userId: session.userId, actorEmail: session.email, resource: `tenant:${session.tenantId}`,
+      result: "error", reason: `old_key_revoke_failed:${e?.message}`,
+      payload: { prefix },
+    });
   }
 
   await audit({
