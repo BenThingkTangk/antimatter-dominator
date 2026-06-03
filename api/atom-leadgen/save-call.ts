@@ -9,6 +9,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sendPush } from "../_lib/push.js";
+import { forwardContentActivityEvent } from "../_lib/content-events.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL              = clean(process.env.SUPABASE_URL);
@@ -53,6 +54,27 @@ async function notifyMeetingBooked(callRow: any) {
   } catch (err: any) {
     console.warn("[save-call] push notify failed:", err?.message);
   }
+}
+
+/**
+ * Forward a saved ATOM leadgen call as a conversation proof event. Best-effort,
+ * never blocks the response. Idempotent on the call's own callSid. When the call
+ * already carries a meeting-booked signal (final_stage === "meeting_booked"),
+ * set bookedMeeting so the Express layer ALSO emits a distinctly-keyed
+ * meeting_booked — we never infer a meeting that wasn't flagged.
+ */
+async function forwardCallProof(callSid: string, patch: any, row: any): Promise<void> {
+  const booked = patch?.final_stage === "meeting_booked";
+  await forwardContentActivityEvent("conversation", {
+    provider: "atom-leadgen",
+    conversationId: callSid,
+    channel: "call",
+    occurredAt: patch?.ended_at || new Date().toISOString(),
+    durationSeconds: Number.isFinite(Number(patch?.duration_s)) ? Number(patch.duration_s) : undefined,
+    sentiment: Number.isFinite(Number(patch?.final_sentiment)) ? String(patch.final_sentiment) : undefined,
+    bookedMeeting: booked || undefined,
+    tenantId: row?.tenant_slug ? String(row.tenant_slug) : undefined,
+  }).catch(() => {});
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -140,6 +162,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (patch.final_stage === "meeting_booked" && insertedRow) {
         notifyMeetingBooked(insertedRow).catch(() => {});
       }
+      forwardCallProof(callSid, patch, insertedRow).catch(() => {});
       return res.status(200).json({ ok: true, row: insertedRow, mode: "insert" });
     }
     const savedRow = rows[0];
@@ -147,6 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (patch.final_stage === "meeting_booked" && savedRow) {
       notifyMeetingBooked(savedRow).catch(() => {});
     }
+    forwardCallProof(callSid, patch, savedRow).catch(() => {});
     return res.status(200).json({ ok: true, row: savedRow, mode: "update" });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || "failed" });
