@@ -784,12 +784,64 @@ function LiveNumbersView() {
         )}
       </div>
 
+      <ActivityEventsCard />
+
       {data?.fallbackMessage && <div className="text-xs p-3 rounded-lg" style={{ background: "rgba(251,191,36,0.08)", color: "#fbbf24" }}><AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> {data.fallbackMessage}</div>}
       <div className="grid md:grid-cols-3 gap-3">
         <Bucket title="Usable (final content)" color="#34d399" items={data?.usable || []} />
         <Bucket title="Suggestable (needs review)" color="#fbbf24" items={data?.suggestable || []} />
         <Bucket title="Unusable (low / unverified)" color="#f87171" items={data?.unusable || []} />
       </div>
+    </div>
+  );
+}
+// First-class event feed — read-only operator/debug view of recent production
+// event counts by type. Demo events are reported separately and never counted
+// as production proof. No test-event ingestion from the UI (production-safe).
+interface RecentEventsResponse {
+  countsByType: Record<string, number>;
+  totalProduction: number;
+  demoTotal: number;
+  sample: Array<{ id: number; eventType: string; sourceSystem: string; occurredAt: string; isDemo: boolean }>;
+}
+const EVENT_LABELS: Record<string, string> = {
+  email_sent: "Emails sent", outreach_sent: "Outreach sent", reply_received: "Replies",
+  meeting_booked: "Meetings booked", conversation_event: "Conversations",
+  followup_completed: "Follow-ups", lead_captured: "Leads captured",
+};
+function ActivityEventsCard() {
+  const { data } = useQuery<RecentEventsResponse>({
+    queryKey: ["/api/content/activity-events/recent"],
+    queryFn: async () => (await apiRequest("GET", "/api/content/activity-events/recent")).json(),
+  });
+  const entries = Object.entries(data?.countsByType || {});
+  return (
+    <div className="p-4 rounded-xl" style={panel()}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4" style={{ color: PRIMARY }} />
+          <span className="text-sm font-semibold">First-class event feed</span>
+          <Badge variant="outline" className="text-[10px]">source: atom-activity-events</Badge>
+        </div>
+        <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+          {data?.totalProduction ?? 0} production event(s){data?.demoTotal ? ` · ${data.demoTotal} demo (excluded)` : ""}
+        </span>
+      </div>
+      <p className="text-xs mb-3" style={{ color: "var(--color-text-muted)" }}>
+        Raw production events (email/outreach sent, replies, meetings, conversations, follow-ups, leads) posted by product systems via <code>POST /api/content/activity-events</code>. The <code>atom-activity-events</code> adapter derives verified metrics directly from these counts.
+      </p>
+      {entries.length ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+          {entries.map(([type, count]) => (
+            <div key={type} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <span className="text-xs truncate">{EVENT_LABELS[type] || type}</span>
+              <span className="font-bold tabular-nums shrink-0" style={{ color: PRIMARY }}>{count}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Muted>No production events ingested yet. Connect a product system or POST to the activity-events endpoint — nothing is fabricated.</Muted>
+      )}
     </div>
   );
 }

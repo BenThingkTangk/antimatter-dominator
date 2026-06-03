@@ -5,7 +5,7 @@ import {
   products, pitches, objections, prospects, marketIntel,
   campaigns, campaignAccounts, scoringTemplates,
   contentProjects, contentGenerations, voiceProfiles,
-  productActivityMetrics, contentClaims, approvalLog,
+  productActivityMetrics, productActivityEvents, contentClaims, approvalLog,
   type Product, type InsertProduct,
   type Pitch, type InsertPitch,
   type Objection, type InsertObjection,
@@ -18,6 +18,7 @@ import {
   type ContentGeneration, type InsertContentGeneration,
   type VoiceProfile, type InsertVoiceProfile,
   type ProductActivityMetric, type InsertProductActivityMetric,
+  type ProductActivityEvent, type InsertProductActivityEvent,
   type ContentClaim, type InsertContentClaim,
   type ApprovalLogEntry, type InsertApprovalLogEntry,
 } from "@shared/schema";
@@ -212,6 +213,29 @@ sqlite.exec(`
     metadata_json TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS product_activity_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    source_system TEXT NOT NULL,
+    source_record_id TEXT,
+    occurred_at TEXT NOT NULL,
+    tenant_id TEXT,
+    user_id TEXT,
+    prospect_id TEXT,
+    account_id TEXT,
+    campaign_id TEXT,
+    is_demo INTEGER NOT NULL DEFAULT 0,
+    metadata_json TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  -- Natural-key uniqueness for idempotent ingestion: a (source_system,
+  -- source_record_id) pair is inserted at most once. Rows with a NULL
+  -- source_record_id are not deduped (SQLite treats NULLs as distinct).
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_pae_natural_key
+    ON product_activity_events(source_system, source_record_id);
+  CREATE INDEX IF NOT EXISTS idx_pae_type_time ON product_activity_events(event_type, occurred_at);
+
   CREATE TABLE IF NOT EXISTS content_claims (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     generation_id INTEGER NOT NULL,
@@ -310,6 +334,21 @@ export interface IStorage {
    * re-ingest can never overwrite or promote seeded demo metrics. Returns the row.
    */
   upsertProductionMetric(data: InsertProductActivityMetric): ProductActivityMetric;
+
+  // ── Product activity events (first-class production event feed)
+  getProductActivityEvents(opts?: {
+    eventType?: string; sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean; limit?: number;
+  }): ProductActivityEvent[];
+  /**
+   * Insert events idempotently on (sourceSystem, sourceRecordId). A repeat of an
+   * already-seen event is skipped (not duplicated). Events with a null
+   * sourceRecordId are always inserted (no dedupe key). Returns the counts.
+   */
+  insertProductActivityEvents(rows: InsertProductActivityEvent[]): { inserted: number; skipped: number };
+  /** Count events grouped by event_type within an optional window/source. */
+  countProductActivityEventsByType(opts?: {
+    sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean;
+  }): Record<string, number>;
 
   getContentClaims(generationId: number): ContentClaim[];
   replaceContentClaims(generationId: number, rows: InsertContentClaim[]): void;
@@ -562,6 +601,79 @@ export class DatabaseStorage implements IStorage {
       return db.insert(productActivityMetrics).values({ ...data, isDemo: false }).returning().get();
     });
     return tx();
+  }
+
+  // ── ATOM Content: Product activity events
+  getProductActivityEvents(opts?: {
+    eventType?: string; sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean; limit?: number;
+  }): ProductActivityEvent[] {
+    const clauses: any[] = [];
+    if (opts?.eventType) clauses.push(sql`${productActivityEvents.eventType} = ${opts.eventType}`);
+    if (opts?.sourceSystem) clauses.push(sql`${productActivityEvents.sourceSystem} = ${opts.sourceSystem}`);
+    if (opts?.from) clauses.push(sql`${productActivityEvents.occurredAt} >= ${opts.from}`);
+    if (opts?.to) clauses.push(sql`${productActivityEvents.occurredAt} <= ${opts.to}`);
+    if (!opts?.includeDemo) clauses.push(sql`${productActivityEvents.isDemo} = 0`);
+    let q: any = db.select().from(productActivityEvents);
+    if (clauses.length) {
+      q = q.where(clauses.reduce((acc, c) => sql`${acc} AND ${c}`));
+    }
+    q = q.orderBy(desc(productActivityEvents.occurredAt));
+    if (opts?.limit) q = q.limit(opts.limit);
+    return q.all();
+  }
+
+  insertProductActivityEvents(rows: InsertProductActivityEvent[]): { inserted: number; skipped: number } {
+    if (rows.length === 0) return { inserted: 0, skipped: 0 };
+    // INSERT OR IGNORE against the unique (source_system, source_record_id) index
+    // makes re-ingestion idempotent without overwriting prior rows. changes()
+    // reports how many rows the statement actually inserted.
+    const stmt = sqlite.prepare(`
+      INSERT OR IGNORE INTO product_activity_events
+      (event_type, source_system, source_record_id, occurred_at, tenant_id, user_id,
+       prospect_id, account_id, campaign_id, is_demo, metadata_json, created_at)
+      VALUES (@eventType, @sourceSystem, @sourceRecordId, @occurredAt, @tenantId, @userId,
+              @prospectId, @accountId, @campaignId, @isDemo, @metadataJson, @createdAt)
+    `);
+    let inserted = 0;
+    const tx = sqlite.transaction((items: InsertProductActivityEvent[]) => {
+      for (const r of items) {
+        const info = stmt.run({
+          eventType: r.eventType,
+          sourceSystem: r.sourceSystem,
+          sourceRecordId: r.sourceRecordId ?? null,
+          occurredAt: r.occurredAt,
+          tenantId: r.tenantId ?? null,
+          userId: r.userId ?? null,
+          prospectId: r.prospectId ?? null,
+          accountId: r.accountId ?? null,
+          campaignId: r.campaignId ?? null,
+          isDemo: r.isDemo ? 1 : 0,
+          metadataJson: r.metadataJson ?? null,
+          createdAt: r.createdAt,
+        });
+        inserted += info.changes;
+      }
+    });
+    tx(rows);
+    return { inserted, skipped: rows.length - inserted };
+  }
+
+  countProductActivityEventsByType(opts?: {
+    sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean;
+  }): Record<string, number> {
+    const clauses: any[] = [];
+    if (opts?.sourceSystem) clauses.push(sql`${productActivityEvents.sourceSystem} = ${opts.sourceSystem}`);
+    if (opts?.from) clauses.push(sql`${productActivityEvents.occurredAt} >= ${opts.from}`);
+    if (opts?.to) clauses.push(sql`${productActivityEvents.occurredAt} <= ${opts.to}`);
+    if (!opts?.includeDemo) clauses.push(sql`${productActivityEvents.isDemo} = 0`);
+    let q: any = db.select({ eventType: productActivityEvents.eventType, c: sql<number>`count(*)` }).from(productActivityEvents);
+    if (clauses.length) {
+      q = q.where(clauses.reduce((acc, c) => sql`${acc} AND ${c}`));
+    }
+    const rows = q.groupBy(productActivityEvents.eventType).all() as Array<{ eventType: string; c: number }>;
+    const out: Record<string, number> = {};
+    for (const r of rows) out[r.eventType] = r.c;
+    return out;
   }
 
   // ── ATOM Content: Claims
