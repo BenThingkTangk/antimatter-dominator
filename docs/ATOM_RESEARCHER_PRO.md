@@ -156,6 +156,20 @@ Offline verification: `npx tsx scripts/atom-researcher-smoke.ts` exercises the
 object-citation, `search_results`, URL-less-source-map, legacy `string[]`, and
 source-thin paths with no network or API key.
 
+## Vercel ESM note
+
+The function entrypoint imports the shared engine with an explicit `.js`
+extension — `from "./_lib/atom-researcher.js"` — even though the source is
+`.ts`. `@vercel/node` emits the relative import **verbatim** into an ESM
+package (`"type": "module"`) and does **not** inline `_lib` (it ships as a
+sibling `.js` file). Node's native ESM loader requires the extension on
+relative specifiers, so an extensionless import throws `ERR_MODULE_NOT_FOUND`
+at module load → the function returns a plain-text `500
+FUNCTION_INVOCATION_FAILED` before the handler (and its 503 key-check) ever
+runs. `tsconfig` uses `moduleResolution: "bundler"`, which still resolves the
+`.js` specifier back to the `.ts` source for type-checking, so the extension
+is safe in both worlds.
+
 ## Guardrails
 
 - API key is server-side only; the browser never sees it.

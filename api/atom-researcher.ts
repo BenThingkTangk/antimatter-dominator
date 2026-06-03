@@ -24,7 +24,7 @@ import {
   PERPLEXITY_API_KEY,
   type ResearchRequest,
   type ResearchMode,
-} from "./_lib/atom-researcher";
+} from "./_lib/atom-researcher.js";
 
 const VALID_MODES: ResearchMode[] = [
   "fast_scan", "pro_dossier", "deep_research", "vibranium_war_room",
