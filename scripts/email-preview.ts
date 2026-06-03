@@ -12,13 +12,16 @@ import { render } from "@react-email/render";
 import fs from "fs";
 import path from "path";
 
-import WelcomeEmail from "../api/_lib/email-templates/welcome";
-import InviteEmail from "../api/_lib/email-templates/invite";
-import PasswordResetEmail from "../api/_lib/email-templates/password-reset";
-import TrialExpiringEmail from "../api/_lib/email-templates/trial-expiring";
-import SubscriptionCreatedEmail from "../api/_lib/email-templates/subscription-created";
-import SubscriptionChangedEmail from "../api/_lib/email-templates/subscription-changed";
-import PaymentFailedEmail from "../api/_lib/email-templates/payment-failed";
+import {
+  WelcomeEmail,
+  InviteEmail,
+  PasswordResetEmail,
+  TrialExpiringEmail,
+  SubscriptionCreatedEmail,
+  SubscriptionChangedEmail,
+  PaymentFailedEmail,
+  ConsentExpiringEmail,
+} from "../api/_lib/email-templates.js";
 
 const OUT_DIR = "/tmp/email-preview";
 
@@ -86,6 +89,20 @@ const templates: { name: string; element: React.ReactElement }[] = [
       retryDate: "June 10, 2025",
       updateCardUrl: "https://atom-dominator-pro.vercel.app/#/billing",
       currency: "usd",
+    }),
+  },
+  {
+    name: "consent-expiring",
+    element: React.createElement(ConsentExpiringEmail, {
+      adminName: "Jordan",
+      tenantName: "Acme Corp",
+      expiringCount: 3,
+      prospects: [
+        { identifier: "+1 (415) 555-0142", consentDate: "2024-06-01", daysRemaining: 5 },
+        { identifier: "+1 (628) 555-0199", consentDate: "2024-06-08", daysRemaining: 12 },
+        { identifier: "lead@example.com", consentDate: "2024-06-15", daysRemaining: 19 },
+      ],
+      consentLedgerUrl: "https://atom-dominator-pro.vercel.app/#/compliance",
     }),
   },
 ];

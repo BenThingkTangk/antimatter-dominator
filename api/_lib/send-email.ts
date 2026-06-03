@@ -5,9 +5,10 @@
  *   import { sendEmail } from "../_lib/send-email";
  *   await sendEmail("welcome", "user@example.com", { fullName: "...", ... });
  *
- * All 7 templates live in ./email-templates/ and are rendered server-side
- * via @react-email/render. Resend SDK is used for delivery; email_log is
- * written to Supabase for delivery tracking.
+ * All 8 templates live in ./email-templates.ts (a single module — see the
+ * note there for the Vercel ESM reason) and are rendered server-side via
+ * @react-email/render. Resend SDK is used for delivery; email_log is written
+ * to Supabase for delivery tracking.
  */
 import * as React from "react";
 import { render } from "@react-email/render";
@@ -21,15 +22,17 @@ import {
   SubscriptionChangedEmail, subscriptionChangedSubject,
   PaymentFailedEmail, paymentFailedSubject,
   ConsentExpiringEmail, consentExpiringSubject,
-} from "./email-templates";
-import type { WelcomeArgs } from "./email-templates";
-import type { InviteArgs } from "./email-templates";
-import type { PasswordResetArgs } from "./email-templates";
-import type { TrialExpiringArgs } from "./email-templates";
-import type { SubscriptionCreatedArgs } from "./email-templates";
-import type { SubscriptionChangedArgs } from "./email-templates";
-import type { PaymentFailedArgs } from "./email-templates";
-import type { ConsentExpiringArgs } from "./email-templates";
+} from "./email-templates.js";
+import type {
+  WelcomeArgs,
+  InviteArgs,
+  PasswordResetArgs,
+  TrialExpiringArgs,
+  SubscriptionCreatedArgs,
+  SubscriptionChangedArgs,
+  PaymentFailedArgs,
+  ConsentExpiringArgs,
+} from "./email-templates.js";
 
 // ─── Template registry ──────────────────────────────────────────────────────
 
