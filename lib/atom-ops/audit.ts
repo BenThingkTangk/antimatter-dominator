@@ -1,12 +1,16 @@
 /**
  * ATOM Ops audit log — append-only, tamper-evident via SHA-256 chaining.
- * Mirrors the chaining approach in api/_lib/admin.ts (appendAuditLog) but
- * targets the ops_audit_log table and the ATOM Ops field set.
+ *
+ * The hash chain (prior_hash + entry_hash) is computed ATOMICALLY in a Postgres
+ * BEFORE INSERT trigger (public.ops_audit_chain in sql/020-atom-ops-tables.sql),
+ * serialized by a per-table advisory transaction lock. The application MUST NOT
+ * compute the chain itself — doing so reintroduces a read→compute→insert race
+ * between concurrent inserters. We just send the event fields and read back the
+ * DB-computed entry_hash as a receipt.
  *
  * Writes are best-effort: a Supabase outage must not block an operator action
  * from being attempted, but every attempt is logged locally (logger) too.
  */
-import crypto from "crypto";
 import { logger } from "./logger";
 import { isSupabaseConfigured, sbRest } from "./supabase-rest";
 import { errMessage, type OpsSource } from "./types";
@@ -28,10 +32,6 @@ export interface AuditEntry {
   reason?: string | null;
   source: OpsSource;
   confirmationId?: string | null;
-}
-
-function sha256(s: string): string {
-  return crypto.createHash("sha256").update(s).digest("hex");
 }
 
 /** Keys redacted out of persisted params/data so secrets never land in the log. */
@@ -65,55 +65,19 @@ export async function appendOpsAudit(entry: AuditEntry): Promise<{ entryHash: st
   const params = redactDeep(entry.params ?? {}) as Record<string, unknown>;
   const data = redactDeep(entry.data ?? null);
 
-  let priorHash = "";
-  if (isSupabaseConfigured()) {
-    try {
-      const prior = await sbRest<Array<{ entry_hash: string }>>(
-        "ops_audit_log?select=entry_hash&order=created_at.desc&limit=1",
-      );
-      priorHash = Array.isArray(prior) && prior[0]?.entry_hash ? prior[0].entry_hash : "";
-    } catch (e) {
-      log.warn({ err: errMessage(e) }, "could not read prior audit hash");
-    }
-  }
-
-  const canonical = JSON.stringify({
-    actor_email: entry.actorEmail,
-    actor_role: entry.actorRole ?? null,
-    intent: entry.intent,
-    tool: entry.tool ?? null,
-    action: entry.action ?? null,
-    destructive: entry.destructive ?? false,
-    phase: entry.phase,
-    result: entry.result ?? "ok",
-    summary: entry.summary ?? null,
-    params,
-    data,
-    reason: entry.reason ?? null,
-    source: entry.source,
-    confirmation_id: entry.confirmationId ?? null,
-    prior_hash: priorHash,
-  });
-  const entryHash = sha256(canonical);
-
-  // Always emit to the structured logger as a durable secondary record.
-  log.info(
-    {
-      actor: entry.actorEmail,
-      intent: entry.intent,
-      phase: entry.phase,
-      result: entry.result ?? "ok",
-      destructive: entry.destructive ?? false,
-      entryHash,
-    },
-    "ops-audit",
-  );
+  // Always emit to the structured logger as a durable secondary record. The
+  // tamper-evident entryHash is assigned by the DB trigger; "" here means the
+  // remote write was skipped or failed (still logged locally).
+  let entryHash = "";
 
   if (isSupabaseConfigured()) {
     try {
-      await sbRest("ops_audit_log", {
+      // The BEFORE INSERT trigger computes prior_hash + entry_hash atomically
+      // under an advisory xact lock. We send ONLY the event fields and read the
+      // computed entry_hash back as a receipt (return=representation).
+      const rows = await sbRest<Array<{ entry_hash: string }>>("ops_audit_log", {
         method: "POST",
-        headers: { Prefer: "return=minimal" },
+        headers: { Prefer: "return=representation" },
         body: JSON.stringify({
           actor_email: entry.actorEmail,
           actor_role: entry.actorRole ?? null,
@@ -129,14 +93,25 @@ export async function appendOpsAudit(entry: AuditEntry): Promise<{ entryHash: st
           reason: entry.reason ?? null,
           source: entry.source,
           confirmation_id: entry.confirmationId ?? null,
-          prior_hash: priorHash,
-          entry_hash: entryHash,
         }),
       });
+      entryHash = Array.isArray(rows) && rows[0]?.entry_hash ? rows[0].entry_hash : "";
     } catch (e) {
       log.error({ err: errMessage(e) }, "ops_audit_log write failed");
     }
   }
+
+  log.info(
+    {
+      actor: entry.actorEmail,
+      intent: entry.intent,
+      phase: entry.phase,
+      result: entry.result ?? "ok",
+      destructive: entry.destructive ?? false,
+      entryHash,
+    },
+    "ops-audit",
+  );
 
   return { entryHash };
 }

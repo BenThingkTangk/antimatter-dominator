@@ -286,11 +286,11 @@ export async function listOpenPRs(p: {
 
 export const tools: Record<string, ToolAction> = {
   createPR: {
-    meta: { tool: "github", action: "createPR", destructive: false, description: "Open a pull request" },
+    meta: { tool: "github", action: "createPR", destructive: false, requiresConfirmation: true, description: "Open a pull request" },
     run: (p) => createPR(p as unknown as PullRequestParams),
   },
   commentOnIssue: {
-    meta: { tool: "github", action: "commentOnIssue", destructive: false, description: "Comment on an issue/PR" },
+    meta: { tool: "github", action: "commentOnIssue", destructive: false, requiresConfirmation: true, description: "Comment on an issue/PR" },
     run: (p) => commentOnIssue(p as unknown as Parameters<typeof commentOnIssue>[0]),
   },
   mergePRAfterCI: {
@@ -306,7 +306,7 @@ export const tools: Record<string, ToolAction> = {
     run: (p) => closeStaleIssues(p as unknown as Parameters<typeof closeStaleIssues>[0]),
   },
   postIssue: {
-    meta: { tool: "github", action: "postIssue", destructive: false, description: "Open a new issue" },
+    meta: { tool: "github", action: "postIssue", destructive: false, requiresConfirmation: true, description: "Open a new issue" },
     run: (p) => postIssue(p as unknown as Parameters<typeof postIssue>[0]),
   },
   listOpenPRs: {

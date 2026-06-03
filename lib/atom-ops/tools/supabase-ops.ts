@@ -170,20 +170,32 @@ export async function suspendTenant(p: {
  * @destructive Resets a user's password to a freshly generated one. The new
  * password is returned once and never logged.
  */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// bcryptjs (used elsewhere in the repo) hashes look like $2a$/$2b$/$2y$<cost>$...
+const BCRYPT_RE = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+
 export async function resetUserPassword(p: {
   email: string;
   newPasswordHash: string;
 }): Promise<OpsResult<{ email: string; reset: boolean }>> {
   try {
-    await sbRest(
-      `tenant_users?email=eq.${encodeURIComponent(p.email.toLowerCase())}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({ password_hash: p.newPasswordHash }),
-        headers: { Prefer: "return=minimal" },
-      },
-    );
-    return ok({ email: p.email, reset: true }, `Reset password for ${p.email}`);
+    const email = (p.email || "").trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      return fail(`resetUserPassword: invalid email '${p.email}'`);
+    }
+    // Refuse to store a plaintext or non-bcrypt value — the caller must pass a
+    // pre-computed bcrypt hash (never a raw password) so plaintext can't leak.
+    if (typeof p.newPasswordHash !== "string" || !BCRYPT_RE.test(p.newPasswordHash)) {
+      return fail(
+        "resetUserPassword: newPasswordHash must be a bcrypt hash ($2a/$2b/$2y$...), not a plaintext password.",
+      );
+    }
+    await sbRest(`tenant_users?email=eq.${encodeURIComponent(email)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ password_hash: p.newPasswordHash }),
+      headers: { Prefer: "return=minimal" },
+    });
+    return ok({ email, reset: true }, `Reset password for ${email}`);
   } catch (e) {
     return fail(`resetUserPassword failed: ${errMessage(e)}`);
   }

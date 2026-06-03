@@ -13,8 +13,21 @@ export interface OpsResult<T = unknown> {
 export interface ToolActionMeta {
   tool: string;
   action: string;
+  /** True when the action mutates persistent state in a hard-to-reverse way. */
   destructive: boolean;
+  /**
+   * True when the action must go through Plan → Confirm → Execute. Defaults to
+   * `destructive` when omitted. Set explicitly on mutating-but-not-destructive
+   * writes (e.g. createPR, postIssue) so they are not silently treated as
+   * read-only just because they aren't irreversible.
+   */
+  requiresConfirmation?: boolean;
   description: string;
+}
+
+/** Does this action require Plan → Confirm → Execute? */
+export function actionRequiresConfirmation(meta: ToolActionMeta): boolean {
+  return meta.requiresConfirmation ?? meta.destructive;
 }
 
 /**
@@ -55,7 +68,12 @@ export interface ConfirmationPlan {
   params: Record<string, unknown>;
   createdAt: number;
   expiresAt: number;
+  /** Identity that CREATED the plan. Only this identity may redeem it. */
   actorEmail: string;
+  /** Origin channel of the plan (console | telegram | cron | api). */
+  source: OpsSource;
+  /** Stable per-session id (cookie token hash, telegram chat id, etc). */
+  sessionId: string;
 }
 
 /** Discriminated result of OpsOrchestrator.dispatch(). */

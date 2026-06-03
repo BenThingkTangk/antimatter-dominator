@@ -58,3 +58,15 @@ export function superAdminEmails(): string[] {
     e.toLowerCase(),
   );
 }
+
+/**
+ * True when running in a production/serverless deployment. Vercel sets
+ * VERCEL_ENV=production on prod deploys; NODE_ENV=production is the generic
+ * fallback. Used to fail closed on missing security envs and to require
+ * durable (DB-backed) persistence instead of in-memory fallbacks.
+ */
+export function isProduction(): boolean {
+  const vercelEnv = clean(process.env.VERCEL_ENV).toLowerCase();
+  if (vercelEnv) return vercelEnv === "production";
+  return clean(process.env.NODE_ENV).toLowerCase() === "production";
+}

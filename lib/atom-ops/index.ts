@@ -25,8 +25,10 @@ import { tools as supabaseOps } from "./tools/supabase-ops";
 import { tools as twilio } from "./tools/twilio";
 import { tools as vercel } from "./tools/vercel";
 import {
+  actionRequiresConfirmation,
   errMessage,
   fail,
+  type ConfirmationPlan,
   type DispatchResult,
   type OpsContext,
   type OpsResult,
@@ -146,8 +148,8 @@ export class OpsOrchestrator {
       };
     }
 
-    // Destructive → return a plan; do NOT execute.
-    if (toolAction.meta.destructive) {
+    // Requires confirmation (destructive OR a mutating write) → return a plan.
+    if (actionRequiresConfirmation(toolAction.meta)) {
       const plan = await createPlan({
         intent: raw,
         tool: parsed.tool,
@@ -155,6 +157,8 @@ export class OpsOrchestrator {
         summary: `Will run ${toolAction.meta.description.toLowerCase()} (${parsed.tool}.${parsed.action})`,
         params: parsed.params,
         actorEmail: context.actorEmail,
+        source: context.source,
+        sessionId: context.sessionId,
       });
       await appendOpsAudit({
         actorEmail: context.actorEmail,
@@ -162,7 +166,7 @@ export class OpsOrchestrator {
         intent: raw,
         tool: parsed.tool,
         action: parsed.action,
-        destructive: true,
+        destructive: toolAction.meta.destructive,
         phase: "plan",
         result: "ok",
         summary: plan.summary,
@@ -173,7 +177,7 @@ export class OpsOrchestrator {
       return { kind: "confirm", plan };
     }
 
-    // Non-destructive → execute now.
+    // Non-confirmable read → execute now.
     const result = await safeRun(toolAction, parsed.params);
     await appendOpsAudit({
       actorEmail: context.actorEmail,
@@ -194,13 +198,43 @@ export class OpsOrchestrator {
 
   /** Redeem a confirmation and execute the underlying destructive action. */
   static async execute(confirmationId: string, context: OpsContext): Promise<DispatchResult> {
-    const plan = await consumePlan(confirmationId);
+    // Look up WITHOUT consuming so a cross-actor attempt can be rejected
+    // without burning the legitimate creator's pending plan.
+    const plan = await getPlan(confirmationId);
     if (!plan) {
       return {
         kind: "error",
         summary: "Confirmation expired or not found (pending ops live 5 minutes).",
       };
     }
+
+    // ── Cross-actor / cross-channel guard ──
+    // A pending plan may only be redeemed by the same identity that created it.
+    const mismatch = actorMismatch(plan, context);
+    if (mismatch) {
+      await appendOpsAudit({
+        actorEmail: context.actorEmail,
+        actorRole: context.actorRole,
+        intent: plan.intent,
+        tool: plan.tool,
+        action: plan.action,
+        destructive: true,
+        phase: "execute",
+        result: "blocked",
+        summary: `Blocked cross-actor confirmation: ${mismatch}`,
+        reason: mismatch,
+        source: context.source,
+        confirmationId,
+      });
+      return {
+        kind: "error",
+        summary:
+          "This confirmation was created by a different operator/session/channel and cannot be redeemed here.",
+      };
+    }
+
+    // Identity verified — now consume (single-use).
+    await consumePlan(confirmationId);
 
     // Macro confirmations (e.g. /release) route to their pipeline, not a tool.
     if (plan.tool === "macro" && plan.action === "release") {
@@ -242,6 +276,34 @@ export class OpsOrchestrator {
   /** Cancel a pending destructive op — writes an audit entry, runs nothing. */
   static async cancel(confirmationId: string, context: OpsContext): Promise<DispatchResult> {
     const plan = await getPlan(confirmationId);
+
+    // Only the creating identity may cancel — otherwise a different operator or
+    // channel could grief a pending op. Unknown plans fall through to a no-op.
+    if (plan) {
+      const mismatch = actorMismatch(plan, context);
+      if (mismatch) {
+        await appendOpsAudit({
+          actorEmail: context.actorEmail,
+          actorRole: context.actorRole,
+          intent: plan.intent,
+          tool: plan.tool,
+          action: plan.action,
+          destructive: true,
+          phase: "cancel",
+          result: "blocked",
+          summary: `Blocked cross-actor cancel: ${mismatch}`,
+          reason: mismatch,
+          source: context.source,
+          confirmationId,
+        });
+        return {
+          kind: "error",
+          summary:
+            "This confirmation was created by a different operator/session/channel and cannot be cancelled here.",
+        };
+      }
+    }
+
     await consumePlan(confirmationId);
     await appendOpsAudit({
       actorEmail: context.actorEmail,
@@ -262,6 +324,30 @@ export class OpsOrchestrator {
       summary: `Cancelled ${plan ? `${plan.tool}.${plan.action}` : "operation"}.`,
     };
   }
+}
+
+/**
+ * Returns a human-readable mismatch reason if `context` is NOT the same
+ * identity that created `plan`, or null when the identities match.
+ *
+ * Identity = (actorEmail, source, sessionId). All three must match. This stops
+ * a console-created plan from being redeemed by a Telegram chat (or a different
+ * console session / different operator) even though both authenticate as
+ * superadmin. Comparison is case-insensitive on email only.
+ */
+export function actorMismatch(plan: ConfirmationPlan, context: OpsContext): string | null {
+  const planEmail = (plan.actorEmail || "").toLowerCase();
+  const ctxEmail = (context.actorEmail || "").toLowerCase();
+  if (planEmail !== ctxEmail) {
+    return `actor ${ctxEmail || "(none)"} != creator ${planEmail || "(none)"}`;
+  }
+  if (plan.source !== context.source) {
+    return `channel ${context.source} != creator channel ${plan.source}`;
+  }
+  if ((plan.sessionId || "") !== (context.sessionId || "")) {
+    return "session id differs from creator session";
+  }
+  return null;
 }
 
 /** Run a tool action, converting thrown errors into a typed failure result. */
@@ -291,6 +377,7 @@ export function listActions(): Array<{
   tool: string;
   action: string;
   destructive: boolean;
+  requiresConfirmation: boolean;
   description: string;
 }> {
   const out: Array<{
@@ -298,6 +385,7 @@ export function listActions(): Array<{
     tool: string;
     action: string;
     destructive: boolean;
+    requiresConfirmation: boolean;
     description: string;
   }> = [];
   const seen = new Set<string>();
@@ -312,13 +400,14 @@ export function listActions(): Array<{
         tool: ta.meta.tool,
         action: ta.meta.action,
         destructive: ta.meta.destructive,
+        requiresConfirmation: actionRequiresConfirmation(ta.meta),
         description: ta.meta.description,
       });
     }
   }
   out.push(
-    { id: "/morning-brief", tool: "macro", action: "morning-brief", destructive: false, description: "Daily non-destructive snapshot" },
-    { id: "/release", tool: "macro", action: "release", destructive: true, description: "Ship pipeline (confirmation-gated)" },
+    { id: "/morning-brief", tool: "macro", action: "morning-brief", destructive: false, requiresConfirmation: false, description: "Daily non-destructive snapshot" },
+    { id: "/release", tool: "macro", action: "release", destructive: true, requiresConfirmation: true, description: "Ship pipeline (confirmation-gated)" },
   );
   return out;
 }

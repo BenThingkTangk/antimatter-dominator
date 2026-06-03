@@ -57,6 +57,8 @@ export async function runRelease(
         `, trigger prod deploy, promote to prod. ALL STEPS DESTRUCTIVE.`,
       params: { pr: args.pr, tag: args.tag, gitRef: args.gitRef },
       actorEmail: context.actorEmail,
+      source: context.source,
+      sessionId: context.sessionId,
     });
     await appendOpsAudit({
       actorEmail: context.actorEmail,

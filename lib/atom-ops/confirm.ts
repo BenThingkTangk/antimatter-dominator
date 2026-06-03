@@ -2,11 +2,18 @@
  * ConfirmationStore — holds pending destructive operations between the
  * "plan" and "execute" phases of the Plan → Confirm → Execute pattern.
  *
- * In-memory by default (Map), with OPTIONAL Supabase persistence so a pending
- * op survives a serverless cold start / instance hop. Pending ops expire after
- * 5 minutes regardless of backend.
+ * Persistence model:
+ *   - In production/serverless, Supabase-backed persistence
+ *     (ops_pending_confirmations) is REQUIRED. A plan that cannot be persisted
+ *     surfaces as an error rather than living only in one instance's memory —
+ *     otherwise the confirm/execute request (which may land on a different
+ *     instance) would silently fail to find the plan.
+ *   - In development, an in-memory Map is an acceptable fallback when Supabase
+ *     is not configured.
+ * Pending ops expire after 5 minutes regardless of backend.
  */
 import crypto from "crypto";
+import { isProduction } from "./env";
 import { logger } from "./logger";
 import { isSupabaseConfigured, sbRest } from "./supabase-rest";
 import { errMessage, type ConfirmationPlan } from "./types";
@@ -35,6 +42,8 @@ export interface CreatePlanInput {
   summary: string;
   params: Record<string, unknown>;
   actorEmail: string;
+  source: ConfirmationPlan["source"];
+  sessionId: string;
 }
 
 export async function createPlan(input: CreatePlanInput): Promise<ConfirmationPlan> {
@@ -51,8 +60,21 @@ export async function createPlan(input: CreatePlanInput): Promise<ConfirmationPl
     createdAt: now,
     expiresAt: now + CONFIRM_TTL_MS,
     actorEmail: input.actorEmail,
+    source: input.source,
+    sessionId: input.sessionId,
   };
   memory.set(plan.confirmationId, plan);
+
+  // In production/serverless, persistence is REQUIRED: confirm/execute may land
+  // on a different instance, so a memory-only plan would be unredeemable. A
+  // failure here must surface, not be swallowed.
+  if (isProduction() && !isSupabaseConfigured()) {
+    throw new Error(
+      "ATOM Ops confirmation persistence requires Supabase in production " +
+        "(SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY). Apply sql/020-atom-ops-tables.sql " +
+        "and configure env before enabling destructive ops.",
+    );
+  }
 
   if (isSupabaseConfigured()) {
     try {
@@ -67,14 +89,25 @@ export async function createPlan(input: CreatePlanInput): Promise<ConfirmationPl
           summary: plan.summary,
           params: plan.params,
           actor_email: plan.actorEmail,
+          source: plan.source,
+          session_id: plan.sessionId,
           created_at: new Date(plan.createdAt).toISOString(),
           expires_at: new Date(plan.expiresAt).toISOString(),
         }),
       });
     } catch (e) {
-      // Persistence is optional — table may not exist. In-memory still works
-      // within a warm instance.
-      log.debug({ err: errMessage(e) }, "pending-confirmation persist skipped");
+      // In production a failed persist means the plan is unredeemable across
+      // instances — surface it. In development we tolerate it (warm-instance
+      // memory still works) for a missing table during local iteration.
+      if (isProduction()) {
+        log.error({ err: errMessage(e) }, "pending-confirmation persist failed");
+        memory.delete(plan.confirmationId);
+        throw new Error(
+          `Failed to persist pending confirmation: ${errMessage(e)}. ` +
+            "Ensure sql/020-atom-ops-tables.sql has been applied.",
+        );
+      }
+      log.debug({ err: errMessage(e) }, "pending-confirmation persist skipped (dev)");
     }
   }
   return plan;
@@ -97,6 +130,8 @@ export async function getPlan(confirmationId: string): Promise<ConfirmationPlan 
           summary: string;
           params: Record<string, unknown>;
           actor_email: string;
+          source: ConfirmationPlan["source"];
+          session_id: string;
           created_at: string;
           expires_at: string;
         }>
@@ -116,13 +151,21 @@ export async function getPlan(confirmationId: string): Promise<ConfirmationPlan 
         summary: row.summary,
         params: row.params || {},
         actorEmail: row.actor_email,
+        source: row.source ?? "console",
+        sessionId: row.session_id ?? "",
         createdAt: new Date(row.created_at).getTime(),
         expiresAt,
       };
       memory.set(plan.confirmationId, plan);
       return plan;
     } catch (e) {
-      log.debug({ err: errMessage(e) }, "pending-confirmation lookup skipped");
+      // In production the DB is the source of truth; a lookup failure must not
+      // masquerade as "not found" (which would let a retry silently re-plan).
+      if (isProduction()) {
+        log.error({ err: errMessage(e) }, "pending-confirmation lookup failed");
+        throw new Error(`Failed to load pending confirmation: ${errMessage(e)}`);
+      }
+      log.debug({ err: errMessage(e) }, "pending-confirmation lookup skipped (dev)");
     }
   }
   return null;

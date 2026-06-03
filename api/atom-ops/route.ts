@@ -17,6 +17,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { rateLimit, resolveSuperAdmin } from "../../lib/atom-ops/api-auth";
 import { readRecentAudit } from "../../lib/atom-ops/audit";
+import { getEnv } from "../../lib/atom-ops/env";
 import { clearBadge, getBadge } from "../../lib/atom-ops/notify";
 import { OpsOrchestrator, listActions } from "../../lib/atom-ops/index";
 import { logger } from "../../lib/atom-ops/logger";
@@ -24,17 +25,32 @@ import { errMessage, type OpsContext } from "../../lib/atom-ops/types";
 
 const log = logger.child({ route: "atom-ops" });
 
+/**
+ * Credentialed CORS must never reflect an arbitrary origin. Allow only the
+ * configured public URL (ATOM_OPS_PUBLIC_URL). Same-origin browser requests
+ * omit Origin entirely and are unaffected. When the origin is not allowed we
+ * simply do not emit CORS headers (no credentials grant).
+ */
+function applyCors(req: VercelRequest, res: VercelResponse): void {
+  const origin = (req.headers.origin || "").toString();
+  const allowed = getEnv("ATOM_OPS_PUBLIC_URL");
+  if (origin && allowed && origin === allowed) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
 
   const auth = await resolveSuperAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
-  if (!rateLimit(auth.actor.sessionId)) {
+  if (!(await rateLimit(auth.actor.sessionId))) {
     return res.status(429).json({ error: "Rate limit exceeded (60/min)" });
   }
 

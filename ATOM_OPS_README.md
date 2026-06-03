@@ -38,14 +38,29 @@ tamper-evident audit log.
 
 ## Setup checklist
 
-1. **Install deps** — `npm install` (adds `@octokit/rest`, `stripe`, `twilio`,
-   `postmark`, `pino`, `nanoid` to `package.json`; the tools themselves call REST
-   so they work even if a given SDK is absent).
-2. **Apply the migration** — see [below](#apply-the-migration).
+> **The migration is MANDATORY before enabling ATOM Ops in production.** ATOM
+> Ops relies on three database objects that ONLY exist after applying
+> `sql/020-atom-ops-tables.sql`:
+> - `ops_pending_confirmations` + its identity columns — required so a
+>   Plan→Confirm→Execute flow survives a serverless instance hop (without it,
+>   destructive confirmations fail in production by design, not silently).
+> - the `ops_audit_chain` BEFORE INSERT trigger — computes the tamper-evident
+>   SHA-256 hash chain atomically (the app no longer computes it).
+> - `ops_rate_limit_hit()` + `ops_rate_limits` — cross-instance rate limiting.
+>
+> Enabling the console/Telegram routes before applying the migration will cause
+> destructive ops to error out in production.
+
+1. **Install deps** — `npm install`. The ATOM Ops tools call provider REST APIs
+   directly (no SDK imports), so the ATOM Ops feature needs no
+   `@octokit/rest` / `twilio` / `postmark` / `pino` dependency. (`stripe` remains
+   a dependency only because the unrelated billing routes import it.)
+2. **Apply the migration** — see [below](#apply-the-migration). **Required.**
 3. **Set env vars** — copy `.env.example` → `.env` (local) or set them in Vercel.
    Required for the gate: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
    `NIRMATA_HQ_EMAILS`. Per-tool envs are only needed for the tools you use.
-4. **Set `CRON_SECRET`** in Vercel so the cron route is protected.
+4. **Set `CRON_SECRET`** (or `ATOM_OPS_CRON_SECRET`) in Vercel. **Required in
+   production** — the cron route FAILS CLOSED (HTTP 503) if neither is set.
 5. **(Optional) Telegram** — create a bot, set `ATOM_OPS_TELEGRAM_*`, then
    [register the webhook](#telegram-setup).
 6. **Deploy** — the cron is already declared in `vercel.json`.
@@ -65,9 +80,11 @@ This repo does **not** auto-apply Supabase migrations. Apply by hand:
 psql "$SUPABASE_DB_URL" -f sql/020-atom-ops-tables.sql
 ```
 
-The migration creates `ops_audit_log`, `ops_macros`,
-`ops_pending_confirmations`, the `public.is_superadmin()` helper, RLS policies,
-and seeds the `morning-brief` and `release` macros.
+The migration creates `ops_audit_log` (+ the `ops_audit_chain` hash-chain
+trigger and `ops_jsonb_canonical` helper), `ops_macros`,
+`ops_pending_confirmations`, `ops_rate_limits` (+ the `ops_rate_limit_hit()`
+function), the `public.is_superadmin()` helper, the `pgcrypto` extension, RLS
+policies, and seeds the `morning-brief` and `release` macros.
 
 `supabase.runApprovedMigration slug=atom-ops-tables` from the console will tell
 you the file to apply (it refuses to run arbitrary SQL over HTTP by design).
@@ -81,15 +98,32 @@ you the file to apply (it refuses to run arbitrary SQL over HTTP by design).
   - API: returns **403 JSON** for non-superadmins (`lib/atom-ops/api-auth.ts`).
   - UI: `/ops` is wrapped in the repo's `SuperAdminOnly` guard, which bounces
     non-superadmins off the page.
-- **Plan → Confirm → Execute.** Destructive actions never auto-run. The
+- **Plan → Confirm → Execute.** Destructive actions (and mutating writes flagged
+  `requiresConfirmation`, e.g. `github.createPR`) never auto-run. The
   orchestrator returns a `ConfirmationPlan`; the operator confirms (console
   modal with countdown, or Telegram inline button) within **5 minutes**.
-- **Append-only audit.** Every plan / execute / cancel / error writes to
-  `ops_audit_log` with a SHA-256 chain (`entry_hash = sha256(prior_hash ||
-  canonical_payload)`), plus a structured log line as a secondary record.
+- **Same-actor confirmation.** A pending plan records the creating identity
+  `(actorEmail, source, sessionId)`. Only that exact identity may confirm or
+  cancel it — a console-created plan cannot be redeemed by a Telegram chat or a
+  different session, even though both authenticate as superadmin. Mismatches are
+  rejected and written to the audit log as `result:"blocked"`.
+- **Confirmation persistence is required in production.** Pending plans persist
+  to `ops_pending_confirmations` so confirm/execute works across serverless
+  instances. If persistence is unavailable in production the plan creation
+  **errors** rather than living only in one instance's memory. In-memory is a
+  development-only fallback.
+- **Append-only audit with an in-DB hash chain.** Every plan / execute / cancel
+  / error writes to `ops_audit_log`. The `prior_hash` + `entry_hash` SHA-256
+  chain is computed **atomically in a Postgres BEFORE INSERT trigger** guarded by
+  an advisory transaction lock (pgcrypto `digest()`), so concurrent inserts
+  cannot fork the chain. The app sends only event fields and reads the computed
+  hash back as a receipt. A structured log line is kept as a secondary record.
 - **Secrets never logged.** The logger and audit writer redact token/secret/
   password/value keys.
-- **Rate limit.** 60 requests / minute / session (and / Telegram chat).
+- **Rate limit.** 60 requests / minute / session (and / Telegram chat),
+  enforced **across instances** via the `ops_rate_limit_hit()` Postgres function
+  (`ops_rate_limits` table). A broken limiter fails closed in production. The
+  in-memory limiter is a development-only fallback.
 - **Telegram double gate.** The webhook requires BOTH the secret-token header
   (constant-time compared) AND an allowlisted chat id.
 - **Deterministic.** Routing is pure keyword matching — **zero LLM calls** in
@@ -184,4 +218,6 @@ integration (Telegram + console badge). Protected by `CRON_SECRET`.
   migration is defense-in-depth (the server bypasses it with the service role);
   `public.is_superadmin()` is ready for a future Supabase-Auth client path.
 - **Tools use REST, not SDK imports.** Keeps serverless bundles small and avoids
-  import-time failures; the SDKs are still listed in `package.json`.
+  import-time failures. The ATOM Ops provider SDKs (`@octokit/rest`, `twilio`,
+  `postmark`, `pino`) are intentionally **not** dependencies. (`stripe` stays in
+  `package.json` for the separate billing routes, not for ATOM Ops.)

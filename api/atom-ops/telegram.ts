@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await answerCallbackQuery(cq.id, "Not authorized");
         return res.status(200).json({ ok: true });
       }
-      if (!rateLimit(`telegram:${chatId}`)) {
+      if (!(await rateLimit(`telegram:${chatId}`))) {
         await answerCallbackQuery(cq.id, "Rate limited");
         return res.status(200).json({ ok: true });
       }
@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Gate 2 failed (or no message). Silently OK so Telegram stops retrying.
       return res.status(200).json({ ok: true });
     }
-    if (!rateLimit(`telegram:${chatId}`)) {
+    if (!(await rateLimit(`telegram:${chatId}`))) {
       await sendTelegramMessage("Rate limit exceeded (60/min).", chatId);
       return res.status(200).json({ ok: true });
     }

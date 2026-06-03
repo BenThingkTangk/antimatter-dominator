@@ -17,8 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  if (!verifyCronSecret(req)) {
-    return res.status(401).json({ error: "Unauthorized" });
+  const cronAuth = verifyCronSecret(req);
+  if (!cronAuth.ok) {
+    return res.status(cronAuth.status).json({ error: cronAuth.error });
   }
 
   const context: OpsContext = {
