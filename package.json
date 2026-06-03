@@ -9,7 +9,10 @@
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "email:preview": "tsx scripts/email-preview.ts"
+    "email:preview": "tsx scripts/email-preview.ts",
+    "smoke:dial-gate": "tsx scripts/smoke-dial-gate.ts",
+    "smoke:rate-limit": "tsx scripts/smoke-rate-limit.ts",
+    "smoke": "npm run smoke:dial-gate && npm run smoke:rate-limit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { enforceRateLimit } from "../_lib/rate-limit";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
@@ -106,6 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Auth + entitlement gate ──
   const session = await resolveSession(req);
   if (!session) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "ai-market-intent", limit: 30, windowSec: 60 })) return;
   const ent = await checkEntitlement(session.tenantId, "signal");
   if (!ent.allowed) {
     return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });

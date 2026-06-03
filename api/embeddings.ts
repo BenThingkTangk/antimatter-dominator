@@ -9,6 +9,8 @@
  *   → { embeddings: number[][], model, dim, latency_ms, cached }
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { authorize } from "./_lib/session";
+import { enforceRateLimit } from "./_lib/rate-limit";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 
@@ -81,6 +83,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Auth: embeddings proxy bills Perplexity/OpenAI — require a session OR an
+  // internal admin key (QA probe / server-to-server callers).
+  const auth = await authorize(req);
+  if (!auth) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "embeddings", limit: 60, windowSec: 60 })) return;
 
   const { input, model } = req.body || {};
   if (!input) return res.status(400).json({ error: "input required" });

@@ -31,3 +31,8 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Hard gate: the compliance dial gate MUST fail closed and the rate
+      # limiter MUST throttle. A regression here is a launch blocker.
+      - name: Safety smoke tests
+        run: npm run smoke
