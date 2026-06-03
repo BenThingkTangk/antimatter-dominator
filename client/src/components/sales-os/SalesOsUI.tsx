@@ -179,3 +179,40 @@ export function StatTile({
 export function fmtCurrency(n: number): string {
   return n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K` : `$${n}`;
 }
+
+/** Inline ATOM mark — an orbiting-electron atom glyph in the brand gradient.
+ *  Deterministic, dependency-free SVG; scales with `size`. */
+export function AtomMark({ size = 28, animate = true }: { size?: number; animate?: boolean }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      aria-label="ATOM"
+      role="img"
+    >
+      <defs>
+        <linearGradient id="atom-mark-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={SALES_OS.cyan} />
+          <stop offset="100%" stopColor={SALES_OS.violet} />
+        </linearGradient>
+      </defs>
+      <g
+        stroke="url(#atom-mark-grad)"
+        strokeWidth="1.8"
+        style={
+          animate
+            ? { transformOrigin: "24px 24px", animation: "atom-spin 9s linear infinite" }
+            : undefined
+        }
+      >
+        <ellipse cx="24" cy="24" rx="19" ry="8" />
+        <ellipse cx="24" cy="24" rx="19" ry="8" transform="rotate(60 24 24)" />
+        <ellipse cx="24" cy="24" rx="19" ry="8" transform="rotate(120 24 24)" />
+      </g>
+      <circle cx="24" cy="24" r="4" fill="url(#atom-mark-grad)" />
+      <style>{`@keyframes atom-spin{to{transform:rotate(360deg)}}`}</style>
+    </svg>
+  );
+}

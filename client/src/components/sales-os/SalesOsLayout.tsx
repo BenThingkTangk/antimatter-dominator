@@ -6,10 +6,15 @@ import { useLocation, Link } from "wouter";
 import { Menu } from "lucide-react";
 import { SalesOsNav, SALES_OS_NAV } from "./SalesOsNav";
 import { AgentActivityDock } from "./AgentActivityDock";
+import { MissionControl } from "./MissionControl";
+import { AtomMark } from "./SalesOsUI";
+import { SalesOsDemoProvider } from "@/lib/sales-os-demo";
 
-export function SalesOsLayout({ children }: { children: ReactNode }) {
+function SalesOsLayoutInner({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The XR War Room renders its own full-screen canvas — no chrome over it.
+  const immersive = location === "/xr" || location === "/xr/warroom";
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -52,14 +57,26 @@ export function SalesOsLayout({ children }: { children: ReactNode }) {
           <button onClick={() => setMobileOpen(true)} className="w-10 h-10 flex items-center justify-center rounded-lg" style={{ color: "rgba(246,248,255,0.7)" }} aria-label="Open menu">
             <Menu size={20} />
           </button>
+          <AtomMark size={22} />
           <span className="text-sm font-bold" style={{ color: "#f6f8ff" }}>ATOM Sales OS</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {!immersive && <MissionControl />}
+          {children}
+        </main>
       </div>
 
       <AgentActivityDock />
     </div>
+  );
+}
+
+export function SalesOsLayout({ children }: { children: ReactNode }) {
+  return (
+    <SalesOsDemoProvider>
+      <SalesOsLayoutInner>{children}</SalesOsLayoutInner>
+    </SalesOsDemoProvider>
   );
 }
 

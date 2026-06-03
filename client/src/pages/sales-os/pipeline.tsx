@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crosshair, ChevronRight } from "lucide-react";
+import { Crosshair, ChevronRight, Zap, ArrowUpRight, Target } from "lucide-react";
 import {
   PageShell,
   ZoneHeader,
@@ -25,6 +25,20 @@ const STAGE_TINT: Record<DealStage, string> = {
   Negotiation: "#f5c842",
   "Closed Won": "#34d399",
 };
+
+// Deterministic "next best action" + impact, derived from the seeded deal so it
+// reads as ATOM's recommendation without any randomness.
+function nextActionFor(p: Prospect): { action: string; impact: string } {
+  if (p.sentimentScore < 0)
+    return { action: "Send objection-handling brief", impact: "Recover +22 sentiment" };
+  if (p.stage === "Negotiation")
+    return { action: "Send mutual close plan", impact: `Pull in ${fmtCurrency(p.dealValue)}` };
+  if (p.stage === "Proposal")
+    return { action: "Book exec alignment call", impact: "Compress cycle 6 days" };
+  if (p.intentScore >= 85)
+    return { action: "Trigger AI discovery call", impact: "Strike while intent peaks" };
+  return { action: "Send tailored case study", impact: "Lift intent +12" };
+}
 
 function DealCard({ p, onClick }: { p: Prospect; onClick: () => void }) {
   return (
@@ -79,10 +93,70 @@ function DealCard({ p, onClick }: { p: Prospect; onClick: () => void }) {
   );
 }
 
+// ── AI Priority Lane — the deals ATOM is actively driving, ranked by intent ──
+function PriorityCard({ p, rank, onClick }: { p: Prospect; rank: number; onClick: () => void }) {
+  const { action, impact } = nextActionFor(p);
+  return (
+    <button
+      onClick={onClick}
+      data-testid={`priority-card-${p.id}`}
+      className="group relative text-left rounded-xl p-4 transition-all hover:-translate-y-1 overflow-hidden"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(124,58,237,0.32)",
+        boxShadow: "0 0 28px rgba(124,58,237,0.08)",
+      }}
+    >
+      <span
+        className="pointer-events-none absolute -right-6 -top-6 w-20 h-20 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"
+        style={{ background: VERTICAL_COLORS[p.vertical] }}
+      />
+      <div className="flex items-center justify-between">
+        <span
+          className="text-[10px] font-mono uppercase tracking-[0.18em] px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(124,58,237,0.18)", color: "#c4b5fd" }}
+        >
+          Priority {rank}
+        </span>
+        <span className="flex items-center gap-1 text-xs font-mono" style={{ color: "#34d399" }}>
+          <Zap size={11} /> {p.intentScore} intent
+        </span>
+      </div>
+      <p className="mt-2.5 text-base font-bold" style={{ color: "#f6f8ff" }}>
+        {p.company}
+      </p>
+      <p className="text-[11px]" style={{ color: "rgba(246,248,255,0.55)" }}>
+        {p.contact} · {p.title}
+      </p>
+      <div
+        className="mt-3 p-2.5 rounded-lg"
+        style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)" }}
+      >
+        <div className="flex items-center gap-1.5">
+          <Target size={11} style={{ color: SALES_OS.cyan }} />
+          <span className="text-[9px] font-mono uppercase tracking-wider" style={{ color: SALES_OS.cyan }}>
+            ATOM next move
+          </span>
+        </div>
+        <p className="text-xs font-semibold mt-1" style={{ color: "#f6f8ff" }}>
+          {action}
+        </p>
+        <p className="flex items-center gap-1 text-[10px] mt-0.5" style={{ color: "#34d399" }}>
+          <ArrowUpRight size={10} /> {impact}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 export default function PipelineCommand() {
   const [selected, setSelected] = useState<Prospect | null>(null);
   const won = PROSPECTS.filter((p) => p.stage === "Closed Won").length;
   const avg = Math.round(PROSPECTS.reduce((s, p) => s + p.intentScore, 0) / PROSPECTS.length);
+  const priority = [...PROSPECTS].sort((a, b) => b.intentScore - a.intentScore).slice(0, 3);
+  const stageMax = Math.max(
+    ...STAGE_ORDER.map((s) => PROSPECTS.filter((p) => p.stage === s).reduce((t, p) => t + p.dealValue, 0)),
+  );
 
   return (
     <PageShell>
@@ -100,12 +174,31 @@ export default function PipelineCommand() {
         <StatTile label="Closed Won" value={`${won}`} delta="this quarter" accent="#34d399" />
       </div>
 
+      {/* AI Priority Lane */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap size={14} style={{ color: SALES_OS.violet }} />
+          <p className="text-xs font-mono uppercase tracking-[0.2em]" style={{ color: "#c4b5fd" }}>
+            AI Priority Lane
+          </p>
+          <span className="text-[11px]" style={{ color: "rgba(246,248,255,0.4)" }}>
+            ATOM is driving these now
+          </span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {priority.map((p, i) => (
+            <PriorityCard key={p.id} p={p} rank={i + 1} onClick={() => setSelected(p)} />
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         {STAGE_ORDER.map((stage) => {
           const deals = PROSPECTS.filter((p) => p.stage === stage);
+          const stageVal = deals.reduce((t, p) => t + p.dealValue, 0);
           return (
             <GlassCard key={stage} className="p-3">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ background: STAGE_TINT[stage] }} />
                   <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#f6f8ff" }}>
@@ -115,6 +208,21 @@ export default function PipelineCommand() {
                 <span className="text-[10px] font-mono" style={{ color: "rgba(246,248,255,0.45)" }}>
                   {deals.length}
                 </span>
+              </div>
+              {/* stage health bar */}
+              <div className="mb-3">
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: stageMax ? `${(stageVal / stageMax) * 100}%` : "0%",
+                      background: STAGE_TINT[stage],
+                    }}
+                  />
+                </div>
+                <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(246,248,255,0.4)" }}>
+                  {fmtCurrency(stageVal)} in stage
+                </p>
               </div>
               <div className="space-y-2">
                 {deals.length === 0 ? (
@@ -163,6 +271,24 @@ export default function PipelineCommand() {
                 <span className="text-xs" style={{ color: "#f6f8ff" }}>
                   {selected.fundingSignal}
                 </span>
+              </div>
+              {/* Guided next-best action */}
+              <div
+                className="mt-3 p-3 rounded-xl"
+                style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.28)" }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Target size={12} style={{ color: SALES_OS.cyan }} />
+                  <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: SALES_OS.cyan }}>
+                    ATOM recommended next move
+                  </span>
+                </div>
+                <p className="text-sm font-semibold mt-1" style={{ color: "#f6f8ff" }}>
+                  {nextActionFor(selected).action}
+                </p>
+                <p className="flex items-center gap-1 text-[11px] mt-0.5" style={{ color: "#34d399" }}>
+                  <ArrowUpRight size={11} /> {nextActionFor(selected).impact}
+                </p>
               </div>
               <button
                 onClick={() => setSelected(null)}

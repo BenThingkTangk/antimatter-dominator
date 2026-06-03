@@ -1,8 +1,9 @@
 // AgentActivityDock — persistent bottom dock showing a horizontal scrolling
 // ticker of live ATOM actions across every channel. Mounted on all
 // authenticated app pages. Seeded by useAgentActivity (mock, 3s cycle).
-import { Phone, MessageSquare, Mail, Linkedin, ArrowRight } from "lucide-react";
+import { Phone, MessageSquare, Mail, Linkedin, ArrowRight, Sparkles } from "lucide-react";
 import { useAgentActivity, AgentEvent, Channel, Sentiment } from "@/hooks/useAgentActivity";
+import { useSalesOsDemo } from "@/lib/sales-os-demo";
 
 const CHANNEL_META: Record<
   Channel,
@@ -81,8 +82,47 @@ function EventChip({ ev }: { ev: AgentEvent }) {
   );
 }
 
+function DemoBeatChip() {
+  const { demoStepData, demoStep } = useSalesOsDemo();
+  if (!demoStepData) return null;
+  return (
+    <div
+      data-testid="dock-demo-beat"
+      className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-r"
+      style={{
+        borderColor: "rgba(124,58,237,0.3)",
+        background: "rgba(124,58,237,0.1)",
+      }}
+    >
+      <div
+        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: "rgba(124,58,237,0.2)", color: "#c4b5fd" }}
+      >
+        <Sparkles size={14} />
+      </div>
+      <div className="min-w-0">
+        <span
+          className="text-[9px] font-mono uppercase tracking-[0.18em]"
+          style={{ color: "#c4b5fd" }}
+        >
+          Investor Demo · Step {demoStep + 1}
+        </span>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <span className="text-xs font-semibold" style={{ color: "#f6f8ff" }}>
+            {demoStepData.title}
+          </span>
+          <span className="text-[11px]" style={{ color: "rgba(246,248,255,0.6)" }}>
+            {demoStepData.metric}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AgentActivityDock() {
   const events = useAgentActivity(3000);
+  const { demoActive } = useSalesOsDemo();
   // Duplicate the batch so the marquee loop is seamless.
   const loop = [...events, ...events, ...events];
 
@@ -96,8 +136,9 @@ export function AgentActivityDock() {
         style={{
           background:
             "linear-gradient(180deg, rgba(10,13,20,0) 0%, rgba(10,13,20,0.92) 28%, #0a0d14 100%)",
-          borderTop: "1px solid rgba(0,212,255,0.18)",
+          borderTop: `1px solid ${demoActive ? "rgba(124,58,237,0.4)" : "rgba(0,212,255,0.18)"}`,
           backdropFilter: "blur(12px)",
+          transition: "border-color .4s",
         }}
       >
         <div className="flex items-center">
@@ -116,6 +157,7 @@ export function AgentActivityDock() {
               ATOM Live
             </span>
           </div>
+          <DemoBeatChip />
           <div className="relative flex-1 overflow-hidden py-2">
             <div className="flex animate-[salesos-marquee_28s_linear_infinite] hover:[animation-play-state:paused]">
               {loop.map((ev, i) => (

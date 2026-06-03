@@ -1,5 +1,6 @@
-// useAgentActivity — v1 seeds realistic mock ATOM agent events and cycles a
-// fresh batch every 3 seconds. No backend dependency; safe for investor demos.
+// useAgentActivity — seeds realistic ATOM agent events and rotates them on a
+// fixed cadence. Deterministic: the batch is derived from a monotonic tick (not
+// Math.random), so renders are stable and there is no layout thrash or flicker.
 import { useEffect, useState } from "react";
 import { PROSPECTS } from "@/data/warroom-seed";
 
@@ -37,76 +38,76 @@ const NEXT_ACTIONS = [
   "Escalate to manager",
 ];
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 function sentimentFromScore(score: number): Sentiment {
   if (score > 25) return "positive";
   if (score < 0) return "negative";
   return "neutral";
 }
 
-function buildBatch(): AgentEvent[] {
-  const now = Date.now();
-  const callP = pick(PROSPECTS);
-  const emailC = pick(CAMPAIGNS);
-  const linkedP = pick(PROSPECTS);
-  const dur = `${Math.floor(Math.random() * 9) + 1}:${String(
-    Math.floor(Math.random() * 60),
-  ).padStart(2, "0")}`;
-  const sequences = Math.floor(Math.random() * 18) + 6;
-  const sent = Math.floor(Math.random() * 900) + 120;
-  const openRate = Math.floor(Math.random() * 38) + 28;
-  const pending = Math.floor(Math.random() * 14) + 3;
+// Deterministic pick keyed on the tick so the ticker rotates predictably.
+function at<T>(arr: T[], i: number): T {
+  return arr[((i % arr.length) + arr.length) % arr.length];
+}
+
+function buildBatch(tick: number): AgentEvent[] {
+  const callP = at(PROSPECTS, tick);
+  const emailC = at(CAMPAIGNS, tick);
+  const linkedP = at(PROSPECTS, tick + 3);
+  const secs = (tick * 17) % 60;
+  const mins = (tick % 8) + 1;
+  const dur = `${mins}:${String(secs).padStart(2, "0")}`;
+  const sequences = (tick % 18) + 6;
+  const sent = ((tick * 37) % 900) + 120;
+  const openRate = ((tick * 7) % 38) + 28;
+  const pending = (tick % 14) + 3;
 
   return [
     {
-      id: `call-${now}`,
+      id: `call-${callP.id}`,
       channel: "CALLING",
       primary: callP.contact,
       detail: `${callP.company} · ${dur}`,
       sentiment: sentimentFromScore(callP.sentimentScore),
       intent: callP.intentScore,
-      nextAction: pick(NEXT_ACTIONS),
+      nextAction: at(NEXT_ACTIONS, tick),
     },
     {
-      id: `text-${now}`,
+      id: `text-${tick}`,
       channel: "TEXTING",
       primary: `${sequences} sequences active`,
       detail: `${Math.floor(sequences * 0.6)} replies pending`,
       sentiment: "neutral",
-      intent: Math.floor(Math.random() * 40) + 50,
-      nextAction: pick(NEXT_ACTIONS),
+      intent: 50 + (tick % 40),
+      nextAction: at(NEXT_ACTIONS, tick + 1),
     },
     {
-      id: `email-${now}`,
+      id: `email-${tick}`,
       channel: "EMAILING",
       primary: emailC,
       detail: `${sent} sent · ${openRate}% open`,
       sentiment: openRate > 45 ? "positive" : "neutral",
-      intent: Math.floor(Math.random() * 30) + 55,
-      nextAction: pick(NEXT_ACTIONS),
+      intent: 55 + (tick % 30),
+      nextAction: at(NEXT_ACTIONS, tick + 2),
     },
     {
-      id: `li-${now}`,
+      id: `li-${tick}`,
       channel: "LINKEDIN",
       primary: `${pending} messages pending`,
       detail: `${linkedP.company} thread warming`,
       sentiment: sentimentFromScore(linkedP.sentimentScore),
       intent: linkedP.intentScore,
-      nextAction: pick(NEXT_ACTIONS),
+      nextAction: at(NEXT_ACTIONS, tick + 3),
     },
   ];
 }
 
 export function useAgentActivity(intervalMs = 3000) {
-  const [events, setEvents] = useState<AgentEvent[]>(() => buildBatch());
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setEvents(buildBatch()), intervalMs);
+    const t = setInterval(() => setTick((n) => n + 1), intervalMs);
     return () => clearInterval(t);
   }, [intervalMs]);
 
-  return events;
+  return buildBatch(tick);
 }

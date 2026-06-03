@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { VRButton, ARButton, XR, Controllers, Hands } from "@react-three/xr";
-import { Boxes, X } from "lucide-react";
+import { Boxes, X, Check, Headset, MousePointer2, BarChart3, PhoneCall, ShieldCheck, Crosshair } from "lucide-react";
 import {
   WarRoomScene,
   DesktopControls,
@@ -42,9 +42,15 @@ export default function WarRoomXR() {
         <ARButton onClick={() => setEnteredXR(true)} />
       </div>
 
-      {/* Entry header overlay (hidden once in immersive session) */}
+      {/* Entry overlay — sells the War Room before entering VR. Hidden once in
+          an immersive session. Constrained-width panel so the top-right VR/AR
+          buttons and the 3D orbit canvas stay reachable. */}
       {!enteredXR && (
-        <div className="absolute top-6 left-6 z-20 pointer-events-none">
+        <div
+          className="absolute top-0 left-0 bottom-0 z-20 w-full max-w-md p-6 md:p-8 overflow-y-auto pointer-events-none"
+          style={{ background: "linear-gradient(90deg, rgba(4,6,12,0.92) 60%, transparent)" }}
+          data-testid="xr-entry-overlay"
+        >
           <div className="flex items-center gap-3">
             <div
               className="w-11 h-11 rounded-xl flex items-center justify-center"
@@ -59,14 +65,15 @@ export default function WarRoomXR() {
               <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#f6f8ff" }}>
                 ATOM War Room
               </h1>
-              <p className="text-sm mt-1 max-w-md" style={{ color: "rgba(246,248,255,0.55)" }}>
-                Step inside your pipeline. Enter the War Room to walk among five live
-                panels — or explore in 3D right here on desktop (drag to orbit).
-              </p>
             </div>
           </div>
+          <p className="text-sm mt-3" style={{ color: "rgba(246,248,255,0.6)" }}>
+            Step inside your pipeline. Walk among live deal panels in full VR — or
+            explore the same scene in 3D right here on desktop.
+          </p>
+
           <div
-            className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full pointer-events-none"
+            className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
             style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}
           >
             <span className="relative flex h-2 w-2">
@@ -74,6 +81,72 @@ export default function WarRoomXR() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
             <span className="text-[11px] font-mono uppercase tracking-[0.18em]">ATOM is active</span>
+          </div>
+
+          {/* Device readiness checklist */}
+          <div
+            className="mt-6 p-4 rounded-2xl pointer-events-auto"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,212,255,0.18)" }}
+          >
+            <p className="text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: CYAN }}>
+              Device readiness
+            </p>
+            <div className="space-y-2">
+              {[
+                { ok: true, label: "WebXR runtime detected" },
+                { ok: true, label: "Quest 3 / Vision Pro / desktop supported" },
+                { ok: true, label: "Hand tracking + controller rays enabled" },
+                { ok: true, label: "Secure context (HTTPS)" },
+              ].map((c) => (
+                <div key={c.label} className="flex items-center gap-2">
+                  <span
+                    className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(52,211,153,0.18)", color: "#34d399" }}
+                  >
+                    <Check size={11} />
+                  </span>
+                  <span className="text-xs" style={{ color: "rgba(246,248,255,0.75)" }}>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* What you'll see */}
+          <p className="text-[10px] font-mono uppercase tracking-[0.22em] mt-6 mb-3" style={{ color: "rgba(246,248,255,0.45)" }}>
+            What you'll see inside
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { icon: Crosshair, label: "Live deal panels", desc: "Top accounts as floating cards" },
+              { icon: PhoneCall, label: "Active calls", desc: "Emotion + intent in real time" },
+              { icon: BarChart3, label: "Pipeline globe", desc: "Revenue by vertical" },
+              { icon: ShieldCheck, label: "Compliance shield", desc: "TCPA / DNC status" },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <div
+                  key={c.label}
+                  className="p-3 rounded-xl pointer-events-auto"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(124,58,237,0.22)" }}
+                >
+                  <Icon size={16} style={{ color: "#c4b5fd" }} />
+                  <p className="text-xs font-semibold mt-1.5" style={{ color: "#f6f8ff" }}>{c.label}</p>
+                  <p className="text-[10px]" style={{ color: "rgba(246,248,255,0.5)" }}>{c.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Controls / fallback */}
+          <div className="mt-6 grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: "rgba(0,212,255,0.06)", border: "1px solid rgba(0,212,255,0.18)" }}>
+              <Headset size={15} style={{ color: CYAN }} />
+              <span className="text-[11px]" style={{ color: "rgba(246,248,255,0.7)" }}>Enter VR (top-right)</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <MousePointer2 size={15} style={{ color: "rgba(246,248,255,0.7)" }} />
+              <span className="text-[11px]" style={{ color: "rgba(246,248,255,0.7)" }}>No headset? Drag to orbit</span>
+            </div>
           </div>
         </div>
       )}
