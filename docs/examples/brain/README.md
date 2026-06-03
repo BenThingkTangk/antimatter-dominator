@@ -4,7 +4,16 @@
 Workers send `{ "task": "<task>", ... }`; the Brain owns model selection and
 routes the request to the Akamai Blackwell **B200** inference plane, **Qdrant**
 (vectors), or — for **Vibranium-tier** chat/reason/vision only — a frontier
-fallback (Claude Opus / GPT-5.5).
+fallback (Claude Opus / GPT-5).
+
+`GET /api/brain` returns a no-secret health/introspection payload — which planes
+are configured, the frontier-eligible tasks, and the **active** model ids and
+B200 route table (after any env overrides). Use it to verify a deployment
+without invoking a model:
+
+```bash
+curl -s "$ATOM_API_BASE/api/brain" | jq
+```
 
 Source: [`api/brain.ts`](../../../api/brain.ts) · Typed client:
 [`shared/atom-brain-client.ts`](../../../shared/atom-brain-client.ts)
@@ -26,10 +35,14 @@ Source: [`api/brain.ts`](../../../api/brain.ts) · Typed client:
 | `vision`        | Qwen 2.5-VL 72B                         | B200     | yes                      |
 | `pii_redact`    | Presidio + NER                          | B200     | no                       |
 
-\* Frontier fallback (Claude Opus / GPT-5.5) is gated to `tier: "vibranium"`
-and only fires for the eligible tasks above. Set `frontier: true` to route
-there directly, or it engages automatically if the B200 plane errors on a
-Vibranium request. Choose the vendor with `frontier_vendor: "anthropic" | "openai"`.
+\* Frontier fallback (Claude Opus / GPT-5) is gated to `tier: "vibranium"`
+and only fires for the eligible tasks above. Lower tiers and non-eligible tasks
+can never reach a frontier vendor, regardless of body flags. Set `frontier: true`
+to route there directly, or it engages automatically if the B200 plane errors on
+a Vibranium request. Choose the vendor with `frontier_vendor: "anthropic" | "openai"`
+(chat/reason only — `vision` always uses OpenAI, since the Anthropic vision API
+expects a different image content-block shape than the OpenAI `image_url` blocks
+workers send).
 
 ## Model selectors
 
@@ -99,8 +112,43 @@ serverless routes, the React client, and Akamai EdgeWorkers alike.
 | `QDRANT_URL`           | Qdrant base URL for vector upsert/search. |
 | `QDRANT_API_KEY`       | Qdrant API key (sent as `api-key`; optional for unauthenticated instances). |
 | `ANTHROPIC_API_KEY`    | Claude Opus frontier fallback (Vibranium tier). |
-| `OPENAI_API_KEY`       | GPT-5.5 frontier fallback (Vibranium tier). |
+| `OPENAI_API_KEY`       | GPT-5 frontier fallback (Vibranium tier). |
 
 Set these in Vercel project env (and `.env` for local `vercel dev`). The B200
 and Qdrant vars are required for self-hosted tasks; the frontier keys are only
 needed if Vibranium-tier frontier routing is enabled.
+
+## Optional overrides (routes, models, dims)
+
+Defaults are documented in `api/brain.ts`. The B200 route suffixes and every
+model id are env-overridable so a route/model swap needs no code change — the
+live values are visible via `GET /api/brain`. Set only the ones you need.
+
+> **Model-id caveat:** the OpenAI frontier default is **`gpt-5`**, not `gpt-5.5`.
+> Per `api/atom-leadgen/call.ts` (verified May 2026) the platform whitelists
+> `gpt-5` / `gpt-5-mini` / `gpt-4.1` / `gpt-4o`; `gpt-5.5` is not yet accepted.
+> Override `BRAIN_FRONTIER_MODEL_OPENAI` if your account whitelists another id.
+> Likewise the B200 audio/classifier/redact route suffixes are deployment
+> -specific assumptions — set the `AKAMAI_B200_ROUTE_*` vars to match your plane.
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `AKAMAI_B200_ROUTE_CHAT` | `chat/completions` | Chat/reason/vision completions route. |
+| `AKAMAI_B200_ROUTE_ASR` | `audio/transcriptions` | ASR (Parakeet) route. |
+| `AKAMAI_B200_ROUTE_TTS` | `audio/speech` | TTS (Kokoro/F5/XTTS) route. |
+| `AKAMAI_B200_ROUTE_EMBED` | `embeddings` | Embeddings (BGE-M3) route. |
+| `AKAMAI_B200_ROUTE_CLASSIFY_AUDIO` | `audio/classify` | Emotion/intent (SpeechBrain) route. |
+| `AKAMAI_B200_ROUTE_CLASSIFY_TEXT` | `text/classify` | TCPA hard-stop (DistilBERT) route. |
+| `AKAMAI_B200_ROUTE_REDACT` | `text/redact` | PII redaction (Presidio) route. |
+| `AKAMAI_B200_MODEL_CHAT_LLAMA` | `llama-3.3-70b-instruct` | Default chat/reason model id. |
+| `AKAMAI_B200_MODEL_CHAT_QWEN` | `qwen-2.5-72b-instruct` | `model: "qwen"` model id. |
+| `AKAMAI_B200_MODEL_ASR` | `parakeet-tdt-1.1b` | ASR model id. |
+| `AKAMAI_B200_MODEL_TTS_KOKORO` / `_TTS_F5` / `_TTS_XTTS` | `kokoro-82m` / `f5-tts` / `xtts-v2` | TTS model ids. |
+| `AKAMAI_B200_MODEL_EMBED` | `bge-m3` | Embedding model id. |
+| `AKAMAI_B200_MODEL_EMOTION` / `_INTENT` | `speechbrain-emotion` / `speechbrain-intent` | SpeechBrain model ids. |
+| `AKAMAI_B200_MODEL_TCPA` | `distilbert-tcpa` | TCPA classifier model id. |
+| `AKAMAI_B200_MODEL_VISION` | `qwen-2.5-vl-72b-instruct` | Vision model id. |
+| `AKAMAI_B200_MODEL_PII` | `presidio-ner` | PII redaction model id. |
+| `AKAMAI_B200_EMBED_DIM` | `1024` | Reported embedding dimension (BGE-M3). |
+| `BRAIN_FRONTIER_MODEL_ANTHROPIC` | `claude-opus-4-7` | Anthropic frontier model id. |
+| `BRAIN_FRONTIER_MODEL_OPENAI` | `gpt-5` | OpenAI frontier model id. |

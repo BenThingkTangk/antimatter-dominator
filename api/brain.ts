@@ -30,7 +30,9 @@
  *                     ↳ Vibranium tier may fall back to Claude Opus / GPT-5.5
  *   pii_redact      → Presidio + NER                          → B200
  *
- * Env (see docs/examples/brain/README.md):
+ * Env (see docs/examples/brain/README.md for the full list, including the
+ * optional AKAMAI_B200_ROUTE_* / AKAMAI_B200_MODEL_* / BRAIN_FRONTIER_MODEL_*
+ * overrides that let routes and model ids be set per environment):
  *   AKAMAI_B200_BASE_URL, AKAMAI_B200_API_KEY,
  *   QDRANT_URL, QDRANT_API_KEY,
  *   ANTHROPIC_API_KEY, OPENAI_API_KEY
@@ -38,6 +40,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
+/** env override with a default, trimmed the same way as every other secret. */
+const envOr = (key: string, fallback: string) => clean(process.env[key]) || fallback;
 
 const AKAMAI_B200_BASE_URL = clean(process.env.AKAMAI_B200_BASE_URL);
 const AKAMAI_B200_API_KEY  = clean(process.env.AKAMAI_B200_API_KEY);
@@ -46,33 +50,64 @@ const QDRANT_API_KEY       = clean(process.env.QDRANT_API_KEY);
 const ANTHROPIC_API_KEY    = clean(process.env.ANTHROPIC_API_KEY);
 const OPENAI_API_KEY       = clean(process.env.OPENAI_API_KEY);
 
+// ─── B200 plane routes ──────────────────────────────────────────────────────────
+// The exact path suffixes the Blackwell plane serves each capability under,
+// appended to `${AKAMAI_B200_BASE_URL}/v1/`. Chat/embeddings use the standard
+// OpenAI-compatible names; the audio/classifier/redact routes are deployment
+// -specific, so every one is env-overridable. Centralized here so a route
+// change is a single edit (and documented in docs/examples/brain/README.md)
+// rather than a string buried in a handler.
+const B200_ROUTES = {
+  chat:     envOr("AKAMAI_B200_ROUTE_CHAT",     "chat/completions"),
+  asr:      envOr("AKAMAI_B200_ROUTE_ASR",      "audio/transcriptions"),
+  tts:      envOr("AKAMAI_B200_ROUTE_TTS",      "audio/speech"),
+  embed:    envOr("AKAMAI_B200_ROUTE_EMBED",    "embeddings"),
+  classify_audio: envOr("AKAMAI_B200_ROUTE_CLASSIFY_AUDIO", "audio/classify"),
+  classify_text:  envOr("AKAMAI_B200_ROUTE_CLASSIFY_TEXT",  "text/classify"),
+  redact:   envOr("AKAMAI_B200_ROUTE_REDACT",   "text/redact"),
+} as const;
+
 // ─── Model registry ───────────────────────────────────────────────────────────
 // Logical model names → the model id the B200 plane serves them under. Keeping
-// the mapping here means a worker never hard-codes a model id.
+// the mapping here means a worker never hard-codes a model id; every id is
+// env-overridable so a model swap needs no redeploy of this file.
 const B200_MODELS = {
-  chat_llama:   "llama-3.3-70b-instruct",
-  chat_qwen:    "qwen-2.5-72b-instruct",
-  asr:          "parakeet-tdt-1.1b",
-  tts_kokoro:   "kokoro-82m",
-  tts_f5:       "f5-tts",
-  tts_xtts:     "xtts-v2",
-  embed:        "bge-m3",
-  emotion:      "speechbrain-emotion",
-  intent:       "speechbrain-intent",
-  tcpa:         "distilbert-tcpa",
-  vision:       "qwen-2.5-vl-72b-instruct",
-  pii:          "presidio-ner",
+  chat_llama:   envOr("AKAMAI_B200_MODEL_CHAT_LLAMA", "llama-3.3-70b-instruct"),
+  chat_qwen:    envOr("AKAMAI_B200_MODEL_CHAT_QWEN",  "qwen-2.5-72b-instruct"),
+  asr:          envOr("AKAMAI_B200_MODEL_ASR",        "parakeet-tdt-1.1b"),
+  tts_kokoro:   envOr("AKAMAI_B200_MODEL_TTS_KOKORO", "kokoro-82m"),
+  tts_f5:       envOr("AKAMAI_B200_MODEL_TTS_F5",     "f5-tts"),
+  tts_xtts:     envOr("AKAMAI_B200_MODEL_TTS_XTTS",   "xtts-v2"),
+  embed:        envOr("AKAMAI_B200_MODEL_EMBED",      "bge-m3"),
+  emotion:      envOr("AKAMAI_B200_MODEL_EMOTION",    "speechbrain-emotion"),
+  intent:       envOr("AKAMAI_B200_MODEL_INTENT",     "speechbrain-intent"),
+  tcpa:         envOr("AKAMAI_B200_MODEL_TCPA",       "distilbert-tcpa"),
+  vision:       envOr("AKAMAI_B200_MODEL_VISION",     "qwen-2.5-vl-72b-instruct"),
+  pii:          envOr("AKAMAI_B200_MODEL_PII",        "presidio-ner"),
 } as const;
 
+// Frontier fallback model ids (Vibranium tier only). NOTE: gpt-5.5 is NOT a
+// confirmed model name — api/atom-leadgen/call.ts documents that the platform
+// only whitelists gpt-5 / gpt-5-mini / gpt-4.1 / gpt-4o (verified May 2026).
+// We default OpenAI to "gpt-5" to match that reality and leave both ids
+// env-overridable so the frontier model can be set per environment.
 const FRONTIER_MODELS = {
-  anthropic: "claude-opus-4-7",
-  openai:    "gpt-5.5",
+  anthropic: envOr("BRAIN_FRONTIER_MODEL_ANTHROPIC", "claude-opus-4-7"),
+  openai:    envOr("BRAIN_FRONTIER_MODEL_OPENAI",    "gpt-5"),
 } as const;
 
-const EMBED_DIM = 1024; // BGE-M3
+const EMBED_DIM = Number(clean(process.env.AKAMAI_B200_EMBED_DIM)) || 1024; // BGE-M3
 
 // Tasks eligible for frontier fallback (Vibranium tier only).
-const FRONTIER_ELIGIBLE = new Set(["chat", "reason", "vision"]);
+const FRONTIER_ELIGIBLE = new Set<BrainTask>(["chat", "reason", "vision"]);
+
+// Single gate for the frontier (Claude Opus / GPT-5) fallback. Frontier is
+// permitted ONLY when the tier is exactly "vibranium" AND the task is one of
+// the eligible tasks above. Everything else (lower tiers, non-eligible tasks)
+// can never reach a frontier vendor, regardless of body flags.
+function frontierGate(task: BrainTask, tier: unknown) {
+  return String(tier || "").toLowerCase() === "vibranium" && FRONTIER_ELIGIBLE.has(task);
+}
 
 type BrainTask =
   | "chat" | "reason" | "asr" | "tts" | "embed"
@@ -91,39 +126,52 @@ class BrainError extends Error {
 // `${BASE}/v1/<path>` with a bearer key and a generous timeout (voice + 72B
 // models are not instant). `model` is always set explicitly by the Brain.
 async function b200<T = any>(path: string, body: unknown, timeoutMs = 60_000): Promise<T> {
-  if (!AKAMAI_B200_BASE_URL) throw new BrainError(500, "AKAMAI_B200_BASE_URL not configured");
-  if (!AKAMAI_B200_API_KEY)  throw new BrainError(500, "AKAMAI_B200_API_KEY not configured");
-  const r = await fetch(`${AKAMAI_B200_BASE_URL.replace(/\/$/, "")}/v1/${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${AKAMAI_B200_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  if (!AKAMAI_B200_BASE_URL) throw new BrainError(500, "B200 plane not configured: set AKAMAI_B200_BASE_URL");
+  if (!AKAMAI_B200_API_KEY)  throw new BrainError(500, "B200 plane not configured: set AKAMAI_B200_API_KEY");
+  const url = `${AKAMAI_B200_BASE_URL.replace(/\/$/, "")}/v1/${path.replace(/^\//, "")}`;
+  let r: Response;
+  try {
+    r = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${AKAMAI_B200_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (e: any) {
+    const reason = e?.name === "TimeoutError" ? `timed out after ${timeoutMs}ms` : (e?.message || "network error");
+    throw new BrainError(504, `b200 ${path} unreachable`, reason);
+  }
   if (!r.ok) {
     const t = await r.text().catch(() => "");
-    throw new BrainError(502, `b200 ${path} ${r.status}`, t.slice(0, 400));
+    throw new BrainError(502, `b200 ${path} returned ${r.status}`, t.slice(0, 400));
   }
   return r.json() as Promise<T>;
 }
 
 // ─── Qdrant transport ──────────────────────────────────────────────────────────
 async function qdrant<T = any>(path: string, body: unknown, method = "PUT"): Promise<T> {
-  if (!QDRANT_URL) throw new BrainError(500, "QDRANT_URL not configured");
-  const r = await fetch(`${QDRANT_URL.replace(/\/$/, "")}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(QDRANT_API_KEY ? { "api-key": QDRANT_API_KEY } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(20_000),
-  });
+  if (!QDRANT_URL) throw new BrainError(500, "vector store not configured: set QDRANT_URL");
+  let r: Response;
+  try {
+    r = await fetch(`${QDRANT_URL.replace(/\/$/, "")}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(QDRANT_API_KEY ? { "api-key": QDRANT_API_KEY } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (e: any) {
+    const reason = e?.name === "TimeoutError" ? "timed out after 20000ms" : (e?.message || "network error");
+    throw new BrainError(504, `qdrant ${path} unreachable`, reason);
+  }
   if (!r.ok) {
     const t = await r.text().catch(() => "");
-    throw new BrainError(502, `qdrant ${path} ${r.status}`, t.slice(0, 400));
+    throw new BrainError(502, `qdrant ${path} returned ${r.status}`, t.slice(0, 400));
   }
   return r.json() as Promise<T>;
 }
@@ -143,8 +191,7 @@ async function runChat(body: any, task: "chat" | "reason") {
 
   // Frontier fallback: Vibranium tier only, and only when explicitly requested
   // (body.frontier) or the B200 plane fails. Reasoning leans a little hotter.
-  const tier = String(body.tier || "").toLowerCase();
-  const frontierAllowed = tier === "vibranium" && FRONTIER_ELIGIBLE.has(task);
+  const frontierAllowed = frontierGate(task, body.tier);
   const wantFrontier = frontierAllowed && body.frontier === true;
 
   const temperature = typeof body.temperature === "number"
@@ -159,7 +206,7 @@ async function runChat(body: any, task: "chat" | "reason") {
 
   try {
     const model = pickChatModel(body.model);
-    const data = await b200<any>("chat/completions", { model, messages, temperature, max_tokens });
+    const data = await b200<any>(B200_ROUTES.chat, { model, messages, temperature, max_tokens });
     return {
       task,
       routed: "b200" as const,
@@ -246,7 +293,7 @@ async function openAIChat(messages: ChatMessage[], temperature: number, max_toke
 async function runAsr(body: any) {
   const audio = body.audio_base64 || body.audio;
   if (!audio) throw new BrainError(400, "audio_base64 required");
-  const data = await b200<any>("audio/transcriptions", {
+  const data = await b200<any>(B200_ROUTES.asr, {
     model: B200_MODELS.asr,
     audio_base64: audio,
     language: body.language || "en",
@@ -266,7 +313,7 @@ async function runTts(body: any) {
   const text = body.text;
   if (!text || typeof text !== "string") throw new BrainError(400, "text required");
   const model = pickTtsModel(body.voice_model);
-  const data = await b200<any>("audio/speech", {
+  const data = await b200<any>(B200_ROUTES.tts, {
     model,
     input: text,
     voice: body.voice,
@@ -284,7 +331,7 @@ async function runTts(body: any) {
 
 // ─── Embeddings (BGE-M3) ──────────────────────────────────────────────────────────
 async function embedTexts(inputs: string[]): Promise<number[][]> {
-  const data = await b200<any>("embeddings", { model: B200_MODELS.embed, input: inputs }, 20_000);
+  const data = await b200<any>(B200_ROUTES.embed, { model: B200_MODELS.embed, input: inputs }, 20_000);
   const embeddings: number[][] = (data?.data || []).map((row: any) => row.embedding);
   if (!embeddings.length) throw new BrainError(502, "b200 returned no embeddings");
   return embeddings;
@@ -349,7 +396,7 @@ async function runSpeechBrain(body: any, task: "emotion" | "intent") {
   const text = body.text;
   if (!audio && !text) throw new BrainError(400, "audio_base64 or text required");
   const model = task === "emotion" ? B200_MODELS.emotion : B200_MODELS.intent;
-  const data = await b200<any>("audio/classify", { model, task, audio_base64: audio, text });
+  const data = await b200<any>(B200_ROUTES.classify_audio, { model, task, audio_base64: audio, text });
   return { task, routed: "b200", model, label: data?.label ?? null, scores: data?.scores ?? {} };
 }
 
@@ -359,7 +406,7 @@ async function runSpeechBrain(body: any, task: "emotion" | "intent") {
 async function runTcpaCheck(body: any) {
   const text = body.text;
   if (!text || typeof text !== "string") throw new BrainError(400, "text required");
-  const data = await b200<any>("text/classify", { model: B200_MODELS.tcpa, text });
+  const data = await b200<any>(B200_ROUTES.classify_text, { model: B200_MODELS.tcpa, text });
   const label = String(data?.label ?? "").toLowerCase();
   const score = typeof data?.score === "number" ? data.score : 0;
   // "stop" / "dnc" / "revoke" labels above threshold → hard stop.
@@ -372,8 +419,10 @@ async function runVision(body: any) {
   const messages = Array.isArray(body.messages) ? body.messages : null;
   if (!messages) throw new BrainError(400, "messages[] required (OpenAI vision format)");
 
-  const tier = String(body.tier || "").toLowerCase();
-  const frontierAllowed = tier === "vibranium" && FRONTIER_ELIGIBLE.has("vision");
+  // Vision frontier always uses the OpenAI vendor: Anthropic expects a
+  // different image content-block shape than the OpenAI `image_url` blocks
+  // workers send, so frontier_vendor is intentionally ignored for vision.
+  const frontierAllowed = frontierGate("vision", body.tier);
   const max_tokens = typeof body.max_tokens === "number" ? body.max_tokens : 1024;
 
   if (frontierAllowed && body.frontier === true) {
@@ -382,7 +431,7 @@ async function runVision(body: any) {
   }
 
   try {
-    const data = await b200<any>("chat/completions", {
+    const data = await b200<any>(B200_ROUTES.chat, {
       model: B200_MODELS.vision,
       messages,
       temperature: body.temperature ?? 0.3,
@@ -402,7 +451,7 @@ async function runVision(body: any) {
 async function runPiiRedact(body: any) {
   const text = body.text;
   if (!text || typeof text !== "string") throw new BrainError(400, "text required");
-  const data = await b200<any>("text/redact", {
+  const data = await b200<any>(B200_ROUTES.redact, {
     model: B200_MODELS.pii,
     text,
     entities: body.entities,
@@ -420,9 +469,28 @@ async function runPiiRedact(body: any) {
 // ─── Dispatch ──────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
+
+  // GET → config/health introspection (no secrets, no model calls). Lets ops
+  // verify which planes are wired up and the active routing table per env.
+  if (req.method === "GET") {
+    return res.status(200).json({
+      service: "atom-brain",
+      tasks: ["chat", "reason", "asr", "tts", "embed", "vector_upsert", "vector_search", "emotion", "intent", "tcpa_check", "vision", "pii_redact"],
+      planes: {
+        b200: Boolean(AKAMAI_B200_BASE_URL && AKAMAI_B200_API_KEY),
+        qdrant: Boolean(QDRANT_URL),
+        frontier_anthropic: Boolean(ANTHROPIC_API_KEY),
+        frontier_openai: Boolean(OPENAI_API_KEY),
+      },
+      frontier_eligible_tasks: Array.from(FRONTIER_ELIGIBLE),
+      models: B200_MODELS,
+      frontier_models: FRONTIER_MODELS,
+      b200_routes: B200_ROUTES,
+    });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const body = req.body || {};
