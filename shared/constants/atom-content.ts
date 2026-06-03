@@ -367,3 +367,30 @@ export const COMPLIANCE_RISK_TERMS = [
   "cure", "diagnose", "treatment", "fda", "hipaa-certified", "guaranteed roi",
   "guaranteed return", "tax", "legal advice", "investment advice",
 ];
+
+/**
+ * Server-side publish/approval guard policy for ATOM Content.
+ *
+ * claimChecker scores a clean, claim-free or fully-verified asset at exactly
+ * 100 (rejected claims −25, needs_review −8, compliance warnings −10). 100 is
+ * therefore the project's existing semantics for "perfect claim safety", so the
+ * approve/export guard requires a claimScore of 100 — anything lower means the
+ * scorer found at least one unsupported, review-state, or compliance-risk claim
+ * and the asset must not be promoted to approved/exported.
+ */
+export const PUBLISH_MIN_CLAIM_SCORE = 100;
+
+/**
+ * Claim verdicts that block approval/export. `rejected` is an unsupported /
+ * fabricated factual claim; `needs_review` covers demo-backed, medium-confidence
+ * and absolute claims that are not yet defensible. Default product policy blocks
+ * BOTH — review-state claims must be resolved (verified or removed) before an
+ * asset can be approved or exported. Flip ALLOW_REVIEW_STATE_APPROVAL only if a
+ * future policy explicitly permits promoting needs_review content.
+ */
+export const ALLOW_REVIEW_STATE_APPROVAL = false;
+export const BLOCKING_CLAIM_VERDICTS: readonly string[] =
+  ALLOW_REVIEW_STATE_APPROVAL ? ["rejected"] : ["rejected", "needs_review"];
+
+/** Actions that promote a generation to a published/exported state and must pass the guard. */
+export const GUARDED_APPROVAL_ACTIONS: readonly string[] = ["approved", "exported"];

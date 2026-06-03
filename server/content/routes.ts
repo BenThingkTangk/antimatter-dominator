@@ -14,6 +14,7 @@ import {
   createContentBrief, generateContentAsset, verifyContentClaims, scoreVoiceCompliance,
   createDerivativeAssets, refineGeneration, approveGeneration, saveEditedGeneration,
 } from "./worker";
+import { PublishGuardError } from "./publishGuard";
 import { z } from "zod";
 
 export function registerContentRoutes(app: Express) {
@@ -224,6 +225,10 @@ export function registerContentRoutes(app: Express) {
       if (!entry) return res.status(404).json({ error: "Generation not found" });
       res.json(entry);
     } catch (err: any) {
+      // Publish guard block → structured 422 explaining why approval/export was denied.
+      if (err instanceof PublishGuardError) {
+        return res.status(err.status).json({ error: err.message, guard: err.detail });
+      }
       res.status(400).json({ error: err.message });
     }
   });
