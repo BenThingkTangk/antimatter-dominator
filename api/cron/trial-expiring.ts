@@ -34,10 +34,12 @@ async function sb(path: string, init: RequestInit = {}) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
-  // Verify cron secret if configured
+  // Verify cron secret. Mandatory in production — a missing secret fails closed.
   if (CRON_SECRET) {
     const provided = (req.headers.authorization || "").replace("Bearer ", "").trim();
     if (provided !== CRON_SECRET) return res.status(401).json({ error: "Unauthorized" });
+  } else if (clean(process.env.VERCEL_ENV) === "production" || (!process.env.VERCEL_ENV && clean(process.env.NODE_ENV) === "production")) {
+    return res.status(500).json({ error: "CRON_SECRET not configured" });
   }
 
   try {

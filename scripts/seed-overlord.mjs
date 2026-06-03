@@ -3,24 +3,34 @@
  * Seed the Nirmata super_admin overlord user.
  * Idempotent: upserts on conflict.
  */
-import fs from "node:fs";
+import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 
-let SUPABASE_URL = "";
-let SERVICE_KEY = "";
-const txt = fs.readFileSync("/home/user/workspace/supabase_keys.txt", "utf-8");
-for (const line of txt.split("\n")) {
-  const sep = Math.min(...[line.indexOf(":"), line.indexOf("=")].filter((i) => i >= 0));
-  if (!Number.isFinite(sep) || sep < 0) continue;
-  const k = line.slice(0, sep).trim();
-  const v = line.slice(sep + 1).trim();
-  if (k === "SUPABASE_URL") SUPABASE_URL = v;
-  if (k === "SUPABASE_SERVICE_ROLE_KEY") SERVICE_KEY = v;
+// Credentials come from the environment — never hard-coded.
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY   (required)
+//   OVERLORD_EMAIL                            (required)
+//   OVERLORD_PASSWORD                         (optional — a strong random one is
+//                                              generated and printed once if unset)
+//   OVERLORD_FULL_NAME                        (optional)
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim();
+const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error("Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY environment variables.");
+  process.exit(1);
 }
 
-const EMAIL    = "ben.oleary@thingktangk.com";
-const PASSWORD = "Lambo2391!";
-const FULL     = "Ben O'Leary";
+const EMAIL = (process.env.OVERLORD_EMAIL || "").trim();
+if (!EMAIL) {
+  console.error("Missing OVERLORD_EMAIL environment variable.");
+  process.exit(1);
+}
+
+// If no password is supplied, generate a strong random one. It is printed exactly
+// once at the end so the operator can capture it; it is never stored in source.
+const GENERATED_PASSWORD = !process.env.OVERLORD_PASSWORD;
+const PASSWORD = (process.env.OVERLORD_PASSWORD || "").trim() ||
+  crypto.randomBytes(18).toString("base64url");
+const FULL = (process.env.OVERLORD_FULL_NAME || EMAIL.split("@")[0]).trim();
 
 async function sb(p, init = {}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${p}`, {
@@ -73,7 +83,11 @@ console.log("\n─────────────────────�
 console.log("OVERLORD CREDENTIALS");
 console.log("──────────────────────────────────────────────");
 console.log(`Email     : ${EMAIL}`);
-console.log(`Password  : ${PASSWORD}`);
+if (GENERATED_PASSWORD) {
+  console.log(`Password  : ${PASSWORD}   ← generated, shown ONCE — store it now`);
+} else {
+  console.log(`Password  : (from OVERLORD_PASSWORD env — not printed)`);
+}
 console.log(`Tenant    : ${tenant.name} (${tenant.slug})`);
 console.log(`Role      : admin (super_admin via NIRMATA_HQ_EMAILS allow-list)`);
 console.log("──────────────────────────────────────────────");

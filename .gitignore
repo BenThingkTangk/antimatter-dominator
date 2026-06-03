@@ -8,3 +8,10 @@ vite.config.ts.*
 *.db-shm
 *.db-wal
 .vercel
+
+# Secrets / local env — never commit
+.env
+.env.*
+!.env.example
+supabase_keys.txt
+*.pem

@@ -20,6 +20,13 @@ const STRIPE_SECRET_KEY = clean(process.env.STRIPE_SECRET_KEY);
 const STRIPE_WEBHOOK_SECRET = clean(process.env.STRIPE_WEBHOOK_SECRET);
 const APP_URL = clean(process.env.NEXT_PUBLIC_APP_URL) || "https://atom-dominator-pro.vercel.app";
 
+// Production is determined by Vercel's VERCEL_ENV ("production" only on the
+// production deployment). Falls back to NODE_ENV for non-Vercel hosts. Preview
+// and development deployments are treated as non-production.
+const IS_PRODUCTION =
+  clean(process.env.VERCEL_ENV) === "production" ||
+  (!process.env.VERCEL_ENV && clean(process.env.NODE_ENV) === "production");
+
 async function sb(path: string, init: RequestInit = {}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
@@ -126,8 +133,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error("[webhook] signature verification failed:", err?.message);
         return res.status(400).json({ error: "Webhook signature verification failed" });
       }
+    } else if (IS_PRODUCTION) {
+      // Fail closed in production: never process an unverified webhook that can
+      // mutate plan/seats/kill_switch state.
+      console.error("[webhook] STRIPE_WEBHOOK_SECRET missing in production — refusing to process");
+      return res.status(500).json({ error: "Webhook signature secret not configured" });
     } else {
-      console.warn("[webhook] STRIPE_WEBHOOK_SECRET not set — skipping signature verification");
+      console.warn("[webhook] STRIPE_WEBHOOK_SECRET not set — skipping signature verification (non-production only)");
       event = JSON.parse(rawBody.toString());
     }
 

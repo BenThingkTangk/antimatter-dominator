@@ -22,6 +22,33 @@ async function sb(path: string, init: RequestInit = {}): Promise<any> {
   return text ? JSON.parse(text) : null;
 }
 
+function parseCookies(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  for (const pair of header.split(";")) {
+    const [k, ...v] = pair.split("=");
+    if (k) out[k.trim()] = v.join("=").trim();
+  }
+  return out;
+}
+
+async function resolveSession(req: VercelRequest): Promise<{ userId: string; tenantId: string } | null> {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies["atom_session"];
+  if (!token || !SUPABASE_URL || !KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_sessions?token=eq.${encodeURIComponent(token)}&revoked_at=is.null&select=user_id,tenant_id,expires_at`, {
+      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const s = Array.isArray(rows) ? rows[0] : null;
+    if (!s) return null;
+    if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+    return { userId: s.user_id, tenantId: s.tenant_id };
+  } catch { return null; }
+}
+
 // Map snake_case rows from Postgres -> camelCase fields the frontend expects.
 function mapCampaign(row: any) {
   if (!row) return row;
@@ -46,10 +73,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
 
+  // ── Auth + tenant scoping ──
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  const tenantId = session.tenantId;
+
   try {
     if (req.method === "GET") {
       const rows = await sb(
-        "atom_campaigns?select=id,name,product_slug,product_label,scoring_template_slug,status,total_accounts,scored_accounts,enriched_accounts,created_at,updated_at&order=created_at.desc",
+        `atom_campaigns?tenant_id=eq.${encodeURIComponent(tenantId)}&select=id,name,product_slug,product_label,scoring_template_slug,status,total_accounts,scored_accounts,enriched_accounts,created_at,updated_at&order=created_at.desc`,
       );
       return res.json((rows || []).map(mapCampaign));
     }
@@ -74,6 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const inserted = await sb("atom_campaigns", {
         method: "POST",
         body: JSON.stringify({
+          tenant_id: tenantId,
           name,
           product_slug: productSlug,
           product_label: productLabel,

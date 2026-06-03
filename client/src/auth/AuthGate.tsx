@@ -34,7 +34,7 @@ function AtomSplash() {
 }
 
 /** Paths that bypass auth */
-const PUBLIC_PATHS = ["/login", "/signup", "/invite/"];
+const PUBLIC_PATHS = ["/login", "/signup", "/invite/", "/reset-password"];
 
 function isPublicPath(path: string): boolean {
   if (path === "/") return true;

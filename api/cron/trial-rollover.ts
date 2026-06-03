@@ -10,6 +10,23 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const CRON_SECRET = clean(process.env.CRON_SECRET);
+const IS_PRODUCTION =
+  clean(process.env.VERCEL_ENV) === "production" ||
+  (!process.env.VERCEL_ENV && clean(process.env.NODE_ENV) === "production");
+
+// Cron auth: Vercel injects `Authorization: Bearer <CRON_SECRET>` on scheduled
+// invocations. In production the secret is mandatory — a missing secret or a
+// mismatched token is rejected so the endpoint can never be triggered anonymously.
+function authorizeCron(req: VercelRequest): { ok: true } | { ok: false; status: number; error: string } {
+  if (!CRON_SECRET) {
+    if (IS_PRODUCTION) return { ok: false, status: 500, error: "CRON_SECRET not configured" };
+    return { ok: true };
+  }
+  const provided = (req.headers.authorization || "").replace("Bearer ", "").trim();
+  if (provided !== CRON_SECRET) return { ok: false, status: 401, error: "Unauthorized" };
+  return { ok: true };
+}
 
 async function sb(path: string, init: RequestInit = {}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -28,6 +45,9 @@ async function sb(path: string, init: RequestInit = {}) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const auth = authorizeCron(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
   try {
     const now = new Date().toISOString();
 
