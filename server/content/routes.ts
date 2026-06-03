@@ -8,11 +8,11 @@ import { storage } from "../storage";
 import {
   contentBriefSchema, derivativeRequestSchema, refineRequestSchema, approveRequestSchema,
 } from "@shared/schema";
-import { parseVoiceYaml, DEFAULT_VOICE_YAML } from "@shared/constants/atom-content";
+import { parseVoiceYaml, validateVoiceYaml, DEFAULT_VOICE_YAML } from "@shared/constants/atom-content";
 import { getLiveNumbers } from "./liveNumbersEngine";
 import {
   createContentBrief, generateContentAsset, verifyContentClaims, scoreVoiceCompliance,
-  createDerivativeAssets, refineGeneration, approveGeneration,
+  createDerivativeAssets, refineGeneration, approveGeneration, saveEditedGeneration,
 } from "./worker";
 import { z } from "zod";
 
@@ -120,6 +120,19 @@ export function registerContentRoutes(app: Express) {
     res.json(result);
   });
 
+  // Persist an inline edit and re-score it so edited content is authoritative
+  // for subsequent refine / derive / approve / export actions.
+  app.post("/api/content/generations/:id/save", (req, res) => {
+    try {
+      const { content } = z.object({ content: z.string().min(1) }).parse(req.body);
+      const result = saveEditedGeneration(Number(req.params.id), content);
+      if (!result) return res.status(404).json({ error: "Generation not found" });
+      res.json(result);
+    } catch (err: any) {
+      res.status(err?.issues ? 400 : 500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/content/voice/score", (req, res) => {
     try {
       const { text } = z.object({ text: z.string().min(1) }).parse(req.body);
@@ -154,8 +167,10 @@ export function registerContentRoutes(app: Express) {
   app.post("/api/content/voice-profiles", (req, res) => {
     try {
       const { name, yamlContent } = z.object({ name: z.string().min(1), yamlContent: z.string().min(1) }).parse(req.body);
-      // Validate it parses before saving.
-      parseVoiceYaml(yamlContent);
+      // Validate before saving — reject garbage / guardrail-stripping profiles
+      // instead of silently restoring defaults.
+      const check = validateVoiceYaml(yamlContent);
+      if (!check.valid) return res.status(400).json({ error: "Invalid voice profile", details: check.errors, warnings: check.warnings });
       const now = new Date().toISOString();
       const created = storage.createVoiceProfile({ name, yamlContent, active: false, createdAt: now, updatedAt: now });
       res.json(created);
@@ -168,7 +183,10 @@ export function registerContentRoutes(app: Express) {
     try {
       const id = Number(req.params.id);
       const body = z.object({ name: z.string().optional(), yamlContent: z.string().optional(), setActive: z.boolean().optional() }).parse(req.body);
-      if (body.yamlContent) parseVoiceYaml(body.yamlContent);
+      if (body.yamlContent !== undefined) {
+        const check = validateVoiceYaml(body.yamlContent);
+        if (!check.valid) return res.status(400).json({ error: "Invalid voice profile", details: check.errors, warnings: check.warnings });
+      }
       const patch: any = { updatedAt: new Date().toISOString() };
       if (body.name) patch.name = body.name;
       if (body.yamlContent) patch.yamlContent = body.yamlContent;

@@ -283,6 +283,72 @@ function parseShapeFromDefault(): VoiceProfileShape {
 
 export const DEFAULT_VOICE_PROFILE: VoiceProfileShape = parseShapeFromDefault();
 
+export interface VoiceYamlValidation {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  /** The parsed profile (with per-field default fallback) — only meaningful when valid. */
+  profile: VoiceProfileShape;
+}
+
+/**
+ * Validate a voice.yaml document before accepting it. parseVoiceYaml is
+ * deliberately tolerant (it falls back field-by-field so generation never
+ * crashes), but that tolerance is wrong at the save boundary: an operator who
+ * submits garbage or clears every banned phrase should get a clear failure, not
+ * a silent restore-to-defaults reported as "valid".
+ *
+ * Rules:
+ *  - The document must parse into a recognizable voice structure (at least one
+ *    of the core keys present). Pure garbage is rejected.
+ *  - banned_phrases must be a non-empty list. Clearing it removes the brand's
+ *    primary tone guardrail, so we reject rather than silently re-seed defaults.
+ *  - Empty/whitespace input is rejected (callers should keep the existing
+ *    profile or fall back to DEFAULT_VOICE_YAML explicitly, not via a blank save).
+ */
+export function validateVoiceYaml(yaml: string): VoiceYamlValidation {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!yaml || !yaml.trim()) {
+    return { valid: false, errors: ["Voice profile is empty."], warnings, profile: DEFAULT_VOICE_PROFILE };
+  }
+
+  let root: any = {};
+  let tokenizedAny = false;
+  try {
+    const lines = tokenize(yaml);
+    tokenizedAny = lines.length > 0;
+    if (lines.length) root = buildBlock(lines, { i: 0 }, lines[0].indent);
+  } catch {
+    return { valid: false, errors: ["Voice profile is not valid YAML."], warnings, profile: DEFAULT_VOICE_PROFILE };
+  }
+
+  const v = (root.voice ?? root) as any;
+  const CORE_KEYS = ["brand_name", "core_identity", "tone", "style_rules", "approved_phrases", "banned_phrases"];
+  const recognized = v && typeof v === "object" && CORE_KEYS.some((k) => k in v);
+  if (!tokenizedAny || !recognized) {
+    errors.push("Voice profile does not contain a recognizable voice structure (expected keys like brand_name, tone, banned_phrases).");
+  }
+
+  // banned_phrases must be present and non-empty — it is the core tone guardrail.
+  if (recognized) {
+    const banned = v.banned_phrases;
+    if (!Array.isArray(banned) || banned.filter((b: any) => String(b).trim()).length === 0) {
+      errors.push("banned_phrases must list at least one phrase. Clearing it disables the brand-voice guardrail.");
+    }
+    if (!("brand_name" in v) || !String(v.brand_name ?? "").trim()) {
+      warnings.push("brand_name is missing; the default brand name will be used.");
+    }
+    if (!Array.isArray(v.tone) || v.tone.length === 0) {
+      warnings.push("tone is empty; default tone descriptors will be used.");
+    }
+  }
+
+  const profile = parseVoiceYaml(yaml);
+  return { valid: errors.length === 0, errors, warnings, profile };
+}
+
 // Weak SaaS filler the voice checker flags beyond explicit banned phrases.
 export const WEAK_FILLER_PATTERNS = [
   "leverage", "synergy", "cutting-edge", "best-in-class", "world-class",

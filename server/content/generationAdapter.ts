@@ -38,10 +38,18 @@ export interface GenerationContext {
   hasUsable: boolean;
 }
 
+export interface ProviderFallback {
+  /** The provider that was requested/resolved before it failed. */
+  requestedProvider: ProviderName;
+  reason: string;
+}
+
 export interface GenerationResult {
   provider: ProviderName;
   envelope: GenerationEnvelope;
   isDemo: boolean;
+  /** Set when a production provider failed and we degraded to demo output. */
+  fallback: ProviderFallback | null;
 }
 
 function clean(v?: string): string {
@@ -217,17 +225,20 @@ async function perplexityGenerate(ctx: GenerationContext): Promise<GenerationEnv
 export async function generateContent(ctx: GenerationContext): Promise<GenerationResult> {
   const provider = resolveProvider();
   try {
-    if (provider === "anthropic") return { provider, envelope: await anthropicGenerate(ctx), isDemo: false };
-    if (provider === "openai") return { provider, envelope: await openaiGenerate(ctx), isDemo: false };
-    if (provider === "perplexity") return { provider, envelope: await perplexityGenerate(ctx), isDemo: false };
+    if (provider === "anthropic") return { provider, envelope: await anthropicGenerate(ctx), isDemo: false, fallback: null };
+    if (provider === "openai") return { provider, envelope: await openaiGenerate(ctx), isDemo: false, fallback: null };
+    if (provider === "perplexity") return { provider, envelope: await perplexityGenerate(ctx), isDemo: false, fallback: null };
   } catch (err: any) {
     // Production provider failed — fall back to demo so the worker never hard-fails,
-    // but clearly label the fallback so the operator knows proof wasn't AI-authored.
+    // but make the degradation explicit (risk flag + structured fallback) so the
+    // caller, evidence panel, and UI can surface it instead of silently shipping
+    // demo output behind an HTTP 200.
+    const reason = `Provider "${provider}" failed (${err.message || "unknown error"}); fell back to demo output.`;
     const env = demoGenerate(ctx);
-    env.risk_flags.unshift(`Provider "${provider}" failed (${err.message || "unknown error"}); fell back to demo output.`);
-    return { provider: "demo", envelope: env, isDemo: true };
+    env.risk_flags.unshift(reason);
+    return { provider: "demo", envelope: env, isDemo: true, fallback: { requestedProvider: provider, reason } };
   }
-  return { provider: "demo", envelope: demoGenerate(ctx), isDemo: true };
+  return { provider: "demo", envelope: demoGenerate(ctx), isDemo: true, fallback: null };
 }
 
 // ── DERIVATIVE + REFINE ──────────────────────────────────────────────────────
@@ -238,7 +249,7 @@ export async function transformContent(args: {
   sourceContent: string;
   voiceYaml: string;
   usableMetrics: LiveMetric[];
-}): Promise<{ provider: ProviderName; content: string; isDemo: boolean }> {
+}): Promise<{ provider: ProviderName; content: string; isDemo: boolean; fallback: ProviderFallback | null }> {
   const provider = resolveProvider();
   const sys = SYSTEM_PROMPT;
   const user = `${args.instruction}
@@ -268,7 +279,7 @@ Return ONLY the rewritten/derived asset body in markdown. No preamble, no JSON.`
         messages: [{ role: "user", content: user }],
       });
       const text = (msg.content as any[]).find((b) => b.type === "text")?.text || "";
-      return { provider, content: text.trim(), isDemo: false };
+      return { provider, content: text.trim(), isDemo: false, fallback: null };
     }
     if (provider === "openai") {
       const key = clean(process.env.OPENAI_API_KEY);
@@ -279,7 +290,7 @@ Return ONLY the rewritten/derived asset body in markdown. No preamble, no JSON.`
       });
       if (!res.ok) throw new Error(`OpenAI error ${res.status}`);
       const data: any = await res.json();
-      return { provider, content: (data.choices?.[0]?.message?.content || "").trim(), isDemo: false };
+      return { provider, content: (data.choices?.[0]?.message?.content || "").trim(), isDemo: false, fallback: null };
     }
     if (provider === "perplexity") {
       const key = clean(process.env.PERPLEXITY_API_KEY);
@@ -290,15 +301,26 @@ Return ONLY the rewritten/derived asset body in markdown. No preamble, no JSON.`
       });
       if (!res.ok) throw new Error(`Perplexity error ${res.status}`);
       const data: any = await res.json();
-      return { provider, content: (data.choices?.[0]?.message?.content || "").trim(), isDemo: false };
+      return { provider, content: (data.choices?.[0]?.message?.content || "").trim(), isDemo: false, fallback: null };
     }
-  } catch {
-    /* fall through to demo */
+  } catch (err: any) {
+    if (provider !== "demo") {
+      // Production transform failed — degrade to a labeled demo transform but
+      // make the degradation explicit instead of silently returning HTTP 200.
+      const reason = `Provider "${provider}" failed during transform (${err?.message || "unknown error"}); returned demo transform.`;
+      return {
+        provider: "demo",
+        isDemo: true,
+        content: `> **[DEMO TRANSFORM — provider fallback]** ${reason}\n\n${args.sourceContent}`,
+        fallback: { requestedProvider: provider, reason },
+      };
+    }
   }
   // Demo transform: append a labeled note rather than fabricate a rewrite.
   return {
     provider: "demo",
     isDemo: true,
     content: `> **[DEMO TRANSFORM]** ${args.instruction}\n\n${args.sourceContent}`,
+    fallback: null,
   };
 }
