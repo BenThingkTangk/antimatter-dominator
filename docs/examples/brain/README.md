@@ -122,16 +122,19 @@ serverless routes, the React client, and Akamai EdgeWorkers alike.
 
 | Variable | Purpose |
 | -------- | ------- |
-| `AKAMAI_B200_BASE_URL` | Base URL of the Akamai Blackwell B200 inference plane (OpenAI-compatible `/v1/*`). |
-| `AKAMAI_B200_API_KEY`  | Bearer key for the B200 plane. |
+| `AKAMAI_B200_BASE_URL` | **Required.** Base URL of the Akamai Blackwell B200 inference plane / ΔTOM Blackwell Gateway (OpenAI-compatible `/v1/*`). Point it straight at the gateway, e.g. `http://<gateway-host>:8443`. |
+| `AKAMAI_B200_API_KEY`  | **Optional.** Bearer key for the B200 plane, sent as `Authorization: Bearer …` **only when set**. The live Blackwell gateway publishes no auth scheme, so leave this unset for unauthenticated gateways; set it (recommended) when the gateway/proxy enforces auth. Do not set a placeholder value — an empty/unset key simply omits the header. |
 | `QDRANT_URL`           | Qdrant base URL for vector upsert/search. |
 | `QDRANT_API_KEY`       | Qdrant API key (sent as `api-key`; optional for unauthenticated instances). |
 | `ANTHROPIC_API_KEY`    | Claude Opus frontier fallback (Vibranium tier). |
 | `OPENAI_API_KEY`       | GPT-5 frontier fallback (Vibranium tier). |
 
-Set these in Vercel project env (and `.env` for local `vercel dev`). The B200
-and Qdrant vars are required for self-hosted tasks; the frontier keys are only
-needed if Vibranium-tier frontier routing is enabled.
+Set these in Vercel project env (and `.env` for local `vercel dev`).
+`AKAMAI_B200_BASE_URL` is required for self-hosted tasks; `AKAMAI_B200_API_KEY`
+is optional and only needed when the gateway enforces auth. The Qdrant vars are
+required for vector tasks, and the frontier keys are only needed if
+Vibranium-tier frontier routing is enabled. `GET /api/brain` reports `b200: true`
+once the base URL is set, and `b200_auth: true` when a bearer key is also configured.
 
 ## Optional overrides (routes, models, dims)
 
@@ -143,18 +146,23 @@ live values are visible via `GET /api/brain`. Set only the ones you need.
 > Per `api/atom-leadgen/call.ts` (verified May 2026) the platform whitelists
 > `gpt-5` / `gpt-5-mini` / `gpt-4.1` / `gpt-4o`; `gpt-5.5` is not yet accepted.
 > Override `BRAIN_FRONTIER_MODEL_OPENAI` if your account whitelists another id.
-> Likewise the B200 audio/classifier/redact route suffixes are deployment
-> -specific assumptions — set the `AKAMAI_B200_ROUTE_*` vars to match your plane.
+>
+> **Route defaults track the live gateway:** the `AKAMAI_B200_ROUTE_*` defaults
+> below match the ΔTOM Blackwell Gateway OpenAPI (v1.0.0), so pointing
+> `AKAMAI_B200_BASE_URL` at the gateway needs **no** route overrides. Override a
+> suffix only for a plane that exposes a different shape. Note emotion + intent
+> share one `emotion-intent` route, while the TCPA hard-stop has its own
+> `compliance/stop-classify` route.
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `AKAMAI_B200_ROUTE_CHAT` | `chat/completions` | Chat/reason/vision completions route. |
-| `AKAMAI_B200_ROUTE_ASR` | `audio/transcriptions` | ASR (Parakeet) route. |
-| `AKAMAI_B200_ROUTE_TTS` | `audio/speech` | TTS (Kokoro/F5/XTTS) route. |
-| `AKAMAI_B200_ROUTE_EMBED` | `embeddings` | Embeddings (BGE-M3) route. |
-| `AKAMAI_B200_ROUTE_CLASSIFY_AUDIO` | `audio/classify` | Emotion/intent (SpeechBrain) route. |
-| `AKAMAI_B200_ROUTE_CLASSIFY_TEXT` | `text/classify` | TCPA hard-stop (DistilBERT) route. |
-| `AKAMAI_B200_ROUTE_REDACT` | `text/redact` | PII redaction (Presidio) route. |
+| `AKAMAI_B200_ROUTE_CHAT` | `chat/completions` | Chat/reason/vision completions route (`/v1/chat/completions`). |
+| `AKAMAI_B200_ROUTE_ASR` | `asr` | ASR (Parakeet) route (`/v1/asr`). |
+| `AKAMAI_B200_ROUTE_TTS` | `tts` | TTS (Kokoro/F5/XTTS) route (`/v1/tts`). |
+| `AKAMAI_B200_ROUTE_EMBED` | `embeddings` | Embeddings (BGE-M3) route (`/v1/embeddings`). |
+| `AKAMAI_B200_ROUTE_EMOTION_INTENT` | `emotion-intent` | Emotion/intent (SpeechBrain) route (`/v1/emotion-intent`). |
+| `AKAMAI_B200_ROUTE_TCPA` | `compliance/stop-classify` | TCPA hard-stop (DistilBERT) route (`/v1/compliance/stop-classify`). |
+| `AKAMAI_B200_ROUTE_REDACT` | `redact` | PII redaction (Presidio) route (`/v1/redact`). |
 | `AKAMAI_B200_MODEL_CHAT_LLAMA` | `llama-3.3-70b-instruct` | Default chat/reason model id. |
 | `AKAMAI_B200_MODEL_CHAT_QWEN` | `qwen-2.5-72b-instruct` | `model: "qwen"` model id. |
 | `AKAMAI_B200_MODEL_ASR` | `parakeet-tdt-1.1b` | ASR model id. |
