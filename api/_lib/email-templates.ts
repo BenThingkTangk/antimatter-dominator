@@ -118,7 +118,7 @@ function PlainLink({ href }: { href: string }) {
 
 interface LayoutProps {
   preheader?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   footerText?: string;
   showUnsubscribe?: boolean;
 }
