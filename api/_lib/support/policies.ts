@@ -2,7 +2,7 @@
  * Topic-risk policy layer. Detects hard-block topics and escalation triggers.
  * The agent must NEVER answer hard-block topics substantively.
  */
-import type { SupportTier } from "./types";
+import type { SupportTier } from "./types.js";
 
 export type RiskCategory =
   | "pricing_negotiation"

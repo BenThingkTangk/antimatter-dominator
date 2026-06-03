@@ -3,7 +3,7 @@
  * user tier, and presence of tenant diagnostics into a single 0..1 score.
  * Below ATOM_SUPPORT_CONFIDENCE_THRESHOLD (default 0.7) → escalate.
  */
-import type { ConfidenceInput, ConfidenceResult } from "./types";
+import type { ConfidenceInput, ConfidenceResult } from "./types.js";
 
 export const CONFIDENCE_THRESHOLD = (() => {
   const raw = Number(process.env.ATOM_SUPPORT_CONFIDENCE_THRESHOLD);

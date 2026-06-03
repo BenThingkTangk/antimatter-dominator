@@ -3,10 +3,10 @@
  * confidence, and tenant tier. Separate from escalation.ts (which does the
  * actual routing) so the decision is pure + unit-testable.
  */
-import type { SupportTier } from "./types";
-import type { PolicyEvaluation } from "./policies";
-import type { Severity } from "./escalation";
-import { CONFIDENCE_THRESHOLD } from "./confidence";
+import type { SupportTier } from "./types.js";
+import type { PolicyEvaluation } from "./policies.js";
+import type { Severity } from "./escalation.js";
+import { CONFIDENCE_THRESHOLD } from "./confidence.js";
 
 export interface EscalationDecision {
   shouldEscalate: boolean;

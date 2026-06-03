@@ -8,11 +8,11 @@
  * Everything is best-effort: any failure degrades to a partial summary rather
  * than blocking the chat reply.
  */
-import { sb, supabaseConfigured } from "./supabase";
-import { planToTier } from "./tone";
-import { recentSentryErrors } from "./diagnostics";
-import type { TenantContextSummary } from "./types";
-import type { ResolvedSession } from "./auth";
+import { sb, supabaseConfigured } from "./supabase.js";
+import { planToTier } from "./tone.js";
+import { recentSentryErrors } from "./diagnostics.js";
+import type { TenantContextSummary } from "./types.js";
+import type { ResolvedSession } from "./auth.js";
 
 export async function buildTenantContext(session: ResolvedSession): Promise<TenantContextSummary> {
   const tier = planToTier(session.plan);

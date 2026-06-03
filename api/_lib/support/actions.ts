@@ -13,9 +13,9 @@
  *   - Ambiguous / cross-tenant / unauthorized → denied + escalate upstream.
  */
 import crypto from "crypto";
-import { sb, sbInsert, supabaseConfigured } from "./supabase";
-import { audit } from "./audit";
-import type { ResolvedSession } from "./auth";
+import { sb, sbInsert, supabaseConfigured } from "./supabase.js";
+import { audit } from "./audit.js";
+import type { ResolvedSession } from "./auth.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const ACTIONS_ENABLED = clean(process.env.ATOM_SUPPORT_ENABLE_ACTIONS).toLowerCase() === "true";

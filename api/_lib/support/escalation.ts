@@ -8,8 +8,8 @@
  * (provider='logged') so nothing is lost — humans can pick it up from the admin
  * dashboard. Clean adapter boundary: swap creds in later with zero code change.
  */
-import { sbInsert } from "./supabase";
-import type { SupportTier, RetrievedChunk, SupportTurn } from "./types";
+import { sbInsert } from "./supabase.js";
+import type { SupportTier, RetrievedChunk, SupportTurn } from "./types.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SLACK_BOT_TOKEN = clean(process.env.SLACK_BOT_TOKEN);

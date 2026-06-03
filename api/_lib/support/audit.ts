@@ -1,5 +1,5 @@
 /** Audit logging for ATOM Support actions. Writes to support_action_log. */
-import { sbInsert } from "./supabase";
+import { sbInsert } from "./supabase.js";
 
 export interface AuditEntry {
   action: string;

@@ -1,6 +1,6 @@
 /** Central hardened system prompt + assembly for ATOM Support. */
-import type { RetrievedChunk, TenantContextSummary } from "./types";
-import { toneDirective } from "./tone";
+import type { RetrievedChunk, TenantContextSummary } from "./types.js";
+import { toneDirective } from "./tone.js";
 
 export const ATOM_SUPPORT_SYSTEM_PROMPT = `You are ATOM Support, the customer-facing AI support agent for ATOM / AntimatterAI.
 Answer only from retrieved docs, approved tenant context, or whitelisted diagnostics.

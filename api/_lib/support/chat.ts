@@ -5,19 +5,19 @@
  *
  * Returns a structured answer the HTTP layer turns into JSON or SSE.
  */
-import { embed } from "./embeddings";
-import { retrieve } from "./retrieval";
-import { evaluatePolicy, hardBlockResponse } from "./policies";
-import { scoreConfidence, CONFIDENCE_THRESHOLD } from "./confidence";
-import { decideEscalation } from "./escalationPolicy";
-import { assembleSystemPrompt } from "./prompt";
-import { generate } from "./llm";
-import { buildTenantContext } from "./tenantContext";
-import { escalate } from "./escalation";
-import { ensureConversation, persistMessage, bumpConversation } from "./eval";
-import { actionCatalog } from "./actions";
-import type { ResolvedSession } from "./auth";
-import type { Citation, RetrievedChunk, SupportTurn, TenantContextSummary } from "./types";
+import { embed } from "./embeddings.js";
+import { retrieve } from "./retrieval.js";
+import { evaluatePolicy, hardBlockResponse } from "./policies.js";
+import { scoreConfidence, CONFIDENCE_THRESHOLD } from "./confidence.js";
+import { decideEscalation } from "./escalationPolicy.js";
+import { assembleSystemPrompt } from "./prompt.js";
+import { generate } from "./llm.js";
+import { buildTenantContext } from "./tenantContext.js";
+import { escalate } from "./escalation.js";
+import { ensureConversation, persistMessage, bumpConversation } from "./eval.js";
+import { actionCatalog } from "./actions.js";
+import type { ResolvedSession } from "./auth.js";
+import type { Citation, RetrievedChunk, SupportTurn, TenantContextSummary } from "./types.js";
 
 export interface ChatRequest {
   message: string;

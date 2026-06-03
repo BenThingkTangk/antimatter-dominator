@@ -4,11 +4,11 @@
  * without any network/LLM dependency. Surfaced on the internal eval page and
  * runnable in CI via api/_lib/support/__tests__.
  */
-import { evaluatePolicy } from "./policies";
-import { scoreConfidence, CONFIDENCE_THRESHOLD } from "./confidence";
-import { decideEscalation } from "./escalationPolicy";
-import { planToTier, toneDirective } from "./tone";
-import type { ConfidenceInput } from "./types";
+import { evaluatePolicy } from "./policies.js";
+import { scoreConfidence, CONFIDENCE_THRESHOLD } from "./confidence.js";
+import { decideEscalation } from "./escalationPolicy.js";
+import { planToTier, toneDirective } from "./tone.js";
+import type { ConfidenceInput } from "./types.js";
 
 export interface EvalCase {
   id: string;

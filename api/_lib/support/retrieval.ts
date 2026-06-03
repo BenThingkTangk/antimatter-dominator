@@ -9,10 +9,10 @@
  * (chat, ingest) is backend-agnostic. If neither is configured, retrieve()
  * returns [] (the agent then says it has no sources and escalates).
  */
-import type { RetrievedChunk } from "./types";
-import type { Chunk } from "./chunking";
-import { sb, supabaseConfigured } from "./supabase";
-import { EMBED_DIM } from "./embeddings";
+import type { RetrievedChunk } from "./types.js";
+import type { Chunk } from "./chunking.js";
+import { sb, supabaseConfigured } from "./supabase.js";
+import { EMBED_DIM } from "./embeddings.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const QDRANT_URL = clean(process.env.QDRANT_URL);
