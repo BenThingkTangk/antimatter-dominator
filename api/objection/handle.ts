@@ -3,6 +3,7 @@
 // ceiling. Reverted to Node serverless with maxDuration: 60.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { enforceRateLimit } from "../_lib/rate-limit";
 
 export const config = { maxDuration: 60 } as const;
 
@@ -108,6 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Entitlement gate ──
   const session = await resolveSession(req);
   if (!session) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "ai-objection", limit: 30, windowSec: 60 })) return;
   const ent = await checkEntitlement(session.tenantId, "objection");
   if (!ent.allowed) {
     return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });

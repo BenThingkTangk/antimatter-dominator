@@ -3,6 +3,8 @@
  * Keeps us under Vercel's 12 serverless function limit
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { authorize, hasAdminKey } from "./_lib/session";
+import { enforceRateLimit } from "./_lib/rate-limit";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const RAG_URL = process.env.RAG_URL || "https://atom-rag.45-79-202-76.sslip.io";
@@ -33,6 +35,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Read action from query params OR body (WarBook sends in body, status checks use query)
   const action = (req.query.action as string) || req.body?.action;
   const company = (req.query.company as string) || req.body?.company_name || req.body?.company;
+
+  // Auth: this proxies the RAG microservice + OpenAI generation. Require a
+  // session OR an internal admin key. The destructive `delete` action requires
+  // an admin key specifically (never a plain user session).
+  const auth = await authorize(req);
+  if (!auth) return res.status(401).json({ error: "Not authenticated" });
+  if (action === "delete" && !hasAdminKey(req)) {
+    return res.status(403).json({ error: "Admin key required for delete" });
+  }
+  if (await enforceRateLimit(req, res, { key: "rag", limit: 60, windowSec: 60 })) return;
 
   try {
     switch (action) {

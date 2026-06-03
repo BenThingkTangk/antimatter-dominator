@@ -3,6 +3,8 @@
 // returns a queued count. Actual dial orchestration (Telnyx SIP, voice
 // pipeline) will be wired in the ATOM Voice integration phase.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { resolveSession } from "../../_lib/session";
+import { enforceRateLimit } from "../../_lib/rate-limit";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -31,12 +33,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  // Auth + tenant scoping: launching dials is a cost- and compliance-sensitive
+  // action. Require a session and confirm the campaign belongs to the tenant.
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "launch-dials", limit: 10, windowSec: 60 })) return;
+
   const id = parseInt((req.query.id || "").toString(), 10);
   if (!id || isNaN(id)) return res.status(400).json({ error: "invalid id" });
 
   try {
-    // Verify campaign exists and is ready
-    const rows = await sb(`campaigns?id=eq.${id}&select=id,name,status`);
+    // Verify campaign exists, is ready, AND belongs to the caller's tenant.
+    const rows = await sb(`atom_campaigns?id=eq.${id}&tenant_id=eq.${encodeURIComponent(session.tenantId)}&select=id,name,status,tenant_id`);
     if (!rows?.length) return res.status(404).json({ error: "Campaign not found" });
     const campaign = rows[0];
     if (campaign.status !== "ready") {
@@ -45,13 +53,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Count accounts available for dialing
     const accounts = await sb(
-      `campaign_accounts?campaign_id=eq.${id}&select=id&enrich_status=in.(ok,done)`,
+      `atom_campaign_accounts?campaign_id=eq.${id}&select=id&enrich_status=in.(ok,done)`,
       { headers: { Prefer: "count=exact" } },
     );
     const queued = Array.isArray(accounts) ? accounts.length : 0;
 
-    // TODO: Wire to ATOM Voice orchestrator (Telnyx SIP outbound)
-    // For now, return the count of accounts that would be dialed.
+    // NOTE: This endpoint only COUNTS dial-ready accounts; it does NOT place
+    // calls. Actual dialing goes through /api/atom-leadgen/call, which runs the
+    // fail-closed compliance gate (api/_lib/dial-gate.ts) per number. Wiring a
+    // batch orchestrator here must route every number through that same gate.
     return res.status(200).json({ ok: true, campaignId: id, queued });
   } catch (err: any) {
     console.error("launch-dials error:", err);

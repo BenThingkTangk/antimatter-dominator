@@ -35,6 +35,8 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { evaluateDial } from "../_lib/dial-gate";
+import { enforceRateLimit } from "../_lib/rate-limit";
 
 // ─── Env ──────────────────────────────────────────────────────────────────────
 const clean = (v: string | undefined) =>
@@ -434,6 +436,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Entitlement gate ──
   const session = await resolveSession(req);
   if (!session) return res.status(401).json({ error: "Not authenticated" });
+
+  // Rate limit dials per session — a runaway loop must not machine-gun the
+  // outbound dialer (cost + TCPA exposure). Tight burst window.
+  if (await enforceRateLimit(req, res, { key: "dial", limit: 20, windowSec: 60 })) return;
+
   const ent = await checkEntitlement(session.tenantId, "voice");
   if (!ent.allowed) {
     return res.status(402).json({ error: ent.reason, used: ent.used, cap: ent.cap, plan: ent.plan, upgradeUrl: "/#/billing" });
@@ -477,55 +484,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const productLabel = ((productName || product || productSlug || "").toString().trim())
     || "our platform";
 
-  // ── TCPA compliance pre-dial check ──
-  // Server-to-server call to /api/compliance/pre-dial-check (same Vercel deployment).
-  // If the pre-dial check endpoint is unreachable, we fail-open with a warning
-  // (never silently block production dials due to infra issues).
-  const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY);
-  if (ADMIN_API_KEY && reqTenantSlug) {
-    try {
-      const proto = (req.headers["x-forwarded-proto"] as string) || "https";
-      const host  = (req.headers["x-forwarded-host"] as string)
-        || (req.headers.host as string) || "atom-dominator-pro.vercel.app";
-      const pdcRes = await fetch(`${proto}://${host}/api/compliance/pre-dial-check`, {
+  // ── TCPA compliance pre-dial gate (FAIL CLOSED) ──
+  // A real autonomous outbound dial is placed ONLY on an explicit positive
+  // compliance decision. Missing tenant, missing admin key, vendor/infra error,
+  // timeout, malformed result, or an explicit block all PREVENT the dial.
+  // See api/_lib/dial-gate.ts for the full safety contract.
+  const gate = await evaluateDial(req, cleanNumber, reqTenantSlug);
+  if (gate.decision !== "allow") {
+    // Persist the blocked/queued dial to Supabase (best-effort audit trail).
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      fetch(`${SUPABASE_URL}/rest/v1/compliance_blocks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Admin-Key": ADMIN_API_KEY },
-        body: JSON.stringify({ phone: cleanNumber, tenantSlug: reqTenantSlug }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (pdcRes.ok) {
-        const pdc = await pdcRes.json();
-        if (!pdc.allowed) {
-          // Log the compliance block to Supabase (best-effort)
-          if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-            fetch(`${SUPABASE_URL}/rest/v1/compliance_blocks`, {
-              method: "POST",
-              headers: {
-                apikey: SUPABASE_SERVICE_ROLE_KEY,
-                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                "Content-Type": "application/json",
-                Prefer: "return=minimal",
-              },
-              body: JSON.stringify({
-                tenant_id: session.tenantId,
-                phone_e164: cleanNumber,
-                reason: pdc.blockReasons?.[0] || "compliance_block",
-                details: { blockReasons: pdc.blockReasons, checks: pdc.checks },
-              }),
-            }).catch(() => {});
-          }
-          return res.status(451).json({
-            error: "compliance_block",
-            reason: pdc.blockReasons?.[0] || "compliance_block",
-            blockReasons: pdc.blockReasons,
-            details: pdc.checks,
-          });
-        }
-      }
-    } catch (pdcErr: any) {
-      // Fail-open: log warning but don't block the dial
-      console.warn("[pre-dial-check] check failed, proceeding:", pdcErr?.message);
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          tenant_id: session.tenantId,
+          phone_e164: cleanNumber,
+          reason: gate.reason,
+          details: {
+            decision: gate.decision,
+            blockReasons: gate.blockReasons,
+            checks: gate.checks,
+            infraError: gate.infraError || false,
+          },
+        }),
+      }).catch(() => {});
     }
+    console.warn(
+      `[dial-gate] dial NOT placed (decision=${gate.decision} reason=${gate.reason} infra=${gate.infraError ? 1 : 0}) to=${cleanNumber} tenant=${reqTenantSlug || "<none>"}`,
+    );
+    return res.status(gate.httpStatus).json({
+      error: gate.decision === "manual_review" ? "manual_review_required" : "compliance_block",
+      decision: gate.decision,
+      reason: gate.reason,
+      blockReasons: gate.blockReasons,
+      details: gate.checks,
+      infraError: gate.infraError || false,
+      message:
+        gate.decision === "manual_review"
+          ? "Dial queued for manual compliance review — no autonomous call was placed."
+          : "Dial blocked by compliance gate — no autonomous call was placed.",
+    });
   }
 
   if (!HUME_API_KEY) return res.status(500).json({ error: "HUME_API_KEY not configured" });

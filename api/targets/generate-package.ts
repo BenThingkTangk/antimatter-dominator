@@ -9,6 +9,8 @@
  * Returns: { marketIntent, pitch, objections, warbook, prospects, sources }
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { resolveSession } from "../_lib/session";
+import { enforceRateLimit } from "../_lib/rate-limit";
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
@@ -63,6 +65,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+
+  // Auth: fans out 5 paid Perplexity Sonar calls per request — require a session.
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "generate-package", limit: 15, windowSec: 60 })) return;
+
   if (!PERPLEXITY_API_KEY) return res.status(500).json({ error: "PERPLEXITY_API_KEY not configured" });
 
   const { company, website, industry, product }: GenerateRequest = req.body || {};

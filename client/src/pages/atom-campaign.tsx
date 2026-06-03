@@ -1173,6 +1173,9 @@ export default function AtomCampaign() {
           product: brief.split("\n")[0].slice(0, 80),
           campaignId,
           brief,
+          // Required so the server-side compliance gate can scope consent/DNC.
+          // Without it the fail-closed dial gate blocks the call.
+          tenantSlug: window.location.hostname.split(".")[0] || undefined,
         }),
       });
 

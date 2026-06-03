@@ -7,6 +7,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
+import { enforceRateLimit } from "../../_lib/rate-limit";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);
@@ -44,6 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Throttle reset-token brute force.
+  if (await enforceRateLimit(req, res, { key: "auth-reset-confirm", limit: 10, windowSec: 300 })) return;
 
   try {
     const body = req.body || {};

@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { resolveSession } from "../_lib/session";
+import { enforceRateLimit } from "../_lib/rate-limit";
 
 // Vercel sometimes stores the env value with a trailing literal `\n` (or a real
 // newline). Apollo rejects either with HTTP 401 "Invalid access credentials".
@@ -733,6 +735,11 @@ function buildReason(org: ApolloOrg, filters: ScanFilters): string {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Auth: prospect scan fans out paid Apollo searches — require a session.
+  const session = await resolveSession(req);
+  if (!session) return res.status(401).json({ error: "Not authenticated" });
+  if (await enforceRateLimit(req, res, { key: "prospect-scan", limit: 20, windowSec: 60 })) return;
 
   try {
     const filters: ScanFilters = {
