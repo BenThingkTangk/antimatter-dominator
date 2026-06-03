@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { TrendingUp, Brain, Shield, PhoneCall } from "lucide-react";
 import { DtomLogo, DtomHero } from "@nirmata/atom-design-system/react";
+import { AtomSupportWidget } from "../components/support/AtomSupportWidget";
 
 const features = [
   { icon: TrendingUp, title: "AI Pitch Generator", desc: "RAG-powered objection-proof scripts in seconds", href: "/pitch?demo=1" },
@@ -109,6 +110,9 @@ export default function LandingPage() {
           ΔTOM · AtomDominator.com · © 2026
         </p>
       </footer>
+
+      {/* ATOM Support — public marketing widget (logged-out mode) */}
+      <AtomSupportWidget surface="marketing" loggedIn={false} />
     </div>
   );
 }

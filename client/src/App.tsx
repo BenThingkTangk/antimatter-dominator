@@ -40,6 +40,8 @@ import LandingPage from "./pages/landing";
 import ResetPasswordPage from "./pages/reset-password";
 import { useTenant } from "./lib/useTenant";
 import AtomChat from "./components/AtomChat";
+import { AtomSupportWidget } from "./components/support/AtomSupportWidget";
+import SupportAdminShell from "./pages/support/SupportAdminShell";
 import MobileApp from "./mobile/MobileApp";
 import { initPush, subscribePush } from "./lib/push-notifications";
 
@@ -228,11 +230,14 @@ function AuthenticatedRoutesInner() {
         <Route path="/admin/hq/seat-costs">{() => <SuperAdminOnly><SeatCostsShell /></SuperAdminOnly>}</Route>
         <Route path="/admin/vibranium-ga">{() => <SuperAdminOnly><VibraniumShell /></SuperAdminOnly>}</Route>
         <Route path="/admin/t/:slug">{(params) => <SuperAdminOnly><TenantDetailShell params={params as any} /></SuperAdminOnly>}</Route>
+        <Route path="/admin/support">{() => <SuperAdminOnly><SupportAdminShell /></SuperAdminOnly>}</Route>
         <Route path="/admin">{() => <SuperAdminOnly><AdminShell /></SuperAdminOnly>}</Route>
         <Route component={NotFound} />
       </Switch>
-      {/* Floating ATOM Chat — visible on every desktop page, route-aware context */}
+      {/* Floating ATOM Chat — internal sales assistant, route-aware context */}
       <AtomChat />
+      {/* ATOM Support — customer-facing support agent (account-aware) */}
+      <AtomSupportWidget surface="app" loggedIn={Boolean(user)} />
     </AppLayout>
   );
 }
