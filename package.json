@@ -13,7 +13,8 @@
     "test:content-proof": "tsx scripts/atom-content-proof-smoke.ts",
     "test:content-ingest": "tsx scripts/atom-content-ingest-smoke.ts",
     "test:content-events": "tsx scripts/atom-content-events-smoke.ts",
-    "test:content-producers": "tsx scripts/atom-content-producers-smoke.ts"
+    "test:content-producers": "tsx scripts/atom-content-producers-smoke.ts",
+    "test:content-provider-webhooks": "tsx scripts/atom-content-provider-webhooks-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
