@@ -48,6 +48,20 @@ workers send).
 
 - **chat / reason** — `model: "qwen"` → Qwen 2.5 72B; otherwise Llama 3.3 70B.
 - **tts** — `voice_model: "f5"` → F5-TTS, `"xtts"` → XTTS-v2; otherwise Kokoro-82M.
+- **emotion / intent** — modality-aware: an `audio_base64` input is sent to the B200
+  audio classifier; a text-only input (no audio) is sent to the text classifier. The
+  response echoes which path ran via `modality: "audio" | "text"`. (Audio wins if both
+  are present.)
+
+## Compliance: `tcpa_check` fails closed
+
+`tcpa_check` is a hard-stop guardrail the dialer must enforce **before** connecting a
+call. It **fails closed**: if the classifier is unreachable or errors, the endpoint
+still returns HTTP `200` with `hardStop: true`, `degraded: true`, and a `detail`
+string explaining why — so a caller that swallows a 5xx can never connect a call that
+should have been blocked. A missing/invalid `text` is still a `400` validation error
+(that's a caller bug, not an outage). On a healthy classifier the response carries
+`degraded: false` with the real `label`/`score`.
 
 ## Example payloads
 
@@ -89,9 +103,10 @@ const { content } = await brain.chat({
   messages: [{ role: "user", content: "Draft a CFO opener." }],
 });
 
-// TCPA hard-stop — enforce BEFORE connecting a call
+// TCPA hard-stop — enforce BEFORE connecting a call. Fails closed: a
+// classifier outage returns hardStop:true + degraded:true (not a throw).
 const tcpa = await brain.tcpaCheck({ text: transcript });
-if (tcpa.hardStop) abortDial();
+if (tcpa.hardStop) abortDial();          // blocks even when tcpa.degraded === true
 
 // Vector search (BGE-M3 query embed + Qdrant)
 const { results } = await brain.vectorSearch({

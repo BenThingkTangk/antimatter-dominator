@@ -137,11 +137,18 @@ export interface VectorSearchResponse extends BrainBase {
 }
 export interface SpeechBrainResponse extends BrainBase {
   task: "emotion" | "intent"; routed: "b200"; model: string;
+  /** Which B200 classifier route served the request (audio vs text-only input). */
+  modality: "audio" | "text";
   label: string | null; scores: Record<string, number>;
 }
 export interface TcpaCheckResponse extends BrainBase {
   task: "tcpa_check"; routed: "b200"; model: string;
-  hardStop: boolean; label: string; score: number;
+  hardStop: boolean;
+  /** true when the classifier was unavailable and the check failed closed. */
+  degraded: boolean;
+  label: string; score: number;
+  /** Reason the check is degraded (present only when degraded === true). */
+  detail?: string;
 }
 export interface VisionResponse extends BrainBase {
   task: "vision"; routed: RoutedTo; model: string; content: string; usage: unknown;
@@ -207,11 +214,16 @@ export function createBrainClient(opts: BrainClientOptions = {}) {
     vectorUpsert: (req: VectorUpsertRequest) => call<VectorUpsertResponse>("vector_upsert", req as any),
     /** Vector search over Qdrant (embeds query text via BGE-M3). */
     vectorSearch: (req: VectorSearchRequest) => call<VectorSearchResponse>("vector_search", req as any),
-    /** SpeechBrain emotion classification. */
+    /** SpeechBrain emotion classification (audio → audio route, text → text route). */
     emotion: (req: SpeechBrainRequest) => call<SpeechBrainResponse>("emotion", req as any),
-    /** SpeechBrain intent classification. */
+    /** SpeechBrain intent classification (audio → audio route, text → text route). */
     intent: (req: SpeechBrainRequest) => call<SpeechBrainResponse>("intent", req as any),
-    /** DistilBERT TCPA hard-stop classifier — enforce BEFORE dialing. */
+    /**
+     * DistilBERT TCPA hard-stop classifier — enforce BEFORE dialing.
+     * Fails closed: a classifier outage returns hardStop:true, degraded:true
+     * (HTTP 200) rather than throwing, so a swallowed error can't connect a
+     * call that should have been blocked.
+     */
     tcpaCheck: (req: TcpaCheckRequest) => call<TcpaCheckResponse>("tcpa_check", req as any),
     /** Qwen 2.5-VL 72B vision. Vibranium tier may use frontier. */
     vision: (req: VisionRequest) => call<VisionResponse>("vision", req as any),

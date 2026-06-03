@@ -391,27 +391,45 @@ async function runVectorSearch(body: any) {
 }
 
 // ─── Emotion / Intent (SpeechBrain) ───────────────────────────────────────────────
+// Modality-aware: audio inputs go to the B200 audio classifier; text-only
+// inputs go to the text classifier. (The shipped intent.json example is
+// text-only, so it must hit the text route, not audio.) Audio wins when both
+// are present.
 async function runSpeechBrain(body: any, task: "emotion" | "intent") {
   const audio = body.audio_base64 || body.audio;
   const text = body.text;
   if (!audio && !text) throw new BrainError(400, "audio_base64 or text required");
   const model = task === "emotion" ? B200_MODELS.emotion : B200_MODELS.intent;
-  const data = await b200<any>(B200_ROUTES.classify_audio, { model, task, audio_base64: audio, text });
-  return { task, routed: "b200", model, label: data?.label ?? null, scores: data?.scores ?? {} };
+  const route = audio ? B200_ROUTES.classify_audio : B200_ROUTES.classify_text;
+  const data = audio
+    ? await b200<any>(route, { model, task, audio_base64: audio, text })
+    : await b200<any>(route, { model, task, text });
+  return { task, routed: "b200", model, modality: audio ? "audio" : "text", label: data?.label ?? null, scores: data?.scores ?? {} };
 }
 
 // ─── TCPA hard-stop (DistilBERT) ────────────────────────────────────────────────
-// Returns a hard-stop decision the dialer enforces BEFORE connecting. We bias
-// toward stopping: on any classifier error the caller should treat it as a stop.
+// Returns a hard-stop decision the dialer enforces BEFORE connecting. This
+// guardrail FAILS CLOSED: a classifier outage must not let a risky call through.
+// On any classifier/transport error we return a normal 200 with hardStop:true
+// and degraded:true, so the decision does not depend on every caller handling a
+// 5xx. A missing `text` is still a 400 (caller bug, not an outage).
 async function runTcpaCheck(body: any) {
   const text = body.text;
   if (!text || typeof text !== "string") throw new BrainError(400, "text required");
-  const data = await b200<any>(B200_ROUTES.classify_text, { model: B200_MODELS.tcpa, text });
-  const label = String(data?.label ?? "").toLowerCase();
-  const score = typeof data?.score === "number" ? data.score : 0;
-  // "stop" / "dnc" / "revoke" labels above threshold → hard stop.
-  const hardStop = /stop|dnc|revoke|opt[_-]?out/.test(label) && score >= (body.threshold ?? 0.5);
-  return { task: "tcpa_check", routed: "b200", model: B200_MODELS.tcpa, hardStop, label, score };
+  try {
+    const data = await b200<any>(B200_ROUTES.classify_text, { model: B200_MODELS.tcpa, text });
+    const label = String(data?.label ?? "").toLowerCase();
+    const score = typeof data?.score === "number" ? data.score : 0;
+    // "stop" / "dnc" / "revoke" labels above threshold → hard stop.
+    const hardStop = /stop|dnc|revoke|opt[_-]?out/.test(label) && score >= (body.threshold ?? 0.5);
+    return { task: "tcpa_check", routed: "b200", model: B200_MODELS.tcpa, hardStop, degraded: false, label, score };
+  } catch (e) {
+    const detail = e instanceof BrainError
+      ? `${e.message}${e.detail ? `: ${e.detail}` : ""}`
+      : (e as any)?.message || "classifier unavailable";
+    // Fail closed: block the call and tell the caller why.
+    return { task: "tcpa_check", routed: "b200", model: B200_MODELS.tcpa, hardStop: true, degraded: true, label: "", score: 0, detail };
+  }
 }
 
 // ─── Vision (Qwen 2.5-VL) ─────────────────────────────────────────────────────────
