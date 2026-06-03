@@ -304,6 +304,12 @@ export interface IStorage {
 
   getProductActivityMetrics(opts?: { sourceSystem?: string; from?: string; to?: string; includeDemo?: boolean }): ProductActivityMetric[];
   createProductActivityMetric(data: InsertProductActivityMetric): ProductActivityMetric;
+  /**
+   * Insert-or-replace a PRODUCTION metric identified by (metricKey, sourceSystem,
+   * sourceRecordId). Demo rows (isDemo=1) are never touched or matched, so a
+   * re-ingest can never overwrite or promote seeded demo metrics. Returns the row.
+   */
+  upsertProductionMetric(data: InsertProductActivityMetric): ProductActivityMetric;
 
   getContentClaims(generationId: number): ContentClaim[];
   replaceContentClaims(generationId: number, rows: InsertContentClaim[]): void;
@@ -543,6 +549,19 @@ export class DatabaseStorage implements IStorage {
   }
   createProductActivityMetric(data: InsertProductActivityMetric): ProductActivityMetric {
     return db.insert(productActivityMetrics).values(data).returning().get();
+  }
+  upsertProductionMetric(data: InsertProductActivityMetric): ProductActivityMetric {
+    // Match only production rows on the natural key; demo rows are immutable here.
+    const tx = sqlite.transaction(() => {
+      db.delete(productActivityMetrics).where(
+        sql`${productActivityMetrics.metricKey} = ${data.metricKey}
+          AND ${productActivityMetrics.sourceSystem} = ${data.sourceSystem}
+          AND ${productActivityMetrics.sourceRecordId} IS ${data.sourceRecordId ?? null}
+          AND ${productActivityMetrics.isDemo} = 0`,
+      ).run();
+      return db.insert(productActivityMetrics).values({ ...data, isDemo: false }).returning().get();
+    });
+    return tx();
   }
 
   // ── ATOM Content: Claims
