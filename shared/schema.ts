@@ -145,6 +145,148 @@ export const marketIntel = sqliteTable("market_intel", {
   createdAt: text("created_at").notNull(),
 });
 
+// ─── ATOM CONTENT WORKER ────────────────────────────────────────────────────
+// Long-form revenue content engine. Brand voice locked via voice_profiles
+// (voice.yaml), numeric claims verified against product_activity_metrics.
+
+export const contentProjects = sqliteTable("content_projects", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  contentType: text("content_type").notNull(), // blog|case-study|whitepaper|linkedin|x-thread|youtube|launch|founder-pov|investor-insight|product-update|customer-success|seo-landing
+  targetAudience: text("target_audience").notNull(),
+  funnelStage: text("funnel_stage").notNull(), // awareness|consideration|conversion|retention|investor|partner
+  intensity: text("intensity").notNull(), // calm|sharp|war_mode
+  status: text("status").notNull().default("draft"), // draft|generated|approved|archived
+  createdBy: text("created_by").notNull().default("operator"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const contentGenerations = sqliteTable("content_generations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull(),
+  promptInput: text("prompt_input").notNull(), // JSON of the brief inputs
+  generatedOutput: text("generated_output").notNull(), // the asset body (markdown)
+  voiceScore: real("voice_score").notNull().default(0), // 0-100 tone compliance
+  claimScore: real("claim_score").notNull().default(0), // 0-100 claim verification
+  evidenceJson: text("evidence_json").notNull(), // JSON: sources, metrics, claims, risks, CTAs
+  provider: text("provider").notNull().default("demo"), // demo|anthropic|openai|perplexity
+  status: text("status").notNull().default("generated"), // generated|approved|revised|archived
+  createdAt: text("created_at").notNull(),
+});
+
+export const voiceProfiles = sqliteTable("voice_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  yamlContent: text("yaml_content").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const productActivityMetrics = sqliteTable("product_activity_metrics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  metricKey: text("metric_key").notNull(), // 'leads_generated', 'reply_rate_delta'
+  metricLabel: text("metric_label").notNull(), // 'Leads generated'
+  metricValue: real("metric_value").notNull(),
+  unit: text("unit").notNull().default(""), // '', '%', 'events', 'hrs'
+  sourceSystem: text("source_system").notNull(), // 'atom-leadgen', 'campaigns', 'demo'
+  sourceRecordId: text("source_record_id"), // optional id within source system
+  confidence: text("confidence").notNull().default("unverified"), // verified|high|medium|low|unverified
+  isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
+  capturedAt: text("captured_at").notNull(),
+  metadataJson: text("metadata_json"), // JSON blob
+});
+
+export const contentClaims = sqliteTable("content_claims", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  generationId: integer("generation_id").notNull(),
+  claimText: text("claim_text").notNull(),
+  claimType: text("claim_type").notNull(), // metric|absolute|outcome|general
+  metricKey: text("metric_key"), // matched metric key if any
+  verified: text("verified").notNull().default("needs_review"), // verified|needs_review|rejected
+  sourceSystem: text("source_system"),
+  confidence: text("confidence"), // verified|high|medium|low|unverified
+  riskLevel: text("risk_level").notNull().default("low"), // low|medium|high
+  createdAt: text("created_at").notNull(),
+});
+
+export const approvalLog = sqliteTable("approval_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  generationId: integer("generation_id").notNull(),
+  action: text("action").notNull(), // approved|revised|rejected|exported
+  outcome: text("outcome").notNull(),
+  approvedBy: text("approved_by").notNull().default("operator"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertContentProjectSchema = createInsertSchema(contentProjects).omit({ id: true });
+export const insertContentGenerationSchema = createInsertSchema(contentGenerations).omit({ id: true });
+export const insertVoiceProfileSchema = createInsertSchema(voiceProfiles).omit({ id: true });
+export const insertProductActivityMetricSchema = createInsertSchema(productActivityMetrics).omit({ id: true });
+export const insertContentClaimSchema = createInsertSchema(contentClaims).omit({ id: true });
+export const insertApprovalLogSchema = createInsertSchema(approvalLog).omit({ id: true });
+
+export type ContentProject = typeof contentProjects.$inferSelect;
+export type InsertContentProject = z.infer<typeof insertContentProjectSchema>;
+export type ContentGeneration = typeof contentGenerations.$inferSelect;
+export type InsertContentGeneration = z.infer<typeof insertContentGenerationSchema>;
+export type VoiceProfile = typeof voiceProfiles.$inferSelect;
+export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
+export type ProductActivityMetric = typeof productActivityMetrics.$inferSelect;
+export type InsertProductActivityMetric = z.infer<typeof insertProductActivityMetricSchema>;
+export type ContentClaim = typeof contentClaims.$inferSelect;
+export type InsertContentClaim = z.infer<typeof insertContentClaimSchema>;
+export type ApprovalLogEntry = typeof approvalLog.$inferSelect;
+export type InsertApprovalLogEntry = z.infer<typeof insertApprovalLogSchema>;
+
+export const CONTENT_TYPES = [
+  "blog", "case-study", "whitepaper", "linkedin", "x-thread", "youtube",
+  "launch", "founder-pov", "investor-insight", "product-update",
+  "customer-success", "seo-landing",
+] as const;
+export const FUNNEL_STAGES = [
+  "awareness", "consideration", "conversion", "retention", "investor", "partner",
+] as const;
+export const INTENSITY_LEVELS = ["calm", "sharp", "war_mode"] as const;
+export const METRIC_CONFIDENCE = ["verified", "high", "medium", "low", "unverified"] as const;
+
+export const contentBriefSchema = z.object({
+  title: z.string().min(1),
+  contentType: z.enum(CONTENT_TYPES),
+  targetAudience: z.string().min(1),
+  funnelStage: z.enum(FUNNEL_STAGES),
+  intensity: z.enum(INTENSITY_LEVELS),
+  primaryCta: z.string().optional().default(""),
+  productFocus: z.string().optional().default(""),
+  sourceFrom: z.string().optional().nullable(), // ISO date for activity window start
+  sourceTo: z.string().optional().nullable(), // ISO date for activity window end
+  sourceSystem: z.string().optional().nullable(),
+  allowDemoData: z.boolean().optional().default(false),
+  notes: z.string().optional().default(""),
+});
+export type ContentBrief = z.infer<typeof contentBriefSchema>;
+
+export const derivativeRequestSchema = z.object({
+  generationId: z.number(),
+  derivativeType: z.enum(CONTENT_TYPES),
+});
+export type DerivativeRequest = z.infer<typeof derivativeRequestSchema>;
+
+export const refineRequestSchema = z.object({
+  generationId: z.number(),
+  mode: z.enum(["tighten", "executive", "technical"]),
+});
+export type RefineRequest = z.infer<typeof refineRequestSchema>;
+
+export const approveRequestSchema = z.object({
+  generationId: z.number(),
+  action: z.enum(["approved", "revised", "rejected", "exported"]),
+  notes: z.string().optional(),
+});
+export type ApproveRequest = z.infer<typeof approveRequestSchema>;
+
 // Insert schemas
 export const insertProductSchema = createInsertSchema(products).omit({ id: true });
 export const insertPitchSchema = createInsertSchema(pitches).omit({ id: true });

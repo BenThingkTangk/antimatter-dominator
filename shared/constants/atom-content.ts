@@ -1,0 +1,303 @@
+/**
+ * ATOM Content Worker — shared constants + a minimal, dependency-free YAML
+ * parser scoped to the voice.yaml shape. The repo has no YAML dependency, and
+ * the voice profile structure is fixed and operator-edited, so a small parser
+ * keeps the bundle lean while still letting the UI round-trip the profile.
+ */
+
+export interface VoiceProfileShape {
+  brand_name: string;
+  core_identity: string;
+  tone: string[];
+  style_rules: string[];
+  approved_phrases: string[];
+  banned_phrases: string[];
+  sentence_shape: {
+    preferred_sentence_length: string;
+    allow_fragments_for_emphasis: boolean;
+    avoid_long_paragraphs: boolean;
+  };
+  intensity_levels: Record<string, { description: string }>;
+  compliance: {
+    require_metric_verification: boolean;
+    mark_unverified_claims: boolean;
+    avoid_medical_legal_financial_promises: boolean;
+    avoid_absolute_guarantees: boolean;
+  };
+}
+
+export const DEFAULT_VOICE_YAML = `voice:
+  brand_name: "ATOM Sales OS"
+  core_identity: "Autonomous revenue command system"
+  tone:
+    - "executive"
+    - "surgical"
+    - "confident"
+    - "cinematic"
+    - "direct"
+    - "revenue-focused"
+    - "founder-grade"
+  style_rules:
+    - "Lead with business impact before technical detail."
+    - "Use short, powerful sentences."
+    - "Avoid generic SaaS language."
+    - "Avoid fluffy motivational language."
+    - "Sound like a command center, not a content calendar."
+    - "Make the buyer feel the cost of inaction."
+    - "Use proof, numbers, and operational clarity."
+    - "Explain simply first, then go technical when needed."
+    - "Position ATOM as an execution layer, not another dashboard."
+  approved_phrases:
+    - "Revenue command center"
+    - "Autonomous sales execution"
+    - "Pipeline that moves while your team sleeps"
+    - "Signal-to-sale operating system"
+    - "AI sales force with executive control"
+    - "Command, not dashboards"
+  banned_phrases:
+    - "game changer"
+    - "revolutionary solution"
+    - "seamless experience"
+    - "unlock your potential"
+    - "supercharge your workflow"
+    - "next-gen platform"
+    - "all-in-one solution"
+    - "AI-powered magic"
+  sentence_shape:
+    preferred_sentence_length: "short-to-medium"
+    allow_fragments_for_emphasis: true
+    avoid_long_paragraphs: true
+  intensity_levels:
+    calm:
+      description: "Executive, polished, restrained."
+    sharp:
+      description: "Direct, competitive, conversion-focused."
+    war_mode:
+      description: "Aggressive, market-taking, high-conviction, still professional."
+  compliance:
+    require_metric_verification: true
+    mark_unverified_claims: true
+    avoid_medical_legal_financial_promises: true
+    avoid_absolute_guarantees: true
+`;
+
+function stripQuotes(v: string): string {
+  const t = v.trim();
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    return t.slice(1, -1);
+  }
+  return t;
+}
+
+function coerce(v: string): any {
+  const t = v.trim();
+  if (t === "true") return true;
+  if (t === "false") return false;
+  if (t !== "" && !Number.isNaN(Number(t)) && /^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+  return stripQuotes(t);
+}
+
+interface RawLine { indent: number; key: string | null; value: string | null; isItem: boolean; }
+
+function tokenize(yaml: string): RawLine[] {
+  const out: RawLine[] = [];
+  for (const raw of yaml.replace(/\r\n/g, "\n").split("\n")) {
+    if (!raw.trim() || raw.trim().startsWith("#")) continue;
+    const indent = raw.length - raw.trimStart().length;
+    const line = raw.trim();
+    if (line.startsWith("- ")) {
+      out.push({ indent, key: null, value: line.slice(2), isItem: true });
+      continue;
+    }
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    out.push({ indent, key: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim(), isItem: false });
+  }
+  return out;
+}
+
+/**
+ * Recursive-descent build of a block at `baseIndent`. Consumes lines from the
+ * shared cursor object. Produces either a plain object (mapping keys) — list
+ * values are attached as arrays under their owning key.
+ */
+function buildBlock(lines: RawLine[], cursor: { i: number }, baseIndent: number): any {
+  const node: any = {};
+  while (cursor.i < lines.length) {
+    const ln = lines[cursor.i];
+    if (ln.indent < baseIndent) break;
+    if (ln.indent > baseIndent) {
+      // Should have been consumed by a child build; skip defensively.
+      cursor.i++;
+      continue;
+    }
+    if (ln.isItem) break; // lists are handled by the owning key below
+    cursor.i++;
+    const key = ln.key as string;
+    if (ln.value && ln.value.length > 0) {
+      node[key] = coerce(ln.value);
+      continue;
+    }
+    // value-less key: nested block — either a list (next line is item) or a map.
+    const next = lines[cursor.i];
+    if (next && next.indent > baseIndent && next.isItem) {
+      const items: any[] = [];
+      while (cursor.i < lines.length && lines[cursor.i].indent > baseIndent && lines[cursor.i].isItem) {
+        items.push(coerce(lines[cursor.i].value as string));
+        cursor.i++;
+      }
+      node[key] = items;
+    } else if (next && next.indent > baseIndent) {
+      node[key] = buildBlock(lines, cursor, next.indent);
+    } else {
+      node[key] = {};
+    }
+  }
+  return node;
+}
+
+/**
+ * Parse the voice.yaml document into a VoiceProfileShape. Tolerant of the
+ * specific 2-space-indented structure used by voice.yaml. Falls back to the
+ * default profile for any missing/garbled field so generation never crashes.
+ */
+export function parseVoiceYaml(yaml: string): VoiceProfileShape {
+  let root: any = {};
+  try {
+    const lines = tokenize(yaml);
+    if (lines.length) root = buildBlock(lines, { i: 0 }, lines[0].indent);
+  } catch {
+    root = {};
+  }
+
+  const v = (root.voice ?? root) as any;
+  const def = parseShapeFromDefault();
+  const arr = (x: any, d: string[]) => (Array.isArray(x) && x.length ? x.map(String) : d);
+  const intensity = (() => {
+    const out: Record<string, { description: string }> = {};
+    const src = v.intensity_levels;
+    if (src && typeof src === "object" && !Array.isArray(src)) {
+      for (const k of Object.keys(src)) {
+        const d = src[k]?.description;
+        out[k] = { description: typeof d === "string" ? d : "" };
+      }
+    }
+    return Object.keys(out).length ? out : def.intensity_levels;
+  })();
+
+  return {
+    brand_name: typeof v.brand_name === "string" ? v.brand_name : def.brand_name,
+    core_identity: typeof v.core_identity === "string" ? v.core_identity : def.core_identity,
+    tone: arr(v.tone, def.tone),
+    style_rules: arr(v.style_rules, def.style_rules),
+    approved_phrases: arr(v.approved_phrases, def.approved_phrases),
+    banned_phrases: arr(v.banned_phrases, def.banned_phrases),
+    sentence_shape: {
+      preferred_sentence_length:
+        v.sentence_shape?.preferred_sentence_length ?? def.sentence_shape.preferred_sentence_length,
+      allow_fragments_for_emphasis:
+        typeof v.sentence_shape?.allow_fragments_for_emphasis === "boolean"
+          ? v.sentence_shape.allow_fragments_for_emphasis
+          : def.sentence_shape.allow_fragments_for_emphasis,
+      avoid_long_paragraphs:
+        typeof v.sentence_shape?.avoid_long_paragraphs === "boolean"
+          ? v.sentence_shape.avoid_long_paragraphs
+          : def.sentence_shape.avoid_long_paragraphs,
+    },
+    intensity_levels: intensity,
+    compliance: {
+      require_metric_verification:
+        typeof v.compliance?.require_metric_verification === "boolean"
+          ? v.compliance.require_metric_verification
+          : def.compliance.require_metric_verification,
+      mark_unverified_claims:
+        typeof v.compliance?.mark_unverified_claims === "boolean"
+          ? v.compliance.mark_unverified_claims
+          : def.compliance.mark_unverified_claims,
+      avoid_medical_legal_financial_promises:
+        typeof v.compliance?.avoid_medical_legal_financial_promises === "boolean"
+          ? v.compliance.avoid_medical_legal_financial_promises
+          : def.compliance.avoid_medical_legal_financial_promises,
+      avoid_absolute_guarantees:
+        typeof v.compliance?.avoid_absolute_guarantees === "boolean"
+          ? v.compliance.avoid_absolute_guarantees
+          : def.compliance.avoid_absolute_guarantees,
+    },
+  };
+}
+
+// The default profile, expressed directly so parseVoiceYaml can fall back to
+// it field-by-field without risking infinite recursion through the parser.
+function parseShapeFromDefault(): VoiceProfileShape {
+  return {
+    brand_name: "ATOM Sales OS",
+    core_identity: "Autonomous revenue command system",
+    tone: ["executive", "surgical", "confident", "cinematic", "direct", "revenue-focused", "founder-grade"],
+    style_rules: [
+      "Lead with business impact before technical detail.",
+      "Use short, powerful sentences.",
+      "Avoid generic SaaS language.",
+      "Avoid fluffy motivational language.",
+      "Sound like a command center, not a content calendar.",
+      "Make the buyer feel the cost of inaction.",
+      "Use proof, numbers, and operational clarity.",
+      "Explain simply first, then go technical when needed.",
+      "Position ATOM as an execution layer, not another dashboard.",
+    ],
+    approved_phrases: [
+      "Revenue command center",
+      "Autonomous sales execution",
+      "Pipeline that moves while your team sleeps",
+      "Signal-to-sale operating system",
+      "AI sales force with executive control",
+      "Command, not dashboards",
+    ],
+    banned_phrases: [
+      "game changer",
+      "revolutionary solution",
+      "seamless experience",
+      "unlock your potential",
+      "supercharge your workflow",
+      "next-gen platform",
+      "all-in-one solution",
+      "AI-powered magic",
+    ],
+    sentence_shape: {
+      preferred_sentence_length: "short-to-medium",
+      allow_fragments_for_emphasis: true,
+      avoid_long_paragraphs: true,
+    },
+    intensity_levels: {
+      calm: { description: "Executive, polished, restrained." },
+      sharp: { description: "Direct, competitive, conversion-focused." },
+      war_mode: { description: "Aggressive, market-taking, high-conviction, still professional." },
+    },
+    compliance: {
+      require_metric_verification: true,
+      mark_unverified_claims: true,
+      avoid_medical_legal_financial_promises: true,
+      avoid_absolute_guarantees: true,
+    },
+  };
+}
+
+export const DEFAULT_VOICE_PROFILE: VoiceProfileShape = parseShapeFromDefault();
+
+// Weak SaaS filler the voice checker flags beyond explicit banned phrases.
+export const WEAK_FILLER_PATTERNS = [
+  "leverage", "synergy", "cutting-edge", "best-in-class", "world-class",
+  "robust", "holistic", "paradigm", "frictionless", "turnkey", "bandwidth",
+  "circle back", "low-hanging fruit", "move the needle", "value-add",
+];
+
+// Absolute terms the claim checker flags unless backed by approved proof.
+export const ABSOLUTE_CLAIM_TERMS = [
+  "guaranteed", "guarantee", "always", "never", "best", "#1", "number one",
+  "100%", "fastest", "cheapest", "only", "instantly", "zero risk", "risk-free",
+];
+
+// Domains that demand a compliance warning when asserted as outcomes.
+export const COMPLIANCE_RISK_TERMS = [
+  "cure", "diagnose", "treatment", "fda", "hipaa-certified", "guaranteed roi",
+  "guaranteed return", "tax", "legal advice", "investment advice",
+];
