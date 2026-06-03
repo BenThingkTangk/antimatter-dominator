@@ -72,12 +72,22 @@ Call Strategy · Outreach Angles · Confidence + Gaps · Source Map.
 
 ## Mode → model strategy
 
-| Mode | Model | Search depth | Recency | Max tokens |
-|---|---|---|---|---|
-| `fast_scan` | `sonar` | low | month | 2200 |
-| `pro_dossier` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | month | 3400 |
-| `deep_research` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | month | 4200 |
-| `vibranium_war_room` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | week | 5000 |
+| Mode | Model | Search depth | Recency filter | Domain filter | Min sources | Max tokens |
+|---|---|---|---|---|---|---|
+| `fast_scan` | `sonar` | low | none | light exclude (pinterest/quora/reddit) | 3 | 2200 |
+| `pro_dossier` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | none | none (full web) | 6 | 3400 |
+| `deep_research` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | none | none (full web) | 8 | 4200 |
+| `vibranium_war_room` | `PERPLEXITY_MODEL_RESEARCH` ?? `sonar-pro` | high | none | none (full web) | 8 | 5200 |
+
+**Why no recency/domain filter on the deep tiers:** Perplexity's
+`search_domain_filter` is an *allowlist* — a fixed list silently blocks the
+target's own official site, investor-relations, and newsroom, and a hard
+`week`/`month` `search_recency_filter` excludes authoritative-but-older primary
+sources. Both caused single-source dossiers in live testing. The deep tiers now
+search the full web with no hard recency window; **the prompt** (not a date
+filter) steers toward recent signals, while a mandatory source-strategy block
+requires 6–10 distinct sources spanning official/company, investor/SEC, news,
+jobs, leadership, and competitor pages, each backing different sections.
 
 ## Environment variables
 

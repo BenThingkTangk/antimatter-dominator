@@ -133,8 +133,9 @@ FORMATTING RULES:
 - Cite factual claims inline using bracket notation like [1], [2] that map to the numbered Source Map.
 - In "Buying Signals", explicitly label each of these categories as DETECTED or NOT DETECTED with a one-line justification: Funding, Hiring, Expansion, Product launch, Compliance pressure, Tech migration, Competitor weakness, Leadership change, Customer pain, Market event.
 - In "Confidence + Gaps", begin with a line "Confidence: NN%" where NN is your overall 0-100 confidence, then list what is VERIFIED vs INFERRED and any gaps.
-- In "Source Map", list every source as a numbered markdown list item with a clickable URL and a 3-6 word description of what it supports.
-- If sources are thin or the target could not be confidently identified, say so plainly. NEVER fabricate URLs, figures, names, or quotes.`;
+- In "Source Map", list every DISTINCT source you used as a numbered markdown list item with its full clickable URL and a 3-6 word description of what it supports. Aim for multiple distinct sources (ideally 6-10 for deep research) spanning official/company, investor/filings, news, jobs, leadership, and market/competitor pages — never base an entire dossier on a single article.
+- Different sections should be backed by different sources where possible; do not reuse one URL for every claim.
+- If sources are genuinely thin or the target could not be confidently identified, say so plainly. NEVER fabricate URLs, figures, names, or quotes.`;
 
 // ── Mode → model + search strategy ───────────────────────────────────────────
 // Configurable strategy. PERPLEXITY_MODEL_RESEARCH overrides the model for the
@@ -151,26 +152,37 @@ interface ModeStrategy {
 export function strategyForMode(mode: ResearchMode): ModeStrategy {
   const deepModel = PERPLEXITY_MODEL_RESEARCH || "sonar-pro";
   switch (mode) {
+    // Fast scan stays compact but no longer caps recency to a month — a hard
+    // filter would exclude official/IR pages that are older yet authoritative.
     case "fast_scan":
-      return { model: "sonar", searchContextSize: "low", recency: "month", maxTokens: 2200, temperature: 0.2, label: "Fast Scan" };
+      return { model: "sonar", searchContextSize: "low", maxTokens: 2200, temperature: 0.2, label: "Fast Scan" };
+    // Deep tiers cast a WIDE net: NO hard recency filter, so the model is free
+    // to pull official, investor, and evergreen primary sources alongside fresh
+    // news. The prompt (not a date filter) is what steers toward recent signals.
     case "deep_research":
-      return { model: deepModel, searchContextSize: "high", recency: "month", maxTokens: 4200, temperature: 0.25, label: "Deep Research" };
+      return { model: deepModel, searchContextSize: "high", maxTokens: 4200, temperature: 0.25, label: "Deep Research" };
     case "vibranium_war_room":
-      return { model: deepModel, searchContextSize: "high", recency: "week", maxTokens: 5000, temperature: 0.3, label: "Vibranium War Room" };
+      return { model: deepModel, searchContextSize: "high", maxTokens: 5200, temperature: 0.3, label: "Vibranium War Room" };
     case "pro_dossier":
     default:
-      return { model: deepModel, searchContextSize: "high", recency: "month", maxTokens: 3400, temperature: 0.25, label: "Pro Dossier" };
+      return { model: deepModel, searchContextSize: "high", maxTokens: 3400, temperature: 0.25, label: "Pro Dossier" };
   }
 }
 
-const RESEARCH_DOMAIN_FILTER = [
-  "sec.gov", "linkedin.com", "crunchbase.com", "techcrunch.com",
-  "bloomberg.com", "reuters.com", "wsj.com", "ft.com", "gartner.com",
-  "forbes.com", "businessinsider.com", "g2.com", "pitchbook.com",
-  "prnewswire.com", "businesswire.com", "glassdoor.com",
-];
+// NOTE: Perplexity's `search_domain_filter` is an ALLOWLIST — anything not
+// listed is excluded. A fixed list silently blocks the target's OWN official
+// site, investor-relations, and newsroom (which can't be enumerated ahead of
+// time), starving deep dossiers down to a single tangential article. So the
+// deep tiers run with NO domain filter (full web), and only fast_scan applies a
+// light EXCLUDE list to keep low-signal noise out of a quick scan.
+const FAST_SCAN_EXCLUDE = ["-pinterest.com", "-quora.com", "-reddit.com"];
 
-export function buildUserPrompt(req: ResearchRequest): string {
+/** Per-mode minimum distinct-source target. Used in both prompt + parser. */
+function minSourcesForMode(mode: ResearchMode): number {
+  return mode === "fast_scan" ? 3 : mode === "pro_dossier" ? 6 : 8;
+}
+
+export function buildUserPrompt(req: ResearchRequest, mode: ResearchMode): string {
   const lines: string[] = [];
   lines.push("Build a Vibranium-tier deep-research sales dossier on the following target.");
   lines.push("");
@@ -187,9 +199,37 @@ export function buildUserPrompt(req: ResearchRequest): string {
   if (req.competitor) lines.push(`Competitor / strategic angle to account for: ${req.competitor}`);
   if (req.notes) lines.push(`Additional notes / context from the rep: ${req.notes}`);
   lines.push("");
+
+  const minSources = minSourcesForMode(mode);
+  lines.push("=== SOURCE STRATEGY (MANDATORY) ===");
+  if (mode === "fast_scan") {
+    lines.push(
+      `This is a fast scan: stay compact, but still gather at least ${minSources} DISTINCT credible sources where they exist. ` +
+      "Prefer the company's own site plus one or two credible news/market sources. Do not rely on a single article."
+    );
+  } else {
+    lines.push(
+      `Gather at least ${minSources}–10 DISTINCT, high-quality sources where they exist — never build the dossier from a single article. ` +
+      "Deliberately pull from a SPREAD of source types:"
+    );
+    lines.push("- The company's OWN official website and product/pricing/solution pages.");
+    lines.push("- Investor relations / SEC filings (10-K, 10-Q, 8-K) / official newsroom or press releases.");
+    lines.push("- Credible recent news (Reuters, Bloomberg, WSJ, FT, TechCrunch, industry press).");
+    lines.push("- Jobs / careers pages (hiring signals, tech-stack hints, expansion).");
+    lines.push("- Leadership / about / team pages (decision-makers).");
+    lines.push("- Credible market, analyst, review, or competitor pages for competitive context.");
+    lines.push(
+      "Cite EACH major factual section with its OWN distinct source(s) — different sections must not all point to the same one URL. " +
+      "Favor official/primary and investor sources for company facts; use news for recent developments. " +
+      "Older official/IR pages are MORE authoritative than a recent tangential blog — do not discard a source just because it is not from this week."
+    );
+  }
+  lines.push("");
   lines.push(
     "Produce all 12 sections in the exact required format. Tie every recommendation back to the seller context above. " +
-    "Prioritise the most recent, verifiable information. Where you cannot verify something, mark it INFERRED and lower your confidence accordingly."
+    "Prioritise recent, verifiable developments for time-sensitive sections, but use authoritative primary sources for stable company facts. " +
+    "Where you cannot verify something, mark it INFERRED and lower your confidence accordingly. " +
+    "The Source Map MUST be URL-rich, listing every distinct source you used with its real URL."
   );
   return lines.join("\n");
 }
@@ -470,15 +510,19 @@ export async function runResearch(req: ResearchRequest): Promise<RunResult> {
     model: strat.model,
     messages: [
       { role: "system", content: ATOM_RESEARCHER_SYSTEM_PROMPT },
-      { role: "user", content: buildUserPrompt(req) },
+      { role: "user", content: buildUserPrompt(req, mode) },
     ],
     temperature: strat.temperature,
     max_tokens: strat.maxTokens,
     return_citations: true,
-    search_recency_filter: strat.recency,
     web_search_options: { search_context_size: strat.searchContextSize },
-    search_domain_filter: RESEARCH_DOMAIN_FILTER,
   };
+  // Only apply a recency filter when the strategy sets one (deep tiers run with
+  // NO hard recency window so official/IR/evergreen sources are not excluded).
+  if (strat.recency) body.search_recency_filter = strat.recency;
+  // Domain filter: deep tiers search the full web (no allowlist that would block
+  // the target's own official/IR/newsroom). Fast scan trims a little low-signal noise.
+  if (mode === "fast_scan") body.search_domain_filter = FAST_SCAN_EXCLUDE;
 
   const t0 = Date.now();
   try {
