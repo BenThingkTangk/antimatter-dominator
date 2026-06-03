@@ -353,6 +353,26 @@ export default function AtomResearcher() {
     return steps;
   }, [form]);
 
+  // Mode-aware source strategy preview — mirrors the engine's minSourcesForMode
+  // and source-strategy prompt so the user sees the plan before running.
+  const planStrategy = useMemo(() => {
+    const minByMode: Record<ResearchMode, number> = {
+      fast_scan: 3, pro_dossier: 6, deep_research: 8, vibranium_war_room: 8,
+    };
+    const depthByMode: Record<ResearchMode, string> = {
+      fast_scan: "Low search depth · light spam exclude · fast turnaround",
+      pro_dossier: "High search depth · full web · 12-section dossier",
+      deep_research: "High search depth · full web · multi-angle deep dive",
+      vibranium_war_room: "Maximum depth · full web · war-room intensity",
+    };
+    const wantOfficial = ["official site", "investor / SEC / filings", "credible news", "jobs / careers", "leadership", "competitor / market"];
+    return {
+      minSources: minByMode[form.mode],
+      depth: depthByMode[form.mode],
+      sourceTypes: form.mode === "fast_scan" ? wantOfficial.slice(0, 3) : wantOfficial,
+    };
+  }, [form.mode]);
+
   const handleRun = useCallback(async () => {
     if (!form.companyName.trim() && !form.domain.trim()) {
       toast({ title: "Target required", description: "Enter a company name or domain to run ATOM research.", variant: "destructive" });
@@ -428,6 +448,12 @@ export default function AtomResearcher() {
     return dossier.sections.filter((s) => tab.match.some((kw) => s.title.toLowerCase().includes(kw)));
   }, [dossier, activeTab]);
 
+  const targetDomain = useMemo(
+    () => (form.domain || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].toLowerCase(),
+    [form.domain],
+  );
+  const rankedSignals = useMemo(() => (dossier ? rankSignals(dossier.buyingSignals) : []), [dossier]);
+
   // Pre-call 3-minute brief — synthesized from current dossier sections.
   const callBrief = useMemo(() => {
     if (!dossier) return null;
@@ -453,6 +479,15 @@ export default function AtomResearcher() {
           .atomr-glass{background:linear-gradient(135deg,rgba(34,230,214,0.05),rgba(14,14,20,0.96));border:1px solid rgba(34,230,214,0.16);border-radius:14px;backdrop-filter:blur(8px)}
           .atomr-card{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px}
           .atomr-anim-bar{background:linear-gradient(90deg,#22e6d6,#8b5cf6,#3b82f6,#22e6d6);background-size:300% 100%;animation:atomrGrad 6s ease infinite}
+          .atomr-print-only{display:none}
+          @media print{
+            body * {visibility:hidden!important}
+            #atomr-print-brief, #atomr-print-brief * {visibility:visible!important}
+            #atomr-print-brief{position:absolute;left:0;top:0;width:100%;padding:24px;background:#fff!important;color:#111!important;display:block!important}
+            #atomr-print-brief *{color:#111!important;background:transparent!important;border-color:#ddd!important}
+            .atomr-print-only{display:block}
+            .atomr-no-print{display:none!important}
+          }
         `}</style>
 
         {/* ── Header ── */}
@@ -552,8 +587,12 @@ export default function AtomResearcher() {
             </div>
 
             {showPlan && (
-              <div className="atomr-fade rounded-lg p-3 space-y-2" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.18)" }}>
-                <div className="flex items-center gap-1.5"><Sparkles size={11} className="text-violet-300" /><Mono>Research Plan Preview</Mono></div>
+              <div className="atomr-fade rounded-lg p-3 space-y-2.5" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.18)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5"><Sparkles size={11} className="text-violet-300" /><Mono>Research Plan Preview</Mono></div>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.14)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.3)" }}>{MODES.find((m) => m.value === form.mode)?.label}</span>
+                </div>
+                <p className="text-[10.5px] text-white/45 leading-snug">{planStrategy.depth} · targets ≥ {planStrategy.minSources} distinct sources.</p>
                 <ol className="space-y-1">
                   {researchPlan.map((step, i) => (
                     <li key={i} className="flex gap-2 text-[11.5px] text-white/55">
@@ -561,6 +600,14 @@ export default function AtomResearcher() {
                     </li>
                   ))}
                 </ol>
+                <div className="pt-1.5 border-t border-white/[0.06]">
+                  <div className="text-[9px] font-mono uppercase tracking-[0.16em] text-white/30 mb-1">Source strategy</div>
+                  <div className="flex flex-wrap gap-1">
+                    {planStrategy.sourceTypes.map((st) => (
+                      <span key={st} className="text-[9.5px] px-1.5 py-0.5 rounded-full text-white/55" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>{st}</span>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -684,39 +731,92 @@ export default function AtomResearcher() {
                   )}
                 </div>
 
-                {/* Buying Signal Radar */}
+                {/* Buying Signal Radar — ranked by detection + urgency */}
                 <div className="atomr-card p-4 space-y-3">
-                  <div className="flex items-center gap-1.5"><Zap size={13} className="text-amber-400/70" /><Mono>Buying Signal Radar</Mono></div>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {dossier.buyingSignals.map((sig) => {
-                      const Icon = SIGNAL_ICONS[sig.category] || Circle;
-                      return (
-                        <Tooltip key={sig.category}>
-                          <TooltipTrigger asChild>
-                            <div className="p-2 rounded-lg text-center cursor-default transition-colors"
-                              style={{
-                                background: sig.detected ? "rgba(34,230,214,0.08)" : "rgba(255,255,255,0.02)",
-                                border: sig.detected ? "1px solid rgba(34,230,214,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                              }}>
-                              <Icon size={14} className={`mx-auto ${sig.detected ? "text-[#22e6d6]" : "text-white/25"}`} />
-                              <div className={`text-[9.5px] font-medium mt-1 leading-tight ${sig.detected ? "text-white/75" : "text-white/35"}`}>{sig.category}</div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[240px]">
-                            <span className="text-xs">{sig.detected ? "✅ Detected — " : "Not detected — "}{sig.detail}</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5"><Zap size={13} className="text-amber-400/70" /><Mono>Buying Signal Radar</Mono></div>
+                    <span className="text-[10px] font-mono text-white/30">{rankedSignals.filter((s) => s.detected).length} active</span>
                   </div>
+
+                  {/* Detected signals — full cards with recommended move */}
+                  {rankedSignals.filter((s) => s.detected).length > 0 ? (
+                    <div className="space-y-2">
+                      {rankedSignals.filter((s) => s.detected).map((sig) => {
+                        const Icon = SIGNAL_ICONS[sig.category] || Circle;
+                        return (
+                          <div key={sig.category} className="rounded-lg p-3" style={{ background: "rgba(34,230,214,0.06)", border: "1px solid rgba(34,230,214,0.25)" }}>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Icon size={14} className="text-[#22e6d6] shrink-0" />
+                              <span className="text-[12.5px] font-semibold text-[#f6f6fd]">{sig.category}</span>
+                              <span className="flex items-center gap-0.5" title={`Urgency ${sig.urgency}/5`}>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <span key={i} className="w-1 h-2.5 rounded-sm" style={{ background: i < sig.urgency ? "#fbbf24" : "rgba(255,255,255,0.12)" }} />
+                                ))}
+                              </span>
+                              <span className="ml-auto text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full" style={{ background: "rgba(34,230,214,0.12)", color: "#22e6d6", border: "1px solid rgba(34,230,214,0.3)" }}>detected</span>
+                            </div>
+                            {sig.detail && sig.detail !== "No clear signal in current sources." && (
+                              <p className="text-[11.5px] text-white/60 mt-1.5 leading-relaxed">{renderInline(sig.detail, dossier.sourceMap)}</p>
+                            )}
+                            {sig.move && (
+                              <div className="flex items-start gap-1.5 mt-1.5 text-[11px] text-violet-200/80">
+                                <Crosshair size={11} className="text-violet-300/70 mt-0.5 shrink-0" />
+                                <span><span className="text-violet-300/90 font-medium">Move:</span> {sig.move}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11.5px] text-white/35 py-1">No strong buying signals detected in current sources. Probe for them live.</p>
+                  )}
+
+                  {/* Remaining signals — compact "not detected" grid */}
+                  {rankedSignals.filter((s) => !s.detected).length > 0 && (
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-white/25 mb-1.5">Not detected</div>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                        {rankedSignals.filter((s) => !s.detected).map((sig) => {
+                          const Icon = SIGNAL_ICONS[sig.category] || Circle;
+                          return (
+                            <Tooltip key={sig.category}>
+                              <TooltipTrigger asChild>
+                                <div className="p-1.5 rounded-md text-center cursor-default" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                                  <Icon size={12} className="mx-auto text-white/25" />
+                                  <div className="text-[8.5px] font-medium mt-0.5 leading-tight text-white/35">{sig.category}</div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px]"><span className="text-xs">Not detected — {sig.detail}</span></TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Call Brief Card */}
+                {/* Source coverage / trust */}
+                <SourceCoverage sources={dossier.sourceMap} targetDomain={targetDomain} />
+
+                {/* Call Brief Card — print-optimized 3-minute pre-call */}
                 {callBrief && (
-                  <div className="atomr-card p-4 space-y-3" style={{ borderColor: "rgba(139,92,246,0.2)" }}>
-                    <div className="flex items-center justify-between">
+                  <div id="atomr-print-brief" className="atomr-card p-4 space-y-3" style={{ borderColor: "rgba(139,92,246,0.2)" }}>
+                    <div className="atomr-print-only" style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 22, fontWeight: 700 }}>{dossier.company} — 3-Minute Call Brief</div>
+                      <div style={{ fontSize: 12, opacity: 0.7 }}>
+                        ATOM Researcher Pro · {MODES.find((m) => m.value === dossier.mode)?.label} · {dossier.confidence}% confidence · {dossier.sourceMap.length} sources
+                        {form.contactName ? ` · Contact: ${form.contactName}${form.contactTitle ? ` (${form.contactTitle})` : ""}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between atomr-no-print">
                       <div className="flex items-center gap-1.5"><Phone size={13} className="text-violet-300" /><Mono>ATOM Call Brief · 3-min pre-call</Mono></div>
-                      <CopyBtn text={callBriefText(dossier, callBrief)} label="Copy brief" title="Call Brief" />
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => window.print()} className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/45 border border-white/[0.08] hover:border-white/25 hover:text-white/70 transition-colors">
+                          <FileDown size={10} /> Print
+                        </button>
+                        <CopyBtn text={callBriefText(dossier, callBrief)} label="Copy brief" title="Call Brief" />
+                      </div>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
@@ -740,6 +840,15 @@ export default function AtomResearcher() {
                         <ul className="space-y-0.5">{callBrief.questions.length ? callBrief.questions.map((q, i) => <li key={i} className="text-[11.5px] text-white/55 flex gap-1.5"><ChevronRight size={11} className="text-violet-300/50 mt-0.5 shrink-0" />{q}</li>) : <li className="text-[11px] text-white/30">—</li>}</ul>
                       </div>
                     </div>
+                    {rankedSignals.find((s) => s.detected)?.move && (
+                      <div className="flex items-start gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.22)" }}>
+                        <Crosshair size={13} className="text-violet-300 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-violet-300/80">Recommended Move</span>
+                          <p className="text-[12px] text-white/75 leading-relaxed mt-0.5">{rankedSignals.find((s) => s.detected)!.move}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -831,6 +940,57 @@ function SourceMap({ sources }: { sources: SourceMapEntry[] }) {
   );
 }
 
+// ─── Source Coverage / Trust panel ──────────────────────────────────────────────
+
+function SourceCoverage({ sources, targetDomain }: { sources: SourceMapEntry[]; targetDomain: string }) {
+  const groups = useMemo(() => buildCoverage(sources, targetDomain), [sources, targetDomain]);
+  const total = sources.length;
+  const hasOfficial = groups.some((g) => g.key === "official");
+  const hasPrimary = groups.some((g) => g.key === "primary");
+  if (!total) return null;
+  return (
+    <div className="atomr-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5"><ShieldCheck size={13} className="text-[#22e6d6]" /><Mono>Source Coverage · Trust</Mono></div>
+        <span className="text-[10px] font-mono text-white/30">{total} sources · {groups.length} categories</span>
+      </div>
+      {/* Stacked coverage bar */}
+      <div className="flex h-2 rounded-full overflow-hidden bg-white/[0.05]">
+        {groups.map((g) => (
+          <div key={g.key} style={{ width: `${(g.items.length / total) * 100}%`, background: COVERAGE_META[g.key].color }} title={`${COVERAGE_META[g.key].label}: ${g.items.length}`} />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {groups.map((g) => {
+          const meta = COVERAGE_META[g.key];
+          return (
+            <Tooltip key={g.key}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-default" style={{ background: `${meta.color}0f`, border: `1px solid ${meta.color}30` }}>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} />
+                  <span className="text-[11px] text-white/65 truncate">{meta.label}</span>
+                  <span className="text-[11px] font-mono ml-auto" style={{ color: meta.color }}>{g.items.length}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[220px]"><span className="text-xs">{meta.hint}</span></TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+      {(!hasOfficial || !hasPrimary) && (
+        <div className="flex items-start gap-2 text-[11px] px-3 py-2 rounded-lg" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", color: "#fcd34d" }}>
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            {!hasOfficial && "No official/company source detected. "}
+            {!hasPrimary && "No primary filing/IR source detected. "}
+            Verify key claims against the target's own site before the call.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function slug(s?: string) { return (s || "target").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
@@ -864,38 +1024,185 @@ const FOLLOWUPS = [
 
 function sectionMd(d: Dossier, kw: string) { return d.sections.find((s) => s.title.toLowerCase().includes(kw))?.markdown || ""; }
 
+// Client-side draft generation from the dossier — no extra paid API call.
+function buildFollowup(id: string, d: Dossier, form: FormState): string {
+  const c = d.company;
+  const offering = form.offering || "our solution";
+  const contact = form.contactName || "there";
+  const firstName = contact.split(" ")[0] || "there";
+  const detectedSignals = d.buyingSignals.filter((s) => s.detected);
+  const topSignal = rankSignals(d.buyingSignals).find((s) => s.detected);
+  const hook = firstLine(sectionMd(d, "outreach")) || firstLine(d.executiveBrief);
+  const fit = firstLine(sectionMd(d, "strategic fit"));
+  const pains = bullets(sectionMd(d, "pain point"), 3);
+  const qs = bullets(sectionMd(d, "call strategy"), 4);
+
+  switch (id) {
+    case "cold_email":
+      return [
+        `Subject: ${topSignal ? `${c} — ${topSignal.category.toLowerCase()} + ${offering.split(" ").slice(0, 4).join(" ")}` : `${c} × ${offering.split(" ").slice(0, 4).join(" ")}`}`,
+        ``,
+        `Hi ${firstName},`,
+        ``,
+        topSignal
+          ? `Saw the ${topSignal.category.toLowerCase()} signal at ${c}${topSignal.detail ? ` — ${topSignal.detail}` : ""}.`
+          : hook,
+        ``,
+        fit || `${offering} maps directly to what ${c} is working on right now.`,
+        pains.length ? `\nWhere teams like ${c} usually feel it:\n${pains.map((p) => `• ${p}`).join("\n")}` : "",
+        ``,
+        `Worth a 15-minute call this week to see if it's a fit?`,
+        ``,
+        `— Drafted by ATOM Researcher Pro`,
+      ].filter((l) => l !== "").join("\n");
+
+    case "linkedin_dm":
+      return `Hi ${firstName} — ${topSignal ? `noticed the ${topSignal.category.toLowerCase()} move at ${c}. ` : `${hook} `}` +
+        `${topSignal?.move ? topSignal.move.replace(/\.$/, "") + ", which is exactly where " : "Thought "}${offering} ` +
+        `could help. Open to a quick connect?`;
+
+    case "discovery":
+      return [
+        `DISCOVERY SCRIPT — ${c}`,
+        `Objective: ${form.salesObjective || "qualify fit + book next step"}`,
+        ``,
+        `OPEN (rapport + relevance):`,
+        topSignal ? `• "I saw ${c} ${topSignal.detail || topSignal.category.toLowerCase()} — how is that reshaping priorities for your team?"` : `• "What's driving the most urgency for your team this quarter?"`,
+        ``,
+        `CURRENT STATE → GAP → IMPACT:`,
+        ...(qs.length ? qs.map((q) => `• ${q}`) : [
+          `• "How are you handling this today?"`,
+          `• "Where does that break down or cost you time?"`,
+          `• "What does solving it unlock?"`,
+        ]),
+        ``,
+        `PAINS TO PROBE:`,
+        ...(pains.length ? pains.map((p) => `• ${p}`) : [`• (no explicit pains surfaced — probe current-state)`]),
+        ``,
+        `CLOSE: confirm next step + decision process.`,
+      ].join("\n");
+
+    case "objections":
+      return [
+        `OBJECTION BATTLECARD — ${c}`,
+        `Competitive angle: ${form.competitor || "incumbent / status quo"}`,
+        ``,
+        `"We already use ${form.competitor || "an incumbent"}."`,
+        `→ ${fit || `Position ${offering} as complementary / a step-change, not a rip-and-replace.`}`,
+        ``,
+        `"Now isn't the right time."`,
+        `→ ${topSignal ? `The ${topSignal.category.toLowerCase()} signal makes this timely — ${topSignal.move}` : "Tie to a current initiative; quantify the cost of waiting."}`,
+        ``,
+        `"Send me information."`,
+        `→ Offer a 15-min tailored walkthrough using their own ${detectedSignals[0]?.category.toLowerCase() || "priorities"} as the frame.`,
+        ``,
+        `COMPETITIVE CONTEXT:`,
+        sectionMd(d, "competitive") || sectionMd(d, "strategic fit") || "—",
+      ].join("\n");
+
+    case "slack":
+      return [
+        `*ATOM dossier — ${c}*  (${d.confidence}% confidence · ${d.sourceMap.length} sources)`,
+        ``,
+        `:dart: *Why now:* ${topSignal ? `${topSignal.category} — ${topSignal.detail || "active signal"}` : firstLine(d.executiveBrief)}`,
+        `:zap: *Signals:* ${detectedSignals.map((s) => s.category).join(", ") || "none detected"}`,
+        `:bust_in_silhouette: *Contact:* ${form.contactName || "TBD"}${form.contactTitle ? ` (${form.contactTitle})` : ""}`,
+        `:arrow_right: *Recommended move:* ${topSignal?.move || form.salesObjective || "Qualify fit, then book a working session."}`,
+      ].join("\n");
+
+    case "crm":
+      return [
+        `[ATOM Researcher] ${c} — ${new Date().toLocaleDateString()}`,
+        `Mode: ${d.mode} · Confidence: ${d.confidence}% (${d.confidenceLabel}) · Sources: ${d.sourceMap.length}`,
+        `Objective: ${form.salesObjective || "—"}`,
+        `Signals: ${detectedSignals.map((s) => s.category).join(", ") || "none"}`,
+        `Next move: ${topSignal?.move || "qualify + book call"}`,
+        ``,
+        `Summary: ${firstLine(d.executiveBrief)}`,
+      ].join("\n");
+  }
+  return firstLine(d.executiveBrief);
+}
+
 function copyFollowup(
   id: string, d: Dossier, form: FormState,
   toast: ReturnType<typeof useToast>["toast"],
 ) {
-  const c = d.company;
-  const offering = form.offering || "our solution";
-  const contact = form.contactName || "there";
-  let text = "";
-  switch (id) {
-    case "cold_email":
-      text = `Subject: ${c} × ${offering}\n\nHi ${contact},\n\n${firstLine(sectionMd(d, "outreach")) || firstLine(d.executiveBrief)}\n\n${firstLine(sectionMd(d, "strategic fit")) || ""}\n\nWorth a 15-minute call this week?\n\n— Sent via ATOM Researcher Pro`;
-      break;
-    case "linkedin_dm":
-      text = `Hi ${contact} — ${firstLine(sectionMd(d, "outreach")) || firstLine(d.executiveBrief)} Given ${c}'s current priorities, thought ${offering} could be relevant. Open to connecting?`;
-      break;
-    case "discovery":
-      text = `DISCOVERY SCRIPT — ${c}\n\n${sectionMd(d, "call strategy") || "Lead with current-state, gap, and impact questions."}`;
-      break;
-    case "objections":
-      text = `OBJECTION BATTLECARD — ${c}\n\nLikely competitive angle: ${form.competitor || "incumbent / status quo"}\n\n${sectionMd(d, "competitive") || sectionMd(d, "strategic fit")}`;
-      break;
-    case "slack":
-      text = `*ATOM dossier — ${c}* (${d.confidence}% confidence)\n\n${firstLine(d.executiveBrief)}\n\nSignals: ${d.buyingSignals.filter((s) => s.detected).map((s) => s.category).join(", ") || "none"}\nNext step: ${form.salesObjective || "qualify + book call"}`;
-      break;
-    case "crm":
-      text = `[ATOM Researcher] ${c} — ${new Date().toLocaleDateString()}\nMode: ${d.mode} · Confidence: ${d.confidence}%\nObjective: ${form.salesObjective || "—"}\nSummary: ${firstLine(d.executiveBrief)}\nSources: ${d.sourceMap.length}`;
-      break;
-  }
+  const text = buildFollowup(id, d, form);
   navigator.clipboard.writeText(text).then(() => toast({ title: "Draft copied", description: `${FOLLOWUPS.find((f) => f.id === id)?.label} generated from dossier.` }));
 }
 
 function firstLine(md: string) {
   const line = md.split("\n").map((l) => l.replace(/^[-*]\s+/, "").trim()).find((l) => l.length > 20);
   return line || md.trim().slice(0, 180);
+}
+
+function bullets(md: string, n: number): string[] {
+  const list = (md.match(/^\s*[-*]\s+.+$/gm) || []).map((l) => l.replace(/^\s*[-*]\s+/, "").trim());
+  const src = list.length ? list : md.split(/\n+/).map((l) => l.trim()).filter((l) => l.length > 12);
+  return src.slice(0, n);
+}
+
+// ─── Source coverage: group the source map into trust buckets ───────────────────
+
+type CoverageKey = "official" | "primary" | "news" | "database" | "other";
+
+const COVERAGE_META: Record<CoverageKey, { label: string; color: string; hint: string }> = {
+  official: { label: "Official / Company", color: "#22e6d6", hint: "Company site, newsroom, blog, careers" },
+  primary: { label: "Primary / Filings", color: "#34d399", hint: "SEC, investor relations, .gov" },
+  news: { label: "Credible News", color: "#8b5cf6", hint: "Reputable press & trade media" },
+  database: { label: "Databases", color: "#3b82f6", hint: "Crunchbase, LinkedIn, G2 & similar" },
+  other: { label: "Other Web", color: "#94a3b8", hint: "Blogs, forums, uncategorized" },
+};
+
+const NEWS_DOMAINS = ["techcrunch", "reuters", "bloomberg", "forbes", "wsj", "nytimes", "ft.com", "cnbc", "businessinsider", "theinformation", "axios", "venturebeat", "wired", "theverge"];
+const DB_DOMAINS = ["crunchbase", "linkedin", "g2.com", "glassdoor", "pitchbook", "owler", "zoominfo", "apollo.io", "builtwith"];
+
+function coverageOf(s: SourceMapEntry, targetDomain: string): CoverageKey {
+  const d = (s.domain || "").toLowerCase();
+  if (targetDomain && d.includes(targetDomain)) return "official";
+  if (s.tier === "primary" || d.endsWith(".gov") || d.includes("sec.gov") || d.includes("investor") || d.includes("/ir")) return "primary";
+  if (DB_DOMAINS.some((x) => d.includes(x))) return "database";
+  if (s.tier === "credible" || NEWS_DOMAINS.some((x) => d.includes(x))) return "news";
+  return "other";
+}
+
+function buildCoverage(sources: SourceMapEntry[], targetDomain: string) {
+  const groups: Record<CoverageKey, SourceMapEntry[]> = { official: [], primary: [], news: [], database: [], other: [] };
+  for (const s of sources) groups[coverageOf(s, targetDomain)].push(s);
+  const order: CoverageKey[] = ["official", "primary", "news", "database", "other"];
+  return order.map((k) => ({ key: k, items: groups[k] })).filter((g) => g.items.length > 0);
+}
+
+// ─── Buying-signal urgency model (client-side, source-aware) ────────────────────
+
+const SIGNAL_URGENCY: Record<string, number> = {
+  "Funding": 5, "Leadership change": 5, "Compliance pressure": 5,
+  "Expansion": 4, "Product launch": 4, "Tech migration": 4,
+  "Hiring": 3, "Competitor weakness": 3, "Market event": 3,
+  "Customer pain": 2,
+};
+
+const SIGNAL_MOVE: Record<string, string> = {
+  "Funding": "Lead with scale/ROI — new capital means budget and a mandate to deploy fast.",
+  "Hiring": "Reference the specific roles they're filling; map your offering to the gap they're staffing.",
+  "Expansion": "Anchor on the new market/region and how you de-risk the expansion.",
+  "Product launch": "Tie outreach to the launch timeline — they need wins around it.",
+  "Compliance pressure": "Lead with risk reduction and audit-readiness; urgency is externally imposed.",
+  "Tech migration": "Position as the modern layer in their new stack; migration = a buying window.",
+  "Competitor weakness": "Contrast directly against the incumbent's exposed gap.",
+  "Leadership change": "New exec = new agenda. Offer a fast, visible win for their first 90 days.",
+  "Customer pain": "Quote the pain back to them and quantify the cost of inaction.",
+  "Market event": "Frame your offering as the response to the market shift.",
+};
+
+interface RankedSignal {
+  category: string; detected: boolean; detail: string;
+  urgency: number; move: string;
+}
+
+function rankSignals(signals: { category: string; detected: boolean; detail: string }[]): RankedSignal[] {
+  return signals
+    .map((s) => ({ ...s, urgency: SIGNAL_URGENCY[s.category] ?? 2, move: SIGNAL_MOVE[s.category] ?? "" }))
+    .sort((a, b) => (Number(b.detected) - Number(a.detected)) || (b.urgency - a.urgency));
 }

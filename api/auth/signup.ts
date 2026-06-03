@@ -7,7 +7,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { sendEmail } from "../_lib/send-email";
+import { sendEmail } from "../_lib/send-email.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

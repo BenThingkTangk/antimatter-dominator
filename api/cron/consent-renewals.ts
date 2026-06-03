@@ -6,7 +6,7 @@
  * groups by tenant, and emails each tenant admin a consent-expiring alert.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sendEmail } from "../_lib/send-email";
+import { sendEmail } from "../_lib/send-email.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL              = clean(process.env.SUPABASE_URL);

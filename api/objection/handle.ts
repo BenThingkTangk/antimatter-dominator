@@ -2,7 +2,7 @@
 // the OpenAI gpt-4 call routinely runs 15-45s and exceeds Edge's 25-30s
 // ceiling. Reverted to Node serverless with maxDuration: 60.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements.js";
 
 export const config = { maxDuration: 60 } as const;
 

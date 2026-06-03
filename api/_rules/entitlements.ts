@@ -14,7 +14,7 @@
  *     created_at timestamptz default now()
  *   )
  */
-import { PLAN_TIERS } from "../../shared/seat-cost-model";
+import { PLAN_TIERS } from "../../shared/seat-cost-model.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

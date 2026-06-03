@@ -10,8 +10,8 @@
  *   - invoice.paid                     → reactivate if was past_due + recovery email
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { PLAN_TIERS } from "../../shared/seat-cost-model";
-import { sendEmail } from "../_lib/send-email";
+import { PLAN_TIERS } from "../../shared/seat-cost-model.js";
+import { sendEmail } from "../_lib/send-email.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

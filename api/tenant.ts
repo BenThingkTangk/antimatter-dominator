@@ -23,7 +23,7 @@ const SUPABASE_URL = clean(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const ADMIN_API_KEY = clean(process.env.ADMIN_API_KEY); // for admin actions
 
-import { sendEmail } from "./_lib/send-email";
+import { sendEmail } from "./_lib/send-email.js";
 
 
 // Default tenant — used ONLY when both host slug and Supabase lookup fail.

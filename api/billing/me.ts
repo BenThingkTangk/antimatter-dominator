@@ -8,8 +8,8 @@
  * Auth: cookie-based session (atom_session).
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { PLAN_TIERS } from "../../shared/seat-cost-model";
-import { getUsageSummary } from "../_rules/entitlements";
+import { PLAN_TIERS } from "../../shared/seat-cost-model.js";
+import { getUsageSummary } from "../_rules/entitlements.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

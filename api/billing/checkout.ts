@@ -13,7 +13,7 @@
  * Returns: { checkoutUrl } or { checkoutUrl: null, message } if Stripe not configured.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { PLAN_TIERS } from "../../shared/seat-cost-model";
+import { PLAN_TIERS } from "../../shared/seat-cost-model.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

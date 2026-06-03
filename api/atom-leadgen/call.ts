@@ -34,7 +34,7 @@
  *      name and has the full research brief already in context.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements.js";
 
 // ─── Env ──────────────────────────────────────────────────────────────────────
 const clean = (v: string | undefined) =>

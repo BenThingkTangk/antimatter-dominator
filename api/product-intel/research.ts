@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL = clean(process.env.SUPABASE_URL);

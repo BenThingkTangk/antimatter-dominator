@@ -8,7 +8,7 @@
  *     warroom, finalSentiment, finalIntent, finalStage, duration }
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sendPush } from "../_lib/push";
+import { sendPush } from "../_lib/push.js";
 
 const clean = (v: string | undefined) => (v || "").replace(/\\n/g, "").trim();
 const SUPABASE_URL              = clean(process.env.SUPABASE_URL);

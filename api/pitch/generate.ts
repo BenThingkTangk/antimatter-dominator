@@ -5,7 +5,7 @@
 // which routinely exceeds Vercel Edge's 25-30s ceiling. Reverted to Node
 // serverless (300s Pro ceiling) and added an explicit maxDuration hint.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { checkEntitlement, recordUsage } from "../_rules/entitlements";
+import { checkEntitlement, recordUsage } from "../_rules/entitlements.js";
 
 export const config = { maxDuration: 60 } as const;
 
