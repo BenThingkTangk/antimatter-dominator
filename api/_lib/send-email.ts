@@ -91,6 +91,68 @@ async function sbInsert(table: string, row: Record<string, any>): Promise<void> 
   }
 }
 
+// ─── Outreach proof linkage (opt-in) ─────────────────────────────────────────
+
+/**
+ * Stable linkage context for a GENUINE outreach send. When (and only when) a
+ * caller passes this, the Resend message is tagged with the exact tag names the
+ * Resend delivery webhook (api/webhooks/resend.ts) extracts, so a delivered
+ * `email.delivered` event forwards to ATOM Content as an `email_sent` proof
+ * event carrying prospect/campaign/account/tenant/user attribution.
+ *
+ * Contract (DO NOT rename without updating api/webhooks/resend.ts tagValue()):
+ *   prospect_id, campaign_id, account_id, tenant_id, user_id
+ *
+ * This is OPT-IN. Transactional/lifecycle sends (welcome, invite, billing,
+ * trial/consent) must NOT pass it — a delivered transactional email must never
+ * become campaign `email_sent` proof just because it was delivered.
+ *
+ * All values are coerced to strings; only defined, non-empty fields are emitted
+ * (Resend tags must be strings; empty linkage is never fabricated). These are
+ * provider-side metadata only — never returned to a caller or sent client-side.
+ */
+export interface OutreachProofLinkage {
+  prospectId?: string | number;
+  campaignId?: string | number;
+  accountId?: string | number;
+  tenantId?: string | number;
+  userId?: string | number;
+}
+
+/** Resend tag — `{ name, value }`, both strings (Resend constraint). */
+export interface ResendTag {
+  name: string;
+  value: string;
+}
+
+// Map of linkage field → the exact Resend tag name the webhook extracts.
+const OUTREACH_TAG_NAMES: { [K in keyof OutreachProofLinkage]-?: string } = {
+  prospectId: "prospect_id",
+  campaignId: "campaign_id",
+  accountId: "account_id",
+  tenantId: "tenant_id",
+  userId: "user_id",
+};
+
+/**
+ * Build the Resend `{ name, value }[]` proof tags from a linkage object.
+ * Only defined, non-empty fields are included; values are stringified and
+ * trimmed. Returns `[]` when nothing is linkable so callers never emit blanks.
+ * Exported so genuine outreach senders (and tests) share one exact contract.
+ */
+export function buildOutreachProofTags(linkage: OutreachProofLinkage | undefined): ResendTag[] {
+  if (!linkage) return [];
+  const tags: ResendTag[] = [];
+  for (const field of Object.keys(OUTREACH_TAG_NAMES) as (keyof OutreachProofLinkage)[]) {
+    const raw = linkage[field];
+    if (raw === undefined || raw === null) continue;
+    const value = String(raw).trim();
+    if (!value) continue;
+    tags.push({ name: OUTREACH_TAG_NAMES[field], value });
+  }
+  return tags;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export interface SendEmailResult {
@@ -103,7 +165,18 @@ export async function sendEmail<T extends keyof TemplateMap>(
   template: T,
   to: string,
   args: TemplateMap[T],
-  options?: { tenantId?: string; userId?: string; subject?: string },
+  options?: {
+    tenantId?: string;
+    userId?: string;
+    subject?: string;
+    /**
+     * OPT-IN. Set ONLY for genuine outreach sends. Emits the proof-linkage
+     * Resend tags (prospect_id/campaign_id/account_id/tenant_id/user_id) so a
+     * delivered event becomes an attributed ATOM Content `email_sent` proof.
+     * Omit for transactional/lifecycle sends — they must not be tagged.
+     */
+    outreachProof?: OutreachProofLinkage;
+  },
 ): Promise<SendEmailResult> {
   if (!RESEND_API_KEY) {
     console.warn(`[email] RESEND_API_KEY not configured — skipping ${template} to ${to}`);
@@ -127,6 +200,14 @@ export async function sendEmail<T extends keyof TemplateMap>(
     return { id: "noop", sent: false, reason: `render_error: ${err?.message}` };
   }
 
+  // Proof-linkage tags are emitted ONLY when the caller opted in via
+  // options.outreachProof. The `template` tag is always present; proof tags are
+  // appended so the Resend webhook can attribute the delivered event.
+  const tags: ResendTag[] = [
+    { name: "template", value: template },
+    ...buildOutreachProofTags(options?.outreachProof),
+  ];
+
   try {
     const resend = new Resend(RESEND_API_KEY);
     const result = await resend.emails.send({
@@ -134,7 +215,7 @@ export async function sendEmail<T extends keyof TemplateMap>(
       to: [to],
       subject: subjectLine,
       html,
-      tags: [{ name: "template", value: template }],
+      tags,
       headers: {
         "List-Unsubscribe": "<mailto:unsubscribe@atomsalesdominator.com>",
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
