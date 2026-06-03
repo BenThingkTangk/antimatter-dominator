@@ -11,12 +11,44 @@ import {
 import { parseVoiceYaml, validateVoiceYaml, DEFAULT_VOICE_YAML } from "@shared/constants/atom-content";
 import { getLiveNumbers } from "./liveNumbersEngine";
 import { previewIngestion, runIngestion, ADAPTERS } from "./productActivityIngestion";
+import { ingestEvents, recentEvents } from "./eventIngestion";
+import crypto from "node:crypto";
 import {
   createContentBrief, generateContentAsset, verifyContentClaims, scoreVoiceCompliance,
   createDerivativeAssets, refineGeneration, approveGeneration, saveEditedGeneration,
 } from "./worker";
 import { PublishGuardError } from "./publishGuard";
 import { z } from "zod";
+
+/**
+ * Bearer-token guard for the production event-ingestion endpoints. Mirrors the
+ * repo's existing CRON_SECRET posture (lib/atom-ops/api-auth.verifyCronSecret):
+ *   - token = CONTENT_EVENTS_INGEST_TOKEN, falling back to CRON_SECRET.
+ *   - In production with NO token configured → fail closed (503) so a
+ *     misconfigured deploy can't expose an unauthenticated write path.
+ *   - Outside production with no token → permissive (local/dev convenience).
+ *   - Otherwise require `Authorization: Bearer <token>`, compared timing-safely.
+ * This deliberately reuses an existing secret instead of inventing a new auth
+ * layer, and keeps the secret entirely server-side (never sent to the client).
+ */
+type IngestAuth = { ok: true } | { ok: false; status: number; error: string };
+
+function verifyEventIngestToken(req: { headers: Record<string, any> }): IngestAuth {
+  const token = process.env.CONTENT_EVENTS_INGEST_TOKEN || process.env.CRON_SECRET || process.env.ATOM_OPS_CRON_SECRET;
+  if (!token) {
+    if (process.env.NODE_ENV === "production") {
+      return { ok: false, status: 503, error: "Event ingest token not configured (set CONTENT_EVENTS_INGEST_TOKEN or CRON_SECRET)." };
+    }
+    return { ok: true }; // dev convenience only
+  }
+  const header = (req.headers.authorization || "").toString();
+  const a = Buffer.from(header);
+  const b = Buffer.from(`Bearer ${token}`);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return { ok: false, status: 401, error: "Unauthorized" };
+  }
+  return { ok: true };
+}
 
 export function registerContentRoutes(app: Express) {
   // ── Dashboard summary
@@ -192,6 +224,39 @@ export function registerContentRoutes(app: Express) {
       res.json(runIngestion(q));
     } catch (err: any) {
       res.status(err?.issues ? 400 : 500).json({ error: err.message });
+    }
+  });
+
+  // ── Production activity events (first-class event feed) ─────────────────────
+  // Real product systems POST events here. Auth: server-side bearer token (see
+  // verifyEventIngestToken). Validation + idempotent persistence live in
+  // eventIngestion; this route is a thin, secret-free boundary.
+  app.post("/api/content/activity-events", (req, res) => {
+    const auth = verifyEventIngestToken(req);
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+    try {
+      const result = ingestEvents(req.body);
+      res.json(result);
+    } catch (err: any) {
+      // ZodError → 400 with field-level issues; anything else → 500.
+      res.status(err?.issues ? 400 : 500).json({ error: err.message || "Event ingest failed", details: err?.issues });
+    }
+  });
+
+  // Operator/debug read-only view of recent event counts (no secrets returned).
+  // Production-only by default; demo events are reported separately so they are
+  // never mistaken for production proof.
+  app.get("/api/content/activity-events/recent", (req, res) => {
+    try {
+      res.json(recentEvents({
+        sourceSystem: (req.query.sourceSystem as string) || undefined,
+        from: (req.query.from as string) || undefined,
+        to: (req.query.to as string) || undefined,
+        includeDemo: req.query.includeDemo === "true",
+        limit: req.query.limit ? Number(req.query.limit) : undefined,
+      }));
+    } catch (err: any) {
+      res.status(err?.issues ? 400 : 500).json({ error: err.message, details: err?.issues });
     }
   });
 

@@ -198,6 +198,27 @@ export const productActivityMetrics = sqliteTable("product_activity_metrics", {
   metadataJson: text("metadata_json"), // JSON blob
 });
 
+// First-class production activity events. Unlike product_activity_metrics
+// (which stores DERIVED aggregates), this table stores raw, append-only
+// production events emitted by real product systems (outreach senders, inbox
+// reply webhooks, calendar/meeting bookers, conversation logs). The events
+// adapter in productActivityIngestion derives verified metrics from these rows.
+export const productActivityEvents = sqliteTable("product_activity_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventType: text("event_type").notNull(), // see PRODUCT_EVENT_TYPES
+  sourceSystem: text("source_system").notNull(), // emitting service, e.g. 'atom-outreach', 'atom-inbox'
+  sourceRecordId: text("source_record_id"), // the event's id WITHIN its source system (dedupe key)
+  occurredAt: text("occurred_at").notNull(), // ISO time the event actually happened
+  tenantId: text("tenant_id"), // optional multi-tenant scope
+  userId: text("user_id"), // optional actor
+  prospectId: text("prospect_id"), // optional linkage to a prospect
+  accountId: text("account_id"), // optional linkage to an account
+  campaignId: text("campaign_id"), // optional linkage to a campaign
+  isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
+  metadataJson: text("metadata_json"), // JSON blob (provider payload, subject, etc.)
+  createdAt: text("created_at").notNull(), // ISO time the row was ingested
+});
+
 export const contentClaims = sqliteTable("content_claims", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   generationId: integer("generation_id").notNull(),
@@ -225,6 +246,7 @@ export const insertContentProjectSchema = createInsertSchema(contentProjects).om
 export const insertContentGenerationSchema = createInsertSchema(contentGenerations).omit({ id: true });
 export const insertVoiceProfileSchema = createInsertSchema(voiceProfiles).omit({ id: true });
 export const insertProductActivityMetricSchema = createInsertSchema(productActivityMetrics).omit({ id: true });
+export const insertProductActivityEventSchema = createInsertSchema(productActivityEvents).omit({ id: true });
 export const insertContentClaimSchema = createInsertSchema(contentClaims).omit({ id: true });
 export const insertApprovalLogSchema = createInsertSchema(approvalLog).omit({ id: true });
 
@@ -236,6 +258,8 @@ export type VoiceProfile = typeof voiceProfiles.$inferSelect;
 export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
 export type ProductActivityMetric = typeof productActivityMetrics.$inferSelect;
 export type InsertProductActivityMetric = z.infer<typeof insertProductActivityMetricSchema>;
+export type ProductActivityEvent = typeof productActivityEvents.$inferSelect;
+export type InsertProductActivityEvent = z.infer<typeof insertProductActivityEventSchema>;
 export type ContentClaim = typeof contentClaims.$inferSelect;
 export type InsertContentClaim = z.infer<typeof insertContentClaimSchema>;
 export type ApprovalLogEntry = typeof approvalLog.$inferSelect;
@@ -251,6 +275,43 @@ export const FUNNEL_STAGES = [
 ] as const;
 export const INTENSITY_LEVELS = ["calm", "sharp", "war_mode"] as const;
 export const METRIC_CONFIDENCE = ["verified", "high", "medium", "low", "unverified"] as const;
+
+// First-class production activity event types. Each is a real, persisted fact
+// a product system can emit. The events adapter maps these to derived metrics.
+export const PRODUCT_EVENT_TYPES = [
+  "email_sent",        // an outreach email/message was sent
+  "outreach_sent",     // generic outreach touch (call/dm/email) — alias-friendly
+  "reply_received",    // a prospect replied
+  "meeting_booked",    // a meeting/demo was scheduled
+  "conversation_event",// a conversation/thread event was processed
+  "followup_completed",// a follow-up task was completed
+  "lead_captured",     // a new lead was captured/generated
+] as const;
+export type ProductEventType = (typeof PRODUCT_EVENT_TYPES)[number];
+
+// ── Production event ingestion payloads (server-side validated) ──────────────
+// occurredAt must be a real ISO timestamp; the event type must be known. Linkage
+// ids and metadata are optional. `isDemo` lets an operator post clearly-marked
+// test events that the default proof pipeline excludes.
+export const productEventInputSchema = z.object({
+  eventType: z.enum(PRODUCT_EVENT_TYPES),
+  sourceSystem: z.string().min(1).max(120),
+  sourceRecordId: z.string().min(1).max(200).optional().nullable(),
+  occurredAt: z.string().datetime(),
+  tenantId: z.string().max(200).optional().nullable(),
+  userId: z.string().max(200).optional().nullable(),
+  prospectId: z.string().max(200).optional().nullable(),
+  accountId: z.string().max(200).optional().nullable(),
+  campaignId: z.string().max(200).optional().nullable(),
+  metadata: z.record(z.any()).optional().nullable(),
+  isDemo: z.boolean().optional().default(false),
+});
+export type ProductEventInput = z.infer<typeof productEventInputSchema>;
+
+export const productEventBatchSchema = z.object({
+  events: z.array(productEventInputSchema).min(1).max(1000),
+});
+export type ProductEventBatch = z.infer<typeof productEventBatchSchema>;
 
 export const contentBriefSchema = z.object({
   title: z.string().min(1),

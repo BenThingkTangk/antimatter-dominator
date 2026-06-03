@@ -220,8 +220,105 @@ class CampaignsAdapter implements MetricAdapter {
   }
 }
 
-/** Registered adapters. Add a new production feed by appending here. */
-export const ADAPTERS: MetricAdapter[] = [new ProspectsAdapter(), new CampaignsAdapter()];
+// ─── Adapter: product activity events (FIRST-CLASS) ──────────────────────────
+// product_activity_events stores raw, append-only production events emitted by
+// real product systems (outreach senders, inbox reply webhooks, calendar
+// bookers, conversation logs). Unlike the prospect/campaign adapters — which
+// APPROXIMATE outreach/replies/meetings from status transitions — these are
+// direct, persisted counts of the thing itself, so they are the strongest proof
+// source. Each direct count is "verified"; rates derived from two reliable
+// counts are "high" and only emitted when the denominator > 0.
+//
+// Event-type → metric mapping (counts, all verified):
+//   email_sent + outreach_sent     → messages_sent
+//   reply_received                 → replies_received
+//   meeting_booked                 → meetings_booked
+//   conversation_event             → conversations_processed
+//   followup_completed             → followups_completed
+//   lead_captured                  → leads_generated
+// Derived rates (high, only when denominator reliable):
+//   reply_rate    = replies / messages_sent * 100   (needs messages_sent > 0)
+//   meeting_rate  = meetings / replies * 100         (needs replies > 0)
+class EventsAdapter implements MetricAdapter {
+  readonly sourceSystem = "atom-activity-events";
+  readonly description = "First-class product activity events (email/outreach sent, replies, meetings, conversations, follow-ups, leads)";
+
+  private counts(w: IngestionWindow): Record<string, number> {
+    // Production events only — demo events are never read here, so a demo/test
+    // event can never become production proof.
+    return storage.countProductActivityEventsByType({
+      from: w.from || undefined,
+      to: w.to || undefined,
+      includeDemo: false,
+    });
+  }
+  available(): boolean {
+    return storage.getProductActivityEvents({ limit: 1 }).length > 0;
+  }
+  derive(w: IngestionWindow): DerivedMetric[] {
+    const c = this.counts(w);
+    const totalEvents = Object.values(c).reduce((a, b) => a + b, 0);
+    if (totalEvents === 0) return [];
+
+    const messagesSent = (c.email_sent || 0) + (c.outreach_sent || 0);
+    const replies = c.reply_received || 0;
+    const meetings = c.meeting_booked || 0;
+    const conversations = c.conversation_event || 0;
+    const followups = c.followup_completed || 0;
+    const leads = c.lead_captured || 0;
+    const now = new Date().toISOString();
+
+    const counted = (key: string, label: string, value: number, unit: string, eventTypes: string[]): DerivedMetric =>
+      emit(this, w, now, {
+        metricKey: key, metricLabel: label, value, unit, confidence: "verified",
+        meta: {
+          derivation: `count(events where event_type in [${eventTypes.join(", ")}])`,
+          source_table: "product_activity_events",
+          event_types: eventTypes,
+          source_count: value,
+          total_events_in_window: totalEvents,
+        },
+      });
+
+    const out: DerivedMetric[] = [];
+    // Only emit a count metric when its underlying event type actually occurred,
+    // so we never assert a fabricated zero as proof.
+    if (messagesSent > 0) out.push(counted("messages_sent", "Messages / outreach sent", messagesSent, "", ["email_sent", "outreach_sent"]));
+    if (replies > 0) out.push(counted("replies_received", "Replies received", replies, "", ["reply_received"]));
+    if (meetings > 0) out.push(counted("meetings_booked", "Meetings booked", meetings, "", ["meeting_booked"]));
+    if (conversations > 0) out.push(counted("conversations_processed", "Conversations processed", conversations, "events", ["conversation_event"]));
+    if (followups > 0) out.push(counted("followups_completed", "Follow-ups completed", followups, "", ["followup_completed"]));
+    if (leads > 0) out.push(counted("leads_generated", "Leads generated", leads, "", ["lead_captured"]));
+
+    // Rates: deterministic but one step removed → "high". Only emitted when the
+    // denominator is a reliable positive count (guards against divide-by-zero
+    // and against asserting a rate with no real basis).
+    if (messagesSent > 0 && replies > 0) {
+      const rate = Math.round((replies / messagesSent) * 1000) / 10;
+      out.push(emit(this, w, now, {
+        metricKey: "reply_rate", metricLabel: "Reply rate", value: rate, unit: "%", confidence: "high",
+        meta: { derivation: "replies_received / messages_sent * 100", source_table: "product_activity_events", numerator: replies, denominator: messagesSent, source_count: messagesSent },
+      }));
+    }
+    if (replies > 0 && meetings > 0) {
+      const rate = Math.round((meetings / replies) * 1000) / 10;
+      out.push(emit(this, w, now, {
+        metricKey: "meeting_conversion_rate", metricLabel: "Reply→meeting rate", value: rate, unit: "%", confidence: "high",
+        meta: { derivation: "meetings_booked / replies_received * 100", source_table: "product_activity_events", numerator: meetings, denominator: replies, source_count: replies },
+      }));
+    }
+    return out;
+  }
+}
+
+/**
+ * Registered adapters, in priority order. The first-class events adapter is the
+ * PRIMARY production proof source; the prospect/campaign adapters remain as
+ * secondary/fallback sources that approximate the same signals from status
+ * transitions when no direct events have been ingested yet. They write to
+ * distinct sourceSystem values, so all three coexist without clobbering.
+ */
+export const ADAPTERS: MetricAdapter[] = [new EventsAdapter(), new ProspectsAdapter(), new CampaignsAdapter()];
 
 export interface IngestionPreview {
   window: IngestionWindow;
