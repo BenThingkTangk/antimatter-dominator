@@ -18,6 +18,7 @@ import MarketIntent from "./pages/market-intent";
 import ProspectEngine from "./pages/prospect-engine";
 import AtomLeadGen from "./pages/atom-leadgen";
 import CompanyIntelligence from "./pages/company-intelligence";
+import AtomResearcher from "./pages/atom-researcher";
 import AtomWarRoom from "./pages/atom-warroom";
 import AtomContent from "./pages/atom-content";
 import Campaigns from "./pages/campaigns";
@@ -215,6 +216,7 @@ function AuthenticatedRoutesInner() {
         <Route path="/atom-leadgen" component={AtomLeadGen} />
         <Route path="/atom-campaign">{() => <Redirect to="/campaigns" />}</Route>
         <Route path="/company-intelligence" component={CompanyIntelligence} />
+        <Route path="/researcher" component={AtomResearcher} />
         <Route path="/war-room" component={AtomWarRoom} />
         <Route path="/atom-content" component={AtomContent} />
         <Route path="/campaigns" component={Campaigns} />

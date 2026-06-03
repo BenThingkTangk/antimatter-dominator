@@ -4,7 +4,7 @@ import {
   Shield, MessageSquareWarning, TrendingUp,
   Radar, ChevronLeft, ChevronRight, PhoneCall, Brain,
   Menu, X, Swords, Settings, LogOut, User, Crown, Building2, Zap, CreditCard, Coins, ListChecks, AlertCircle,
-  LayoutDashboard, ArrowUpRight, FileText,
+  LayoutDashboard, ArrowUpRight, FileText, FileSearch,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { href: "/campaigns", icon: ListChecks, label: "ΔTOM Campaigns" },
   { href: "/atom-content", icon: FileText, label: "ΔTOM Content" },
   { href: "/company-intelligence", icon: Brain, label: "ΔTOM WarBook" },
+  { href: "/researcher", icon: FileSearch, label: "ΔTOM Researcher Pro" },
 ];
 
 // ΔTOM canonical logo — sourced from @nirmata/atom-design-system/react.

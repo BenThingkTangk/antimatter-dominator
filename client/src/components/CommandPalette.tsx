@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   Swords, TrendingUp, MessageSquareWarning, Shield, Radar,
-  PhoneCall, ListChecks, Brain, Search, ArrowRight,
+  PhoneCall, ListChecks, Brain, Search, ArrowRight, FileSearch,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -24,6 +24,7 @@ const NAV_ITEMS: PaletteItem[] = [
   { id: "leadgen", label: "ΔTOM Lead Gen", href: "/atom-leadgen", icon: PhoneCall, keywords: "lead gen dialer call phone" },
   { id: "campaigns", label: "ΔTOM Campaigns", href: "/campaigns", icon: ListChecks, keywords: "campaign bulk import csv" },
   { id: "warbook", label: "ΔTOM WarBook", href: "/company-intelligence", icon: Brain, keywords: "warbook company intelligence research" },
+  { id: "researcher", label: "ΔTOM Researcher Pro", href: "/researcher", icon: FileSearch, keywords: "researcher sonar deep research dossier perplexity vibranium account intelligence" },
 ];
 
 interface CommandPaletteProps {

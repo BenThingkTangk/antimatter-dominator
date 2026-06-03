@@ -14,8 +14,18 @@ import {
 } from "@shared/schema";
 import { scorePublic, scoreAtom, tierOf, HEALTHCARE_HIPAA_TEMPLATE } from "./scoring/engine";
 import { registerContentRoutes } from "./content/routes";
+import {
+  runResearch,
+  PERPLEXITY_API_KEY as RESEARCHER_PPLX_KEY,
+  type ResearchRequest,
+  type ResearchMode,
+} from "../api/_lib/atom-researcher";
 
 const anthropic = new Anthropic();
+
+const RESEARCH_MODES: ResearchMode[] = [
+  "fast_scan", "pro_dossier", "deep_research", "vibranium_war_room",
+];
 
 const SYSTEM_PROMPT = `You are the Antimatter AI Sales Dominator — a lethal, hyper-intelligent sales AI for the Antimatter ecosystem. You know every product inside and out. You speak with authority, confidence, and killer instinct. Your job is to arm sales reps with devastating pitches, bulletproof objection responses, and market intelligence that closes deals.
 
@@ -39,6 +49,57 @@ export async function registerRoutes(server: Server, app: Express) {
     const product = storage.getProductBySlug(req.params.slug);
     if (!product) return res.status(404).json({ error: "Product not found" });
     res.json(product);
+  });
+
+  // ===== ATOM RESEARCHER PRO / SONAR (Vibranium deep research) =====
+  // Dev-mode mirror of api/atom-researcher.ts (the Vercel function). Both call
+  // the same shared engine in api/_lib/atom-researcher.ts so behaviour is
+  // identical in local dev and on Vercel.
+  app.post("/api/atom-researcher", async (req, res) => {
+    if (!RESEARCHER_PPLX_KEY) {
+      return res.status(503).json({
+        ok: false,
+        error: "perplexity_not_configured",
+        details: "PERPLEXITY_API_KEY is not configured. Add it to your server environment to activate live Sonar research.",
+      });
+    }
+    const b = (req.body || {}) as Record<string, unknown>;
+    const mode = RESEARCH_MODES.includes(b.mode as ResearchMode)
+      ? (b.mode as ResearchMode)
+      : "pro_dossier";
+    const researchReq: ResearchRequest = {
+      companyName: typeof b.companyName === "string" ? b.companyName.trim() : undefined,
+      domain: typeof b.domain === "string" ? b.domain.trim() : undefined,
+      contactName: typeof b.contactName === "string" ? b.contactName.trim() : undefined,
+      contactTitle: typeof b.contactTitle === "string" ? b.contactTitle.trim() : undefined,
+      linkedinUrl: typeof b.linkedinUrl === "string" ? b.linkedinUrl.trim() : undefined,
+      salesObjective: typeof b.salesObjective === "string" ? b.salesObjective.trim() : undefined,
+      offering: typeof b.offering === "string" ? b.offering.trim() : undefined,
+      competitor: typeof b.competitor === "string" ? b.competitor.trim() : undefined,
+      notes: typeof b.notes === "string" ? b.notes.trim() : undefined,
+      mode,
+    };
+    if (!researchReq.companyName && !researchReq.domain) {
+      return res.status(400).json({
+        ok: false,
+        error: "missing_target",
+        details: "A companyName or domain is required to run ATOM research.",
+      });
+    }
+    try {
+      const result = await runResearch(researchReq);
+      if (!result.ok) {
+        const status = result.error === "timeout" ? 504 : 502;
+        return res.status(status).json(result);
+      }
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: "research_failed",
+        details: err?.message || "Unexpected error during ATOM research.",
+      });
+    }
   });
 
   // ===== PITCH GENERATOR (AI) =====
