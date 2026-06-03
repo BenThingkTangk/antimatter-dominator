@@ -33,7 +33,8 @@
  * Env (see docs/examples/brain/README.md for the full list, including the
  * optional AKAMAI_B200_ROUTE_* / AKAMAI_B200_MODEL_* / BRAIN_FRONTIER_MODEL_*
  * overrides that let routes and model ids be set per environment):
- *   AKAMAI_B200_BASE_URL, AKAMAI_B200_API_KEY,
+ *   AKAMAI_B200_BASE_URL (required), AKAMAI_B200_API_KEY (optional — sent as a
+ *   bearer only when set; the live Blackwell gateway exposes no auth scheme),
  *   QDRANT_URL, QDRANT_API_KEY,
  *   ANTHROPIC_API_KEY, OPENAI_API_KEY
  */
@@ -52,19 +53,24 @@ const OPENAI_API_KEY       = clean(process.env.OPENAI_API_KEY);
 
 // ─── B200 plane routes ──────────────────────────────────────────────────────────
 // The exact path suffixes the Blackwell plane serves each capability under,
-// appended to `${AKAMAI_B200_BASE_URL}/v1/`. Chat/embeddings use the standard
-// OpenAI-compatible names; the audio/classifier/redact routes are deployment
-// -specific, so every one is env-overridable. Centralized here so a route
-// change is a single edit (and documented in docs/examples/brain/README.md)
-// rather than a string buried in a handler.
+// appended to `${AKAMAI_B200_BASE_URL}/v1/`. Defaults match the live ΔTOM
+// Blackwell Gateway OpenAPI (v1.0.0) so a deployment can point
+// AKAMAI_B200_BASE_URL straight at the gateway with no route overrides. Every
+// suffix stays env-overridable for planes that expose a different shape.
+// Centralized here so a route change is a single edit (and documented in
+// docs/examples/brain/README.md) rather than a string buried in a handler.
+//
+// Gateway shape: emotion + intent share one /v1/emotion-intent route, while the
+// TCPA hard-stop has its own /v1/compliance/stop-classify route — so they no
+// longer collapse onto a single text classifier.
 const B200_ROUTES = {
   chat:     envOr("AKAMAI_B200_ROUTE_CHAT",     "chat/completions"),
-  asr:      envOr("AKAMAI_B200_ROUTE_ASR",      "audio/transcriptions"),
-  tts:      envOr("AKAMAI_B200_ROUTE_TTS",      "audio/speech"),
+  asr:      envOr("AKAMAI_B200_ROUTE_ASR",      "asr"),
+  tts:      envOr("AKAMAI_B200_ROUTE_TTS",      "tts"),
   embed:    envOr("AKAMAI_B200_ROUTE_EMBED",    "embeddings"),
-  classify_audio: envOr("AKAMAI_B200_ROUTE_CLASSIFY_AUDIO", "audio/classify"),
-  classify_text:  envOr("AKAMAI_B200_ROUTE_CLASSIFY_TEXT",  "text/classify"),
-  redact:   envOr("AKAMAI_B200_ROUTE_REDACT",   "text/redact"),
+  emotion_intent: envOr("AKAMAI_B200_ROUTE_EMOTION_INTENT", "emotion-intent"),
+  tcpa:     envOr("AKAMAI_B200_ROUTE_TCPA",     "compliance/stop-classify"),
+  redact:   envOr("AKAMAI_B200_ROUTE_REDACT",   "redact"),
 } as const;
 
 // ─── Model registry ───────────────────────────────────────────────────────────
@@ -123,18 +129,22 @@ class BrainError extends Error {
 // ─── B200 plane transport ──────────────────────────────────────────────────────
 // The Blackwell plane exposes an OpenAI-compatible surface for chat/embeddings
 // plus task-specific routes for audio/vision/classifier models. We post to
-// `${BASE}/v1/<path>` with a bearer key and a generous timeout (voice + 72B
-// models are not instant). `model` is always set explicitly by the Brain.
+// `${BASE}/v1/<path>` with a generous timeout (voice + 72B models are not
+// instant). `model` is always set explicitly by the Brain.
+//
+// Only AKAMAI_B200_BASE_URL is required: the live Blackwell gateway publishes no
+// auth scheme, so the bearer header is sent ONLY when AKAMAI_B200_API_KEY is a
+// non-empty value. Deployments that front the gateway with an auth proxy set the
+// key and get Authorization; unauthenticated gateways leave it unset.
 async function b200<T = any>(path: string, body: unknown, timeoutMs = 60_000): Promise<T> {
   if (!AKAMAI_B200_BASE_URL) throw new BrainError(500, "B200 plane not configured: set AKAMAI_B200_BASE_URL");
-  if (!AKAMAI_B200_API_KEY)  throw new BrainError(500, "B200 plane not configured: set AKAMAI_B200_API_KEY");
   const url = `${AKAMAI_B200_BASE_URL.replace(/\/$/, "")}/v1/${path.replace(/^\//, "")}`;
   let r: Response;
   try {
     r = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${AKAMAI_B200_API_KEY}`,
+        ...(AKAMAI_B200_API_KEY ? { Authorization: `Bearer ${AKAMAI_B200_API_KEY}` } : {}),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -391,19 +401,19 @@ async function runVectorSearch(body: any) {
 }
 
 // ─── Emotion / Intent (SpeechBrain) ───────────────────────────────────────────────
-// Modality-aware: audio inputs go to the B200 audio classifier; text-only
-// inputs go to the text classifier. (The shipped intent.json example is
-// text-only, so it must hit the text route, not audio.) Audio wins when both
-// are present.
+// Both emotion and intent are served by the gateway's single /v1/emotion-intent
+// route. It accepts either an audio_base64 input or text-only input; we forward
+// whichever the caller supplied (audio wins when both are present) and echo the
+// modality the request ran under. `task` tells the route which classifier head
+// to use.
 async function runSpeechBrain(body: any, task: "emotion" | "intent") {
   const audio = body.audio_base64 || body.audio;
   const text = body.text;
   if (!audio && !text) throw new BrainError(400, "audio_base64 or text required");
   const model = task === "emotion" ? B200_MODELS.emotion : B200_MODELS.intent;
-  const route = audio ? B200_ROUTES.classify_audio : B200_ROUTES.classify_text;
   const data = audio
-    ? await b200<any>(route, { model, task, audio_base64: audio, text })
-    : await b200<any>(route, { model, task, text });
+    ? await b200<any>(B200_ROUTES.emotion_intent, { model, task, audio_base64: audio, text })
+    : await b200<any>(B200_ROUTES.emotion_intent, { model, task, text });
   return { task, routed: "b200", model, modality: audio ? "audio" : "text", label: data?.label ?? null, scores: data?.scores ?? {} };
 }
 
@@ -417,7 +427,7 @@ async function runTcpaCheck(body: any) {
   const text = body.text;
   if (!text || typeof text !== "string") throw new BrainError(400, "text required");
   try {
-    const data = await b200<any>(B200_ROUTES.classify_text, { model: B200_MODELS.tcpa, text });
+    const data = await b200<any>(B200_ROUTES.tcpa, { model: B200_MODELS.tcpa, text });
     const label = String(data?.label ?? "").toLowerCase();
     const score = typeof data?.score === "number" ? data.score : 0;
     // "stop" / "dnc" / "revoke" labels above threshold → hard stop.
@@ -498,7 +508,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       service: "atom-brain",
       tasks: ["chat", "reason", "asr", "tts", "embed", "vector_upsert", "vector_search", "emotion", "intent", "tcpa_check", "vision", "pii_redact"],
       planes: {
-        b200: Boolean(AKAMAI_B200_BASE_URL && AKAMAI_B200_API_KEY),
+        // The B200 plane needs only a base URL — the live Blackwell gateway is
+        // unauthenticated. `b200_auth` reports whether a bearer key is also set
+        // (sent as Authorization) for gateways fronted by an auth proxy.
+        b200: Boolean(AKAMAI_B200_BASE_URL),
+        b200_auth: Boolean(AKAMAI_B200_API_KEY),
         qdrant: Boolean(QDRANT_URL),
         frontier_anthropic: Boolean(ANTHROPIC_API_KEY),
         frontier_openai: Boolean(OPENAI_API_KEY),
