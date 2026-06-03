@@ -39,33 +39,92 @@ function sentencesOf(content: string): string[] {
   return content.split(SENTENCE_SPLIT).map((s) => s.trim()).filter(Boolean);
 }
 
-// Numbers that look like factual metrics: 42, 31%, 5,204, $1.2M, 74 percent.
-const NUMERIC_RE = /(\$?\d[\d,]*(?:\.\d+)?\s?(?:%|percent|k|m|million|billion|events|hrs|hours|leads|x)?)/i;
+/**
+ * Find every numeric factual token in a sentence — plain counts, percentages,
+ * currency, ranges, multipliers, and metric-like phrases. The previous version
+ * relied on a keyword allowlist, which let fabricated counts ("42 enterprise
+ * logos") slip through with no claim recorded. We now extract all numbers and
+ * let unit semantics + metric matching decide the verdict.
+ *
+ * Excluded: years (1900-2099), ordinals ("1st"), and list/heading markers so we
+ * don't flag "Step 2" or "in 2024" as performance claims.
+ */
+const NUMBER_TOKEN_RE =
+  /\$?\d[\d,]*(?:\.\d+)?\s?(?:%|percent|k\b|m\b|million|billion|events?|hrs?|hours?|leads?|reps?|customers?|logos?|accounts?|deals?|x\b)?/gi;
 
-/** Try to bind a numeric value found in text to a usable live metric. */
-function matchMetric(value: number, unit: string | null, live: LiveNumbersResult): LiveMetric | undefined {
-  const candidates = live.metrics.filter((m) => Math.abs(m.value - value) < 0.001);
-  if (candidates.length === 0) return undefined;
-  if (unit) {
-    const u = unit.toLowerCase();
-    const byUnit = candidates.find((m) => m.unit.toLowerCase() === u || (u === "percent" && m.unit === "%"));
-    if (byUnit) return byUnit;
-  }
-  // Prefer the highest-confidence candidate.
-  const rank = (c: string) => ({ verified: 4, high: 3, medium: 2, low: 1, unverified: 0 } as any)[c] ?? 0;
-  return candidates.sort((a, b) => rank(b.confidence) - rank(a.confidence))[0];
+interface ParsedNumber {
+  raw: string;
+  value: number;
+  unit: string | null; // normalized: "%", "$", "$M", or null for bare count
 }
 
-function parseNumeric(token: string): { value: number; unit: string | null } | null {
-  const m = token.match(/(\$)?([\d,]+(?:\.\d+)?)\s?(%|percent|k|m|million|billion|events|hrs|hours|leads|x)?/i);
+/** Canonical unit-class so a claim can only bind to a semantically compatible metric. */
+export type UnitClass = "percent" | "currency" | "duration" | "count";
+
+export function unitClass(unit: string | null | undefined): UnitClass {
+  const u = (unit || "").toLowerCase().trim();
+  if (u === "%" || u === "percent") return "percent";
+  if (u === "$" || u === "$m" || u === "usd" || u.startsWith("$")) return "currency";
+  if (u === "hr" || u === "hrs" || u === "hour" || u === "hours" || u === "min" || u === "mins" || u === "days") return "duration";
+  return "count";
+}
+
+function isYear(value: number, raw: string): boolean {
+  return /^\d{4}$/.test(raw.trim()) && value >= 1900 && value <= 2099;
+}
+
+function parseNumeric(token: string): ParsedNumber | null {
+  const m = token.match(/(\$)?([\d,]+(?:\.\d+)?)\s?(%|percent|k|m|million|billion|events?|hrs?|hours?|leads?|reps?|customers?|logos?|accounts?|deals?|x)?/i);
   if (!m) return null;
   let value = parseFloat(m[2].replace(/,/g, ""));
-  let unit: string | null = m[3] ? m[3].toLowerCase() : m[1] ? "$" : null;
-  if (unit === "k") { value *= 1_000; unit = null; }
-  else if (unit === "m" || unit === "million") { value *= 1; unit = m[1] ? "$M" : null; }
-  else if (unit === "percent") unit = "%";
   if (Number.isNaN(value)) return null;
-  return { value, unit };
+  const rawUnit = m[3] ? m[3].toLowerCase() : null;
+  let unit: string | null = rawUnit || (m[1] ? "$" : null);
+  if (rawUnit === "k") { value *= 1_000; unit = m[1] ? "$" : null; }
+  else if (rawUnit === "m" || rawUnit === "million") { value *= 1; unit = m[1] ? "$M" : null; }
+  else if (rawUnit === "billion") { value *= 1; unit = m[1] ? "$M" : null; }
+  else if (rawUnit === "percent") unit = "%";
+  else if (rawUnit && unitClass(rawUnit) === "count") unit = null; // plain count noun, drop label
+  return { raw: token, value, unit };
+}
+
+/** Extract all numeric factual tokens from a sentence (excluding years). */
+function extractNumbers(sentence: string): ParsedNumber[] {
+  const out: ParsedNumber[] = [];
+  const re = new RegExp(NUMBER_TOKEN_RE.source, "gi");
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(sentence)) !== null) {
+    if (match[0] === "") { re.lastIndex++; continue; }
+    const parsed = parseNumeric(match[0]);
+    if (!parsed) continue;
+    if (isYear(parsed.value, match[0])) continue;
+    out.push(parsed);
+  }
+  return out;
+}
+
+const RANK = (c: string) => ({ verified: 4, high: 3, medium: 2, low: 1, unverified: 0 } as Record<string, number>)[c] ?? 0;
+
+/**
+ * Try to bind a numeric value to a live metric. A match requires BOTH equal
+ * value AND a compatible unit-class — a percent claim can only bind to a
+ * percent-rate metric, currency only to currency, counts only to counts. This
+ * closes the unit-blind hole where "42%" matched "leads_generated = 42".
+ *
+ * Demo metrics may only back a claim when demo data is explicitly allowed;
+ * otherwise they are ignored so demo numbers can never be promoted as real
+ * verified proof.
+ */
+function matchMetric(parsed: ParsedNumber, live: LiveNumbersResult): LiveMetric | undefined {
+  const wantClass = unitClass(parsed.unit);
+  const candidates = live.metrics.filter((m) => {
+    if (Math.abs(m.value - parsed.value) >= 0.001) return false;
+    if (unitClass(m.unit) !== wantClass) return false;
+    if (m.isDemo && !live.demoMode) return false; // demo proof requires explicit opt-in
+    return true;
+  });
+  if (candidates.length === 0) return undefined;
+  return candidates.sort((a, b) => RANK(b.confidence) - RANK(a.confidence))[0];
 }
 
 export function checkClaims(content: string, live: LiveNumbersResult): ClaimReport {
@@ -85,48 +144,52 @@ export function checkClaims(content: string, live: LiveNumbersResult): ClaimRepo
     // Absolute claims.
     const absHit = ABSOLUTE_CLAIM_TERMS.find((t) => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(sentence));
 
-    // Metric claims — sentence contains a number that reads as a stat.
-    const numToken = sentence.match(NUMERIC_RE)?.[0];
-    const looksLikeStat = !!numToken && /(lead|reply|repl|reduc|increas|process|event|pipeline|conversion|%|percent|\$|faster|x )/i.test(sentence);
-
-    if (looksLikeStat && numToken) {
-      const parsed = parseNumeric(numToken);
-      const matched = parsed ? matchMetric(parsed.value, parsed.unit, live) : undefined;
-      if (matched && matched.usableInFinal) {
-        claims.push({
-          claimText: sentence,
-          claimType: "metric",
-          metricKey: matched.metricKey,
-          verified: "verified",
-          sourceSystem: matched.sourceSystem,
-          confidence: matched.confidence,
-          riskLevel: "low",
-          note: `Backed by ${matched.sourceSystem} (${matched.confidence}, captured ${matched.capturedAt.slice(0, 10)}).`,
-        });
-      } else if (matched && matched.suggestableOnly) {
-        claims.push({
-          claimText: sentence,
-          claimType: "metric",
-          metricKey: matched.metricKey,
-          verified: "needs_review",
-          sourceSystem: matched.sourceSystem,
-          confidence: matched.confidence,
-          riskLevel: "medium",
-          note: `Matched a medium-confidence metric — needs review before publishing.`,
-        });
-        riskFlags.push(`Medium-confidence metric used: "${sentence.slice(0, 80)}"`);
-      } else {
-        claims.push({
-          claimText: sentence,
-          claimType: "metric",
-          metricKey: null,
-          verified: "rejected",
-          sourceSystem: null,
-          confidence: null,
-          riskLevel: "high",
-          note: "Numeric claim with no matching verified live metric. Remove or verify.",
-        });
-        riskFlags.push(`Unsupported numeric claim: "${sentence.slice(0, 80)}"`);
+    // Numeric claims — extract EVERY numeric factual statement in the sentence.
+    // No keyword allowlist: any unsupported number is surfaced, never ignored.
+    const numbers = extractNumbers(sentence);
+    if (numbers.length > 0) {
+      for (const parsed of numbers) {
+        const matched = matchMetric(parsed, live);
+        const demoNote = matched?.isDemo ? " [DEMO metric — not real production proof]" : "";
+        if (matched && matched.usableInFinal) {
+          claims.push({
+            claimText: sentence,
+            claimType: "metric",
+            metricKey: matched.metricKey,
+            verified: matched.isDemo ? "needs_review" : "verified",
+            sourceSystem: matched.sourceSystem,
+            confidence: matched.confidence,
+            riskLevel: matched.isDemo ? "medium" : "low",
+            note: matched.isDemo
+              ? `Matched a DEMO metric (${matched.sourceSystem}, ${matched.confidence}). Demo data cannot certify real proof — review before publishing.`
+              : `Backed by ${matched.sourceSystem} (${matched.confidence}, captured ${matched.capturedAt.slice(0, 10)}).`,
+          });
+          if (matched.isDemo) riskFlags.push(`Demo metric backing a claim: "${sentence.slice(0, 80)}"`);
+        } else if (matched && matched.suggestableOnly) {
+          claims.push({
+            claimText: sentence,
+            claimType: "metric",
+            metricKey: matched.metricKey,
+            verified: "needs_review",
+            sourceSystem: matched.sourceSystem,
+            confidence: matched.confidence,
+            riskLevel: "medium",
+            note: `Matched a medium-confidence metric — needs review before publishing.${demoNote}`,
+          });
+          riskFlags.push(`Medium-confidence metric used: "${sentence.slice(0, 80)}"`);
+        } else {
+          claims.push({
+            claimText: sentence,
+            claimType: "metric",
+            metricKey: null,
+            verified: "rejected",
+            sourceSystem: null,
+            confidence: null,
+            riskLevel: "high",
+            note: `Numeric claim "${parsed.raw.trim()}" has no matching verified live metric of the same unit type. Remove or verify.`,
+          });
+          riskFlags.push(`Unsupported numeric claim: "${sentence.slice(0, 80)}"`);
+        }
       }
       continue;
     }

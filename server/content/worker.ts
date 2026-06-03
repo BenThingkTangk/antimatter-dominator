@@ -21,7 +21,7 @@ import { getLiveNumbers, type LiveNumbersResult } from "./liveNumbersEngine";
 import { checkVoice, type VoiceReport } from "./voiceChecker";
 import { checkClaims, claimsToRows, type ClaimReport } from "./claimChecker";
 import {
-  generateContent, transformContent, type GenerationEnvelope, type ProviderName,
+  generateContent, transformContent, type GenerationEnvelope, type ProviderName, type ProviderFallback,
 } from "./generationAdapter";
 import { CONTENT_TYPE_LABELS } from "./promptBuilder";
 
@@ -39,6 +39,8 @@ export interface EvidencePanel {
   voice: VoiceReport;
   claimReport: { score: number; summary: string };
   fallbackMessage: string | null;
+  /** Set when a production provider failed and output degraded to demo. */
+  providerFallback: ProviderFallback | null;
 }
 
 function activeVoiceYaml(): string {
@@ -95,7 +97,7 @@ export async function generateContentAsset(brief: ContentBrief, projectId?: numb
   const voice = checkVoice(gen.envelope.content, voiceYaml);
   const claimReport = checkClaims(gen.envelope.content, live);
 
-  const evidence = buildEvidence(gen.provider, gen.isDemo, gen.envelope, live, voice, claimReport);
+  const evidence = buildEvidence(gen.provider, gen.isDemo, gen.envelope, live, voice, claimReport, gen.fallback);
 
   // 4) Persist.
   const now = new Date().toISOString();
@@ -123,6 +125,7 @@ function buildEvidence(
   live: LiveNumbersResult,
   voice: VoiceReport,
   claimReport: ClaimReport,
+  providerFallback: ProviderFallback | null = null,
 ): EvidencePanel {
   const suggestedProofPoints = live.usable
     .filter((m) => !envelope.live_numbers_used.some((u) => u.metric_key === m.metricKey))
@@ -154,6 +157,7 @@ function buildEvidence(
     voice,
     claimReport: { score: claimReport.score, summary: claimReport.summary },
     fallbackMessage: live.fallbackMessage,
+    providerFallback,
   };
 }
 
@@ -240,7 +244,7 @@ export async function createDerivativeAssets(generationId: number, derivativeTyp
     risk_flags: claimReport.riskFlags,
     derivative_recommendations: [],
   };
-  const evidence = buildEvidence(out.provider, out.isDemo, envelope, live, voice, claimReport);
+  const evidence = buildEvidence(out.provider, out.isDemo, envelope, live, voice, claimReport, out.fallback);
 
   const generation = storage.createContentGeneration({
     projectId: project.id,
@@ -300,7 +304,7 @@ export async function refineGeneration(generationId: number, mode: "tighten" | "
     risk_flags: claimReport.riskFlags,
     derivative_recommendations: existingEnvelope?.derivative_recommendations || [],
   };
-  const evidence = buildEvidence(out.provider, out.isDemo, envelope, live, voice, claimReport);
+  const evidence = buildEvidence(out.provider, out.isDemo, envelope, live, voice, claimReport, out.fallback);
 
   const updated = storage.updateContentGeneration(generationId, {
     generatedOutput: out.content,
@@ -308,6 +312,56 @@ export async function refineGeneration(generationId: number, mode: "tighten" | "
     claimScore: claimReport.score,
     evidenceJson: JSON.stringify({ ...evidence, envelope }),
     provider: out.provider,
+    status: "revised",
+  });
+  storage.replaceContentClaims(generationId, claimsToRows(generationId, claimReport));
+  return updated ? { generation: updated, evidence } : null;
+}
+
+/**
+ * Persist an operator's inline edit and re-score it. Result-page edits used to
+ * be local-only React state, so refine / derive / approve / export operated on
+ * the stale stored output, not what the operator saw. Routing edits through here
+ * makes the edited text authoritative and re-runs voice + claim verification so
+ * the scores and evidence reflect the actual content being acted on.
+ */
+export function saveEditedGeneration(generationId: number, editedContent: string): { generation: ContentGeneration; evidence: EvidencePanel } | null {
+  const source = storage.getContentGenerationById(generationId);
+  if (!source) return null;
+  const brief = safeBrief(source.promptInput);
+  const voiceYaml = activeVoiceYaml();
+  const live = getLiveNumbers({
+    sourceSystem: brief?.sourceSystem,
+    from: brief?.sourceFrom,
+    to: brief?.sourceTo,
+    allowDemoData: brief?.allowDemoData,
+  });
+
+  const voice = checkVoice(editedContent, voiceYaml);
+  const claimReport = checkClaims(editedContent, live);
+  const existingEnvelope = safeEnvelope(source.evidenceJson);
+  const envelope: GenerationEnvelope = {
+    ...(existingEnvelope || ({} as GenerationEnvelope)),
+    content: editedContent,
+    title: existingEnvelope?.title || "Edited asset",
+    asset_type: existingEnvelope?.asset_type || "",
+    summary: existingEnvelope?.summary || "",
+    cta: existingEnvelope?.cta || "",
+    live_numbers_used: (existingEnvelope?.live_numbers_used || []).filter((u) => editedContent.includes(u.value)),
+    claims: claimReport.claims.map((c) => c.claimText),
+    claims_needing_verification: claimReport.claimsNeedingVerification.map((c) => c.claimText),
+    voice_compliance_notes: [voice.summary],
+    risk_flags: claimReport.riskFlags,
+    derivative_recommendations: existingEnvelope?.derivative_recommendations || [],
+  };
+  const isDemo = existingEnvelope ? (safeEvidenceIsDemo(source.evidenceJson) ?? false) : false;
+  const evidence = buildEvidence(source.provider as ProviderName, isDemo, envelope, live, voice, claimReport);
+
+  const updated = storage.updateContentGeneration(generationId, {
+    generatedOutput: editedContent,
+    voiceScore: voice.score,
+    claimScore: claimReport.score,
+    evidenceJson: JSON.stringify({ ...evidence, envelope }),
     status: "revised",
   });
   storage.replaceContentClaims(generationId, claimsToRows(generationId, claimReport));
@@ -347,4 +401,7 @@ function safeBrief(json: string): ContentBrief | null {
 }
 function safeEnvelope(json: string): GenerationEnvelope | null {
   try { const e = JSON.parse(json); return e.envelope || null; } catch { return null; }
+}
+function safeEvidenceIsDemo(json: string): boolean | null {
+  try { const e = JSON.parse(json); return typeof e.isDemo === "boolean" ? e.isDemo : null; } catch { return null; }
 }

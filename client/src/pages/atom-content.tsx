@@ -41,6 +41,7 @@ interface Evidence {
   voice: { score: number; summary: string; violations: any[]; bannedPhrasesFound: string[]; weakFillerFound: string[]; approvedPhrasesUsed: string[]; suggestedRewrites: string[] };
   claimReport: { score: number; summary: string };
   fallbackMessage: string | null;
+  providerFallback: { requestedProvider: string; reason: string } | null;
 }
 interface GenerationRow { id: number; projectId: number; generatedOutput: string; voiceScore: number; claimScore: number; status: string; provider: string; createdAt: string; }
 interface GenerateResponse { project: { id: number; title: string; contentType: string }; generation: GenerationRow; evidence: Evidence; }
@@ -265,7 +266,7 @@ function NewContentView({ onGenerated }: { onGenerated: (id: number) => void }) 
   const [productFocus, setProductFocus] = useState("ATOM Sales OS");
   const [sourceFrom, setSourceFrom] = useState("");
   const [sourceTo, setSourceTo] = useState("");
-  const [allowDemoData, setAllowDemoData] = useState(true);
+  const [allowDemoData, setAllowDemoData] = useState(false);
   const [notes, setNotes] = useState("");
 
   const { data: live } = useQuery<LiveNumbersResult>({
@@ -417,6 +418,11 @@ function ResultView({ generationId, onBack, onOpen }: { generationId: number | n
     mutationFn: async () => (await apiRequest("POST", `/api/content/generations/${generationId}/verify`, {})).json(),
     onSuccess: () => { refetch(); toast({ title: "Claims re-verified" }); },
   });
+  const save = useMutation({
+    mutationFn: async (content: string) => (await apiRequest("POST", `/api/content/generations/${generationId}/save`, { content })).json(),
+    onSuccess: () => { setEdited(null); refetch(); queryClient.invalidateQueries({ queryKey: ["/api/content/summary"] }); toast({ title: "Saved & re-scored" }); },
+    onError: (e: any) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+  });
   const approve = useMutation({
     mutationFn: async (action: string) => (await apiRequest("POST", "/api/content/approve", { generationId, action })).json(),
     onSuccess: (_d, action) => { refetch(); queryClient.invalidateQueries({ queryKey: ["/api/content/summary"] }); toast({ title: `Marked ${action}` }); },
@@ -429,8 +435,11 @@ function ResultView({ generationId, onBack, onOpen }: { generationId: number | n
   const ev = data.evidence as Evidence;
   const project = data.project;
   const content = edited ?? gen.generatedOutput;
+  const dirty = edited !== null && edited !== gen.generatedOutput;
+  const busy = refine.isPending || derive.isPending || approve.isPending || save.isPending;
 
   const exportAs = (kind: "md" | "json" | "html") => {
+    if (dirty) { toast({ title: "Unsaved edits", description: "Save & re-score before exporting so the export reflects verified content.", variant: "destructive" }); return; }
     let blob: Blob; let name: string;
     if (kind === "md") { blob = new Blob([content], { type: "text/markdown" }); name = `atom-content-${gen.id}.md`; }
     else if (kind === "json") { blob = new Blob([JSON.stringify({ generation: gen, evidence: ev }, null, 2)], { type: "application/json" }); name = `atom-content-${gen.id}.json`; }
@@ -452,6 +461,12 @@ function ResultView({ generationId, onBack, onOpen }: { generationId: number | n
           </div>
         </div>
 
+        {ev?.providerFallback && (
+          <div className="text-xs p-2.5 rounded-lg" style={{ background: "rgba(248,113,113,0.1)", color: "#f87171", border: "1px solid rgba(248,113,113,0.3)" }} data-testid="content-provider-fallback">
+            <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Provider fallback: {ev.providerFallback.reason} This output is demo content, not AI-authored production proof.
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <ScoreCard label="Voice Compliance" score={gen.voiceScore} summary={ev?.voice?.summary} />
           <ScoreCard label="Claim Verification" score={gen.claimScore} summary={ev?.claimReport?.summary} />
@@ -469,22 +484,31 @@ function ResultView({ generationId, onBack, onOpen }: { generationId: number | n
           </CardHeader>
           <CardContent>
             <Textarea value={content} onChange={(e) => setEdited(e.target.value)} rows={20} className="font-mono text-[13px] leading-relaxed" data-testid="content-output" />
+            {dirty && (
+              <div className="flex items-center justify-between gap-2 mt-2 text-xs p-2 rounded-lg" style={{ background: "rgba(251,191,36,0.08)", color: "#fbbf24" }}>
+                <span><AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> Unsaved edits — scores below are stale. Save to re-score before exporting or approving.</span>
+                <div className="flex gap-1.5 shrink-0">
+                  <Button size="sm" onClick={() => save.mutate(content)} disabled={save.isPending} style={{ background: PRIMARY, color: "#06121a" }} data-testid="content-save">{save.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save & Re-score"}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEdited(null)} disabled={save.isPending}>Discard</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" disabled={refine.isPending} onClick={() => refine.mutate("tighten")}><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Tighten Tone</Button>
-          <Button size="sm" variant="outline" disabled={refine.isPending} onClick={() => refine.mutate("executive")}><Gauge className="w-3.5 h-3.5 mr-1.5" /> More Executive</Button>
-          <Button size="sm" variant="outline" disabled={refine.isPending} onClick={() => refine.mutate("technical")}><Zap className="w-3.5 h-3.5 mr-1.5" /> More Technical</Button>
-          <Button size="sm" variant="outline" disabled={derive.isPending} onClick={() => derive.mutate("linkedin")}><Linkedin className="w-3.5 h-3.5 mr-1.5" /> → LinkedIn</Button>
-          <Button size="sm" variant="outline" disabled={derive.isPending} onClick={() => derive.mutate("x-thread")}><Twitter className="w-3.5 h-3.5 mr-1.5" /> → X Thread</Button>
-          <Button size="sm" variant="outline" disabled={derive.isPending} onClick={() => derive.mutate("youtube")}><Youtube className="w-3.5 h-3.5 mr-1.5" /> → YouTube</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => refine.mutate("tighten")}><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Tighten Tone</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => refine.mutate("executive")}><Gauge className="w-3.5 h-3.5 mr-1.5" /> More Executive</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => refine.mutate("technical")}><Zap className="w-3.5 h-3.5 mr-1.5" /> More Technical</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => derive.mutate("linkedin")}><Linkedin className="w-3.5 h-3.5 mr-1.5" /> → LinkedIn</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => derive.mutate("x-thread")}><Twitter className="w-3.5 h-3.5 mr-1.5" /> → X Thread</Button>
+          <Button size="sm" variant="outline" disabled={busy || dirty} onClick={() => derive.mutate("youtube")}><Youtube className="w-3.5 h-3.5 mr-1.5" /> → YouTube</Button>
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={() => approve.mutate("approved")} disabled={approve.isPending} style={{ background: "#34d399", color: "#06121a" }} data-testid="content-approve"><Check className="w-4 h-4 mr-1.5" /> Approve</Button>
-          <Button variant="outline" onClick={() => approve.mutate("revised")} disabled={approve.isPending}>Send for Revision</Button>
-          <Button variant="outline" onClick={() => verify.mutate()} disabled={verify.isPending}>{verify.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Re-verify Claims"}</Button>
+          <Button onClick={() => approve.mutate("approved")} disabled={busy || dirty} style={{ background: "#34d399", color: "#06121a" }} data-testid="content-approve"><Check className="w-4 h-4 mr-1.5" /> Approve</Button>
+          <Button variant="outline" onClick={() => approve.mutate("revised")} disabled={busy || dirty}>Send for Revision</Button>
+          <Button variant="outline" onClick={() => verify.mutate()} disabled={verify.isPending || dirty}>{verify.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Re-verify Claims"}</Button>
         </div>
       </div>
 
